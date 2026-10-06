@@ -61,7 +61,7 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
   const listed = listForView(scoped, viewMode, calDay)
   const selected = all.find((s) => s.id === selectedId) ?? listed[0] ?? null
   // Exit focus lives in the detail pane, so with nothing selected the tree and list come back.
-  const focused = focus && !!selected
+  if (focus && !selected) setFocus(false)
   // Membership, not order: live sessions reorder constantly and must not drop a selection made from the bar.
   const listKey = listed.map((s) => s.id).sort().join(',')
 
@@ -191,7 +191,7 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
   return (
     <div className="app">
       {!selected && <div className="app-drag" style={{ left: panes.side + panes.list }} />}
-      {!focused && (
+      {!focus && (
         <Sidebar
           tree={tree}
           scope={scope}
@@ -203,7 +203,7 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
           onToggle={(root) => setExpanded({ ...open, [root]: !open[root] })}
         />
       )}
-      {!focused && (
+      {!focus && (
         <SessionList
           title={scopeTitle(scope, tree)}
           width={panes.list}
@@ -276,17 +276,13 @@ if (import.meta.vitest) {
     expect(html).toContain('>2 sessions<')
     expect(html).not.toContain('sdk run')
   })
-  it('lays out the tree and the list at their default widths with the drag strip after them', () => {
-    const html = renderToStaticMarkup(<Deck all={[]} settings={settings} now={now} />)
-    expect(html).toContain('class="app-drag" style="left:600px"')
-    expect(html).toContain('class="sidebar" style="width:220px"')
-    expect(html).toContain('class="list" style="width:380px"')
-  })
-  it('shows the empty list and no detail when there are no sessions', () => {
+  it('shows the empty list, no detail, and the tree and list at their default widths with the drag strip after them', () => {
     const html = renderToStaticMarkup(<Deck all={[]} settings={settings} now={now} />)
     expect(html).toContain('No sessions here.')
     expect(html).not.toContain('<h2')
-    expect(html).toContain('app-drag')
+    expect(html).toContain('class="app-drag" style="left:600px"')
+    expect(html).toContain('class="sidebar" style="width:220px"')
+    expect(html).toContain('class="list" style="width:380px"')
   })
   it('renders the detail tab bar on Overview for the selected session', () => {
     const html = renderToStaticMarkup(<Deck all={[makeSession({ title: 'live-meeting' })]} settings={settings} now={now} />)
