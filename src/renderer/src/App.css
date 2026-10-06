@@ -1,0 +1,19 @@
+.app {
+  height: 100%;
+  display: flex;
+  position: relative;
+  background: var(--app-bg);
+}
+
+.app-drag {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 38px;
+  -webkit-app-region: drag;
+}
+
+.app-loading {
+  height: 100%;
+  background: var(--app-bg);
+}

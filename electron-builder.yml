@@ -1,0 +1,14 @@
+appId: dev.alanoliv.session-deck
+productName: Session Deck
+directories:
+  output: dist
+files:
+  - out/**
+mac:
+  target: dir
+  identity: 'YOUR_SIGNING_IDENTITY'
+  hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  extendInfo:
+    NSAppleEventsUsageDescription: Session Deck opens your terminal to resume Claude sessions.
