@@ -294,8 +294,8 @@ if (import.meta.vitest) {
   })
 
   it('shows a created file as all added lines when the Write result has no patch', () => {
-    const { t } = run(user('go'), assistant([use('t1', 'Write', { file_path: '/new.md', content: 'a\nb' })]),
-      result('t1', 'File created successfully at: /new.md', {}, { type: 'create', filePath: '/new.md', content: 'a\nb', structuredPatch: [] }))
+    const { t } = run(user('go'), assistant([use('t1', 'Write', { file_path: '/new.md', content: 'a\nb\n' })]),
+      result('t1', 'File created successfully at: /new.md', {}, { type: 'create', filePath: '/new.md', content: 'a\nb\n', structuredPatch: [] }))
     expect(tool(t, 0, 0)).toMatchObject({ a: 2, d: 0, diff: [[1, '+', 'a'], [2, '+', 'b']] })
     expect(tool(t, 0, 0).out).toBeUndefined()
   })
