@@ -3,8 +3,10 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import type { IconName, Session, Settings, Terminal } from '../../shared/api'
 import { makeSession } from '../../shared/fixtures'
 import { agoLong, fileSize, tildify } from '../../shared/format'
+import { PANES } from '../../shared/panes'
 import { detectKind, kindById, search, type Kind, type KindId, type Result } from '../../shared/search'
 import { Icon } from './icons'
+import { ResizeHandle } from './Resize'
 import './CommandBar.css'
 
 export interface BarOpen {
@@ -31,6 +33,8 @@ export interface CommandBarProps {
   settings: Settings
   now: Date
   note: string | null
+  resultsWidth: number
+  onResultsWidth(width: number): void
   onClose(): void
   onAction(a: BarAction): void
 }
@@ -219,8 +223,8 @@ export function CommandBar(p: CommandBarProps) {
     : 'No matches.'
 
   return (
-    <div className="bar-scrim" onClick={p.onClose}>
-      <div className="bar" onClick={(e) => e.stopPropagation()}>
+    <div className="bar-scrim" onPointerDown={(e) => e.target === e.currentTarget && p.onClose()}>
+      <div className="bar">
         <div className="bar-input-row">
           {kindId === 'sessions' ? (
             <span className="bar-search"><Icon name="Search1" size={16} /></span>
@@ -266,34 +270,37 @@ export function CommandBar(p: CommandBarProps) {
           <span className="keycap">esc</span>
         </div>
         <div className="bar-body">
-          <div className="bar-results" ref={listRef}>
-            {groups.map((g) => (
-              <div key={g.label} className="bar-group">
-                <div className="bar-group-label">{g.label}</div>
-                {g.results.map((r) => {
-                  const i = flat.indexOf(r)
-                  return (
-                    <div
-                      key={r.key}
-                      className={r === cur ? 'bar-row is-active' : 'bar-row'}
-                      onMouseMove={() => {
-                        if (i !== idx) setIdx(i)
-                      }}
-                      onClick={() => (r.type === 'session' ? p.onAction({ type: 'select', id: r.session.id }) : run(r))}
-                    >
-                      <span style={{ display: 'flex', color: r.iconColor }}><Icon name={r.icon} size={14} /></span>
-                      <div className="bar-row-text">
-                        <span className="bar-row-title">{r.title}</span>
-                        {r.sub && <span className={r.mono ? 'bar-row-sub mono' : 'bar-row-sub'}>{r.sub}</span>}
+          <div className="bar-results-col" style={{ width: p.resultsWidth }}>
+            <ResizeHandle width={p.resultsWidth} min={PANES.pal.min} max={PANES.pal.max} defaultWidth={PANES.pal.default} label="Resize results" onWidth={p.onResultsWidth} />
+            <div className="bar-results" ref={listRef}>
+              {groups.map((g) => (
+                <div key={g.label} className="bar-group">
+                  <div className="bar-group-label">{g.label}</div>
+                  {g.results.map((r) => {
+                    const i = flat.indexOf(r)
+                    return (
+                      <div
+                        key={r.key}
+                        className={r === cur ? 'bar-row is-active' : 'bar-row'}
+                        onMouseMove={() => {
+                          if (i !== idx) setIdx(i)
+                        }}
+                        onClick={() => (r.type === 'session' ? p.onAction({ type: 'select', id: r.session.id }) : run(r))}
+                      >
+                        <span style={{ display: 'flex', color: r.iconColor }}><Icon name={r.icon} size={14} /></span>
+                        <div className="bar-row-text">
+                          <span className="bar-row-title">{r.title}</span>
+                          {r.sub && <span className={r.mono ? 'bar-row-sub mono' : 'bar-row-sub'}>{r.sub}</span>}
+                        </div>
+                        {r.keycap && <span className="keycap">{r.keycap}</span>}
+                        {r.right && <span className="bar-row-right">{r.right}</span>}
                       </div>
-                      {r.keycap && <span className="keycap">{r.keycap}</span>}
-                      {r.right && <span className="bar-row-right">{r.right}</span>}
-                    </div>
-                  )
-                })}
-              </div>
-            ))}
-            {flat.length === 0 && <div className="bar-empty">{emptyText}</div>}
+                    )
+                  })}
+                </div>
+              ))}
+              {flat.length === 0 && <div className="bar-empty">{emptyText}</div>}
+            </div>
           </div>
           <div className="bar-preview">
             <Preview cur={cur} kind={kind} now={p.now} onExample={onExample} />
@@ -321,7 +328,7 @@ if (import.meta.vitest) {
     artifacts: [{ name: 'veracity-report.md', kind: 'markdown', path: '/Users/me/code/app/r.md', bytes: 9000, preview: '# Veracity report' }],
   })
   const render = (open: BarOpen, over: Partial<CommandBarProps> = {}) =>
-    renderToStaticMarkup(<CommandBar open={open} sessions={[s]} selected={s} settings={settings} now={now} note={null} onClose={() => {}} onAction={() => {}} {...over} />)
+    renderToStaticMarkup(<CommandBar open={open} sessions={[s]} selected={s} settings={settings} now={now} note={null} resultsWidth={380} onResultsWidth={() => {}} onClose={() => {}} onAction={() => {}} {...over} />)
 
   it('opens on the search kinds and recent sessions with the plain search placeholder', () => {
     const html = render({ kind: 'sessions', query: '' })
@@ -330,6 +337,8 @@ if (import.meta.vitest) {
     expect(html).toContain('>Recent<')
     expect(html).toContain('>Choose<')
     expect(html).not.toContain('bar-chip')
+    expect(html).toContain('class="bar-results-col" style="width:380px"')
+    expect(html).toContain('aria-label="Resize results"')
   })
   it('shows the active kind as a chip with its own placeholder', () => {
     const html = render({ kind: 'files', query: '' })

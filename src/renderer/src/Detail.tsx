@@ -1,9 +1,12 @@
-import { Fragment, type ReactNode } from 'react'
+import { Fragment, useEffect, useState, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import type { Session } from '../../shared/api'
+import type { Session, Transcript as TranscriptData } from '../../shared/api'
 import { makeSession } from '../../shared/fixtures'
 import { agoLong, fileSize, modelLabel, monthDay, plural, tildify } from '../../shared/format'
 import { Button } from './Button'
+import { errorText } from './hooks'
+import { Icon } from './icons'
+import { Transcript } from './Transcript'
 import { Usage, tiles } from './Usage'
 import './Detail.css'
 
@@ -12,11 +15,17 @@ export interface CopiedKey {
   what: 'resume' | 'fork' | 'pr'
 }
 
+export type DetailTab = 'overview' | 'transcript'
+
 export interface DetailProps {
   session: Session
   now: Date
   copied: CopiedKey | null
   teeOn: boolean
+  tab: DetailTab
+  focus: boolean
+  onTab(tab: DetailTab): void
+  onFocus(): void
   onResume(): void
   onCopy(): void
   onFork(): void
@@ -50,6 +59,31 @@ export function facts(s: Session): { k: string; v: string; mono: boolean }[] {
   return out
 }
 
+type Loaded = { id: string; transcript: TranscriptData | null; error: string | null }
+
+// Loads once per session, and again on every change while it is live; main tails only the appended bytes.
+function useTranscript(id: string, live: boolean): Loaded {
+  const [state, setState] = useState<Loaded>({ id: '', transcript: null, error: null })
+  useEffect(() => {
+    let alive = true
+    let seq = 0
+    const load = () => {
+      const n = ++seq
+      window.api.getTranscript(id).then(
+        (t) => alive && n === seq && setState({ id, transcript: t, error: null }),
+        (e) => alive && n === seq && setState({ id, transcript: null, error: errorText(e) }),
+      )
+    }
+    load()
+    const off = live ? window.api.onSessionsChanged(load) : null
+    return () => {
+      alive = false
+      off?.()
+    }
+  }, [id, live])
+  return state.id === id ? state : { id, transcript: null, error: null }
+}
+
 function Section({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="detail-section">
@@ -62,58 +96,86 @@ function Section({ label, children }: { label: string; children: ReactNode }) {
 export function Detail(p: DetailProps) {
   const s = p.session
   const copied = (what: CopiedKey['what']) => p.copied?.id === s.id && p.copied.what === what
+  const { transcript, error } = useTranscript(s.id, s.live)
+  const count = transcript ? transcript.turns.reduce((n, t) => n + t.items.length, 0) : null
+  const tabClass = (t: DetailTab) => (p.tab === t ? 'tab is-active' : 'tab')
   return (
     <main className="detail">
-      <div className="detail-inner">
-        <div className="detail-head">
-          <h2 className="detail-title">{s.title}</h2>
-          <span className="detail-when">{`${agoLong(s.end, p.now)} · ${modelLabel(s.model)} · ${fileSize(s.sizeBytes)}`}</span>
-        </div>
-        <div className="detail-actions">
-          <Button kind="primary" onClick={p.onResume} title="Opens claude --resume in your terminal">Resume</Button>
-          <Button kind="secondary" onClick={p.onCopy}>{copied('resume') ? 'Copied' : 'Copy command'}</Button>
-          <Button kind="secondary" onClick={p.onFork} title="Opens claude --resume … --fork-session in your terminal">
-            {copied('fork') ? 'Copied' : 'Fork'}
-          </Button>
-          {s.cwdExists && <Button kind="secondary" onClick={p.onOpenFolder}>Open folder</Button>}
-          {s.pr && (
-            <span className="detail-pr" title="Copies claude --from-pr" onClick={p.onCopyPr}>
-              {copied('pr') ? 'Copied' : `All sessions for #${s.pr.number}`}
-            </span>
-          )}
-        </div>
-        <div className="facts">
-          {facts(s).map((f) => (
-            <Fragment key={f.k}>
-              <span className="fact-k">{f.k}</span>
-              <span className={f.mono ? 'fact-v mono' : 'fact-v'}>{f.v}</span>
-            </Fragment>
-          ))}
-        </div>
-        <Usage session={s} now={p.now} teeOn={p.teeOn} onEnableTee={p.onEnableTee} />
-        {s.summary?.did && (
-          <Section label="Where it stopped">
-            <p className="prose">{s.summary.did}</p>
-          </Section>
-        )}
-        {s.summary && s.summary.next.length > 0 && (
-          <Section label="Next">
-            {s.summary.next.map((n) => (
-              <span key={n} className="prose">{n}</span>
-            ))}
-          </Section>
-        )}
-        {s.files.length > 0 && (
-          <Section label={`${plural(s.files.length, 'file')} changed`}>
-            {s.files.map((f) => (
-              <div key={f.path} className="file">
-                <span className="file-path mono">{f.path}</span>
-                <span className="file-delta tnum">{`+${f.added} −${f.removed}`}</span>
-              </div>
-            ))}
-          </Section>
-        )}
+      <div className={p.focus ? 'detail-tabs is-focus' : 'detail-tabs'}>
+        <span className={tabClass('overview')} onClick={() => p.onTab('overview')}>Overview</span>
+        <span className={tabClass('transcript')} onClick={() => p.onTab('transcript')}>
+          Transcript{count !== null && <span className="tab-count tnum">{count}</span>}
+        </span>
+        <span className="detail-tabs-spacer" />
+        <span className="focus-btn" title={p.focus ? 'Show the tree and list again' : 'Hide the tree and list'} onClick={p.onFocus}>
+          <Icon name="Expand" size={12} />
+          {p.focus ? 'Exit focus' : 'Focus'}
+        </span>
       </div>
+      {p.tab === 'overview' ? (
+        <div className="detail-body">
+          <div className="detail-inner">
+            <div className="detail-head">
+              <h2 className="detail-title">{s.title}</h2>
+              <span className="detail-when">{`${agoLong(s.end, p.now)} · ${modelLabel(s.model)} · ${fileSize(s.sizeBytes)}`}</span>
+            </div>
+            <div className="detail-actions">
+              <Button kind="primary" onClick={p.onResume} title="Opens claude --resume in your terminal">Resume</Button>
+              <Button kind="secondary" onClick={p.onCopy}>{copied('resume') ? 'Copied' : 'Copy command'}</Button>
+              <Button kind="secondary" onClick={p.onFork} title="Opens claude --resume … --fork-session in your terminal">
+                {copied('fork') ? 'Copied' : 'Fork'}
+              </Button>
+              {s.cwdExists && <Button kind="secondary" onClick={p.onOpenFolder}>Open folder</Button>}
+              {s.pr && (
+                <span className="detail-pr" title="Copies claude --from-pr" onClick={p.onCopyPr}>
+                  {copied('pr') ? 'Copied' : `All sessions for #${s.pr.number}`}
+                </span>
+              )}
+            </div>
+            <div className="facts">
+              {facts(s).map((f) => (
+                <Fragment key={f.k}>
+                  <span className="fact-k">{f.k}</span>
+                  <span className={f.mono ? 'fact-v mono' : 'fact-v'}>{f.v}</span>
+                </Fragment>
+              ))}
+            </div>
+            <Usage session={s} now={p.now} teeOn={p.teeOn} onEnableTee={p.onEnableTee} />
+            {s.summary?.did && (
+              <Section label="Where it stopped">
+                <p className="prose">{s.summary.did}</p>
+              </Section>
+            )}
+            {s.summary && s.summary.next.length > 0 && (
+              <Section label="Next">
+                {s.summary.next.map((n) => (
+                  <span key={n} className="prose">{n}</span>
+                ))}
+              </Section>
+            )}
+            {s.files.length > 0 && (
+              <Section label={`${plural(s.files.length, 'file')} changed`}>
+                {s.files.map((f) => (
+                  <div key={f.path} className="file">
+                    <span className="file-path mono">{f.path}</span>
+                    <span className="file-delta tnum">{`+${f.added} −${f.removed}`}</span>
+                  </div>
+                ))}
+              </Section>
+            )}
+          </div>
+        </div>
+      ) : (
+        <Transcript
+          key={s.id}
+          session={s}
+          transcript={transcript}
+          error={error}
+          now={p.now}
+          onResume={p.onResume}
+          loadOutput={(turn, item) => window.api.getToolOutput(s.id, turn, item)}
+        />
+      )}
     </main>
   )
 }
@@ -123,7 +185,24 @@ if (import.meta.vitest) {
   const now = new Date(2026, 9, 6, 11, 0)
   const pr = { repo: 'alan-oliv/meetnotes', number: 27, url: 'https://github.com/alan-oliv/meetnotes/pull/27' }
   const noop = () => {}
-  const handlers = { onResume: noop, onCopy: noop, onFork: noop, onOpenFolder: noop, onCopyPr: noop, onEnableTee: noop }
+  const handlers = { tab: 'overview' as DetailTab, focus: false, onTab: noop, onFocus: noop, onResume: noop, onCopy: noop, onFork: noop, onOpenFolder: noop, onCopyPr: noop, onEnableTee: noop }
+
+  it('shows the tab bar with Focus, and swaps the overview for the transcript tab', () => {
+    const s = makeSession({ title: 'live-meeting' })
+    const over = renderToStaticMarkup(<Detail session={s} now={now} copied={null} teeOn={false} {...handlers} />)
+    expect(over).toContain('tab is-active">Overview<')
+    expect(over).toContain('>Focus<')
+    expect(over).toContain('title="Hide the tree and list"')
+    expect(over).toContain('class="detail-body"')
+    expect(over).toContain('class="facts"')
+    const tx = renderToStaticMarkup(<Detail session={s} now={now} copied={null} teeOn={false} {...handlers} tab="transcript" focus />)
+    expect(tx).toContain('tab is-active">Transcript<')
+    expect(tx).toContain('>Exit focus<')
+    expect(tx).toContain('title="Show the tree and list again"')
+    expect(tx).toContain('detail-tabs is-focus')
+    expect(tx).toContain('class="tx"')
+    expect(tx).not.toContain('class="facts"')
+  })
 
   it('lists facts in the handoff order, skipping rows without data', () => {
     const s = makeSession({

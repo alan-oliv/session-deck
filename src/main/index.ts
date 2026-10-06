@@ -9,6 +9,7 @@ import { createSettingsStore, isTerminal } from './settings'
 import { installTee, removeTee } from './statusline'
 import { folderToOpen, launch, terminalCommand } from './terminal'
 import { cleanTitle, customTitleLine } from './transcript'
+import { createTranscriptStore } from './transcripts'
 
 function createMainWindow(): BrowserWindow {
   const win = new BrowserWindow({
@@ -65,6 +66,7 @@ app.whenReady().then(() => {
     getSettings: settings.get,
     onChange: () => broadcast('sessionsChanged'),
   })
+  const transcripts = createTranscriptStore((id) => indexer.transcriptPath(id))
 
   const sessionFor = (id: unknown): Session => {
     if (!isSessionId(id)) throw new Error('Invalid session id')
@@ -138,6 +140,11 @@ app.whenReady().then(() => {
       settings.save({ statusTee: enabled })
       broadcast('settingsChanged')
       indexer.notify()
+    },
+    getTranscript: async (id) => transcripts.get(sessionFor(id).id),
+    getToolOutput: async (id, turn, item) => {
+      if (!Number.isInteger(turn) || !Number.isInteger(item) || turn < 0 || item < 0) throw new Error('Invalid tool call')
+      return transcripts.output(sessionFor(id).id, turn, item)
     },
   })
 

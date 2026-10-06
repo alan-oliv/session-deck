@@ -2,9 +2,11 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import type { IconName, Session } from '../../shared/api'
 import { makeSession } from '../../shared/fixtures'
 import { agoShort, attention, clock, plural, tildify } from '../../shared/format'
+import { PANES } from '../../shared/panes'
 import { dayKey, groupSessions, listForView, type ViewMode, type YearMonth } from '../../shared/views'
 import { Calendar } from './Calendar'
 import { Icon } from './icons'
+import { ResizeHandle } from './Resize'
 import './SessionList.css'
 
 const MODES: { id: ViewMode; label: string; icon: IconName }[] = [
@@ -17,6 +19,9 @@ const MODES: { id: ViewMode; label: string; icon: IconName }[] = [
 
 export interface SessionListProps {
   title: string
+  width: number
+  maxWidth: number
+  onWidth(width: number): void
   sessions: Session[]
   showModes: boolean
   mode: ViewMode
@@ -58,7 +63,8 @@ export function SessionList(p: SessionListProps) {
   const shown = listForView(p.sessions, p.mode, p.day)
   const groups = groupSessions(shown, p.mode, p.now)
   return (
-    <section className="list">
+    <section className="list" style={{ width: p.width }}>
+      <ResizeHandle width={p.width} min={PANES.list.min} max={p.maxWidth} defaultWidth={PANES.list.default} label="Resize session list" onWidth={p.onWidth} />
       <header className="list-header">
         <div className="list-title-row">
           <span className="list-title">{p.title}</span>
@@ -104,7 +110,7 @@ if (import.meta.vitest) {
   const { it, expect } = import.meta.vitest
   const now = new Date(2026, 9, 6, 11, 0)
   const base = {
-    title: 'All sessions', showModes: true, mode: 'list' as ViewMode, onMode: () => {}, selectedId: null,
+    title: 'All sessions', width: 380, maxWidth: 600, onWidth: () => {}, showModes: true, mode: 'list' as ViewMode, onMode: () => {}, selectedId: null,
     onSelect: () => {}, onOpenBar: () => {}, now, month: { year: 2026, month: 9 }, day: null, onMonth: () => {}, onDay: () => {},
   }
   const live = makeSession({ title: 'live-meeting', status: 'running', forks: 1, end: new Date(2026, 9, 6, 9, 12).toISOString() })
@@ -114,6 +120,8 @@ if (import.meta.vitest) {
   it('shows the scope title, the count, the command bar key and rows with time and location', () => {
     const html = render()
     expect(html).toContain('>All sessions<')
+    expect(html).toContain('class="list" style="width:380px"')
+    expect(html).toContain('aria-label="Resize session list"')
     expect(html).toContain('>2 sessions<')
     expect(html).toContain('⌘⇧P')
     expect(html).toContain('>9:12 AM<')

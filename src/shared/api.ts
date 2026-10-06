@@ -64,6 +64,29 @@ export interface Session {
   usage: Usage
 }
 
+export type DiffSign = ' ' | '+' | '-'
+export type DiffLine = [lineNo: number, sign: DiffSign, text: string]
+export interface ToolItem {
+  k: 'tool'
+  tool: string      // raw name: Bash, Edit, Grep, Read, Write, Skill, Agent, …
+  name: string      // what the row shows; see toolLabel
+  arg: string       // command, path, pattern, skill, query, prompt, url or description
+  out?: string[]    // first lines of the result
+  more?: number     // lines not included, of the output or of the diff
+  err?: boolean
+  a?: number
+  d?: number
+  diff?: DiffLine[]
+  link?: string     // GitHub PR URL from a `gh pr create` result
+}
+export type Item = { k: 'text'; md: string } | ToolItem
+export interface Turn { prompt: string; items: Item[]; footer?: string; recap?: string }
+export interface Transcript { cli: string; turns: Turn[] }
+
+// The CLI prints Edit as "Update" and Grep/Glob as "Search"; the transcript reads like the terminal did.
+const TOOL_LABELS: Record<string, string> = { Edit: 'Update', MultiEdit: 'Update', Grep: 'Search', Glob: 'Search' }
+export const toolLabel = (tool: string): string => TOOL_LABELS[tool] ?? tool
+
 export type ResumeResult =
   | { ok: true }
   | { ok: false; needsTerminal: true }
@@ -79,6 +102,8 @@ export interface Api {
   renameSession(id: string, title: string): Promise<void>
   setArchived(id: string, archived: boolean): Promise<void>
   setStatusTee(enabled: boolean): Promise<void>
+  getTranscript(id: string): Promise<Transcript>
+  getToolOutput(id: string, turn: number, item: number): Promise<string[]>
   onSessionsChanged(cb: () => void): () => void
   onSettingsChanged(cb: () => void): () => void
 }
@@ -97,6 +122,8 @@ export const API_METHODS = [
   'renameSession',
   'setArchived',
   'setStatusTee',
+  'getTranscript',
+  'getToolOutput',
 ] as const satisfies readonly ApiMethod[]
 
 // Fails to compile if a method is added to Api but not to API_METHODS.
@@ -115,7 +142,7 @@ export const prCommand = (n: number): string => `claude --from-pr ${n}`
 export const ICON_NAMES = [
   'AllItems', 'Box', 'Branch', 'Layers', 'Storage', 'ChevronDown2', 'Search1', 'Bolt', 'Document', 'Attachment2',
   'Loader', 'ClockOutline', 'Code', 'Code2', 'ViewList', 'Timeline', 'CalendarEmpty', 'ArrowRight', 'Clipboard',
-  'Link', 'Edit', 'Archive', 'Check',
+  'Link', 'Edit', 'Archive', 'Check', 'Edit2', 'Expand',
 ] as const
 export type IconName = (typeof ICON_NAMES)[number]
 
@@ -133,5 +160,13 @@ if (import.meta.vitest) {
   })
   it('builds the from-pr command from a PR number', () => {
     expect(prCommand(27)).toBe('claude --from-pr 27')
+  })
+  it('labels Edit and Grep the way the CLI prints them and leaves other tools alone', () => {
+    expect(toolLabel('Edit')).toBe('Update')
+    expect(toolLabel('MultiEdit')).toBe('Update')
+    expect(toolLabel('Grep')).toBe('Search')
+    expect(toolLabel('Glob')).toBe('Search')
+    expect(toolLabel('Bash')).toBe('Bash')
+    expect(toolLabel('mcp__linear__get_issue')).toBe('mcp__linear__get_issue')
   })
 }

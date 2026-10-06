@@ -7,25 +7,6 @@
   box-shadow: inset -1px 0 0 var(--app-divider);
 }
 
-/* Straddles the hairline; no-drag so it stays grabbable inside the title-bar drag strip. */
-.sidebar-resize {
-  position: absolute;
-  top: 0;
-  right: -3px;
-  bottom: 0;
-  width: 6px;
-  z-index: 1;
-  cursor: col-resize;
-  outline: none;
-  -webkit-app-region: no-drag;
-}
-
-.sidebar-resize:hover,
-.sidebar-resize:active,
-.sidebar-resize:focus-visible {
-  background: linear-gradient(var(--app-border-hover), var(--app-border-hover)) center / 1px 100% no-repeat;
-}
-
 .sidebar-lights {
   height: 38px;
   flex: none;
