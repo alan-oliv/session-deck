@@ -96,16 +96,21 @@ export function emptyAgg(id: string): Agg {
   }
 }
 
-export function reduceLine(agg: Agg, line: string): void {
-  if (!line || SKIP_HEAD.test(line.slice(0, 120))) return
-  if (line.includes('"type":"attachment"') && !line.includes('"forkedFrom"')) return
+export function parseRecord(line: string): Rec | null {
+  if (!line || SKIP_HEAD.test(line.slice(0, 120))) return null
+  if (line.includes('"type":"attachment"') && !line.includes('"forkedFrom"')) return null
   let rec: unknown
   try {
     rec = JSON.parse(line)
   } catch {
-    return
+    return null
   }
-  if (rec && typeof rec === 'object' && !Array.isArray(rec)) reduceRecord(agg, rec as Rec)
+  return rec && typeof rec === 'object' && !Array.isArray(rec) ? (rec as Rec) : null
+}
+
+export function reduceLine(agg: Agg, line: string): void {
+  const rec = parseRecord(line)
+  if (rec) reduceRecord(agg, rec)
 }
 
 function reduceRecord(agg: Agg, r: Rec): void {
@@ -202,7 +207,7 @@ function userText(agg: Agg, text: string): void {
 }
 
 // Slash commands arrive wrapped in tags; keep "/name args" when there are args, drop everything else tagged.
-function promptText(text: string): string | null {
+export function promptText(text: string): string | null {
   const t = text.trim()
   if (!t) return null
   if (!t.startsWith('<')) return t
@@ -287,8 +292,10 @@ function bump(agg: Agg, path: string, added: number, removed: number): void {
   f.removed += removed
 }
 
+export const stripRecapSuffix = (text: string): string => text.replace(/\s*\(disable recaps in \/config\)\s*$/, '').trim()
+
 export function splitSummary(text: string): { did: string; next: string[] } {
-  const clean = text.replace(/\s*\(disable recaps in \/config\)\s*$/, '').trim()
+  const clean = stripRecapSuffix(text)
   const m = /\bNext[:,]\s*/.exec(clean)
   if (!m) return { did: clean, next: [] }
   const did = clean.slice(0, m.index).trim()
@@ -522,5 +529,18 @@ if (import.meta.vitest) {
     reduceLine(agg, customTitleLine(id, 'audio-upload').trimEnd())
     expect(customTitleLine(id, 'x').endsWith('\n')).toBe(true)
     expect(finalize(agg)).toMatchObject({ title: 'audio-upload', named: true })
+  })
+  it('parses a record line and returns null for skipped types, attachments and bad JSON', () => {
+    expect(parseRecord('{"type":"custom-title","customTitle":"x"}')).toEqual({ type: 'custom-title', customTitle: 'x' })
+    expect(parseRecord('{"type":"file-history-snapshot","snapshot":{}}')).toBeNull()
+    expect(parseRecord('{"type":"attachment","attachment":{}}')).toBeNull()
+    expect(parseRecord('[1,2]')).toBeNull()
+    expect(parseRecord('{nope')).toBeNull()
+  })
+  it('keeps slash commands with arguments as prompts and drops other tagged text', () => {
+    expect(promptText('<command-message>plan</command-message>\n<command-name>/team8:plan</command-name>\n<command-args>build it</command-args>')).toBe('/team8:plan build it')
+    expect(promptText('<local-command-stdout>ok</local-command-stdout>')).toBeNull()
+    expect(promptText('  plain  ')).toBe('plain')
+    expect(stripRecapSuffix('Did it. (disable recaps in /config)')).toBe('Did it.')
   })
 }

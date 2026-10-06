@@ -1,11 +1,12 @@
 import {
-  appendFileSync, chmodSync, createReadStream, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync,
+  appendFileSync, chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync,
   statSync, watch, writeFileSync, type FSWatcher,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import type { Session, Settings, Status } from '../shared/api'
 import { resolveGit, type GitInfo } from './git'
+import { tailLines } from './lines'
 import { readLive, readTee, type LiveInfo, type TeeInfo } from './live'
 import { PATHS } from './paths'
 import { writeJsonAtomic } from './settings'
@@ -171,22 +172,6 @@ function countAgents(transcript: string): number {
   }
 }
 
-// Reads from entry.offset to EOF, advancing the offset only past complete lines.
-async function parseFrom(path: string, entry: FileEntry): Promise<void> {
-  let carry: Buffer = Buffer.alloc(0)
-  for await (const chunk of createReadStream(path, { start: entry.offset }) as AsyncIterable<Buffer>) {
-    const buf = carry.length ? Buffer.concat([carry, chunk]) : chunk
-    let from = 0
-    let nl: number
-    while ((nl = buf.indexOf(10, from)) !== -1) {
-      reduceLine(entry.agg, buf.toString('utf8', from, nl))
-      entry.offset += nl - from + 1
-      from = nl + 1
-    }
-    carry = buf.subarray(from)
-  }
-}
-
 export function createIndexer(o: IndexerOptions): Indexer {
   const cache = loadCache(o.cachePath)
   const watchers: FSWatcher[] = []
@@ -250,7 +235,10 @@ export function createIndexer(o: IndexerOptions): Indexer {
         cache.files[path] = entry
       }
       try {
-        await parseFrom(path, entry)
+        await tailLines(path, entry.offset, (line, next) => {
+          reduceLine(entry.agg, line)
+          entry.offset = next
+        })
       } catch (e) {
         console.warn('[indexer] skipped unreadable transcript', path, e)
         continue
