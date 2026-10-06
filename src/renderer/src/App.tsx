@@ -6,7 +6,7 @@ import { clampPane, PANES_KEY, paneMax, readPaneWidths, type PaneKey, type PaneW
 import { buildTree, defaultExpanded, inScope, scopeTitle, visible, type Scope } from '../../shared/tree'
 import { byRecent, dayKey, latestDay, listForView, type ViewMode, type YearMonth } from '../../shared/views'
 import { CommandBar, type BarAction, type BarOpen } from './CommandBar'
-import { Detail, type CopiedKey } from './Detail'
+import { Detail, type CopiedKey, type DetailTab } from './Detail'
 import { errorText, useNow, useSessions, useSettings } from './hooks'
 import { SessionList } from './SessionList'
 import { Sidebar } from './Sidebar'
@@ -47,6 +47,8 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
   const [copied, setCopied] = useState<CopiedKey | null>(null)
   const [panes, setPanes] = useState<PaneWidths>(savedPanes)
   const [winWidth, setWinWidth] = useState(windowWidth)
+  const [detailTab, setDetailTab] = useState<DetailTab>('overview')
+  const [focus, setFocus] = useState(false)
   const barSeq = useRef(0)
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
@@ -58,6 +60,8 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
   const calDay = day ?? (latest ? dayKey(latest) : null)
   const listed = listForView(scoped, viewMode, calDay)
   const selected = all.find((s) => s.id === selectedId) ?? listed[0] ?? null
+  // Exit focus lives in the detail pane, so with nothing selected the tree and list come back.
+  const focused = focus && !!selected
   // Membership, not order: live sessions reorder constantly and must not drop a selection made from the bar.
   const listKey = listed.map((s) => s.id).sort().join(',')
 
@@ -186,41 +190,49 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
 
   return (
     <div className="app">
-      <div className="app-drag" style={{ left: panes.side + panes.list }} />
-      <Sidebar
-        tree={tree}
-        scope={scope}
-        expanded={open}
-        width={panes.side}
-        maxWidth={paneMax('side', panes.list, winWidth)}
-        onWidth={setPane('side')}
-        onScope={setScope}
-        onToggle={(root) => setExpanded({ ...open, [root]: !open[root] })}
-      />
-      <SessionList
-        title={scopeTitle(scope, tree)}
-        width={panes.list}
-        maxWidth={paneMax('list', panes.side, winWidth)}
-        onWidth={setPane('list')}
-        sessions={scoped}
-        showModes={scope.type === 'all'}
-        mode={viewMode}
-        onMode={setMode}
-        selectedId={selected?.id ?? null}
-        onSelect={setSelectedId}
-        onOpenBar={() => openBar({ kind: 'sessions', query: '' })}
-        now={now}
-        month={calMonth}
-        day={calDay}
-        onMonth={setMonth}
-        onDay={setDay}
-      />
+      {!selected && <div className="app-drag" style={{ left: panes.side + panes.list }} />}
+      {!focused && (
+        <Sidebar
+          tree={tree}
+          scope={scope}
+          expanded={open}
+          width={panes.side}
+          maxWidth={paneMax('side', panes.list, winWidth)}
+          onWidth={setPane('side')}
+          onScope={setScope}
+          onToggle={(root) => setExpanded({ ...open, [root]: !open[root] })}
+        />
+      )}
+      {!focused && (
+        <SessionList
+          title={scopeTitle(scope, tree)}
+          width={panes.list}
+          maxWidth={paneMax('list', panes.side, winWidth)}
+          onWidth={setPane('list')}
+          sessions={scoped}
+          showModes={scope.type === 'all'}
+          mode={viewMode}
+          onMode={setMode}
+          selectedId={selected?.id ?? null}
+          onSelect={setSelectedId}
+          onOpenBar={() => openBar({ kind: 'sessions', query: '' })}
+          now={now}
+          month={calMonth}
+          day={calDay}
+          onMonth={setMonth}
+          onDay={setDay}
+        />
+      )}
       {selected ? (
         <Detail
           session={selected}
           now={now}
           copied={copied}
           teeOn={settings.statusTee}
+          tab={detailTab}
+          focus={focus}
+          onTab={setDetailTab}
+          onFocus={() => setFocus(!focus)}
           onResume={() => void resume(selected.id, false)}
           onCopy={() => copy(selected.id, 'resume', resumeCommand(selected.id, false))}
           onFork={() => void resume(selected.id, true)}
@@ -265,7 +277,7 @@ if (import.meta.vitest) {
     expect(html).not.toContain('sdk run')
   })
   it('lays out the tree and the list at their default widths with the drag strip after them', () => {
-    const html = renderToStaticMarkup(<Deck all={[makeSession()]} settings={settings} now={now} />)
+    const html = renderToStaticMarkup(<Deck all={[]} settings={settings} now={now} />)
     expect(html).toContain('class="app-drag" style="left:600px"')
     expect(html).toContain('class="sidebar" style="width:220px"')
     expect(html).toContain('class="list" style="width:380px"')
@@ -274,5 +286,12 @@ if (import.meta.vitest) {
     const html = renderToStaticMarkup(<Deck all={[]} settings={settings} now={now} />)
     expect(html).toContain('No sessions here.')
     expect(html).not.toContain('<h2')
+    expect(html).toContain('app-drag')
+  })
+  it('renders the detail tab bar on Overview for the selected session', () => {
+    const html = renderToStaticMarkup(<Deck all={[makeSession({ title: 'live-meeting' })]} settings={settings} now={now} />)
+    expect(html).toContain('tab is-active">Overview<')
+    expect(html).toContain('>Focus<')
+    expect(html).not.toContain('app-drag')
   })
 }
