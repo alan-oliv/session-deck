@@ -10,9 +10,9 @@ pr: <url, at close>
 - spec rounds with the user: 6 (markdown depth, data approach, 4 section approvals) + spec approved as written
 
 ## Plan
-- plan: written by the lead · self-review fixes: <n>
-- tasks: <n> · tracks: <n> · waves: <n> · peak: <n> at once · mode: <mode> — <reason>
-- estimate: ≈$<total> (per task in the plan's table)
+- plan: written by the lead · self-review fixes: 5 (Api methods moved from Task 1 to Task 4 so the typecheck stays green between tracks; a diff line-number expectation in the Task 3 tests; a meaningless assertion and a misleading test name in Task 4; the spec's Transcript root class and Focus test synced with the plan)
+- tasks: 10 · tracks: 4 (A main + contract, B pure shared logic, C renderer layout + detail, D transcript component) · waves: 4 · peak: 3 at once · mode: teammates — tracks A, B and C share wave 2 with disjoint files
+- estimate: ≈$28.45 (3 opus tasks: 3, 8, 10; 6 sonnet; 1 haiku)
 
 ## Run
 - executors: <name> · <model> · <effort> · track <X> · wave <n>, one line each · peak <n> at once

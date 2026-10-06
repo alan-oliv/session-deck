@@ -74,7 +74,7 @@ Items before the first prompt (e.g. after a compaction) attach to a turn with an
 ## 5. Detail pane
 
 - **Tab bar** (44px, bottom hairline): tabs Overview and Transcript (28px, active `--app-selected` / `--app-text`, inactive `--app-text-3`), the Transcript count = total items (hidden until loaded), spacer, Focus button (`Expand` icon 12px + "Focus" / "Exit focus", tooltips "Hide the tree and list" / "Show the tree and list again", hover wash).
-- **Scroll body**: flex 1, `overflow-y: auto`. Overview padding becomes `40px 56px`; its content is unchanged. Transcript padding `24px 40px 48px`, max-width 820px, gap 24px.
+- **Scroll body**: each tab owns its own scroll body (flex 1, `overflow-y: auto`): the Overview's `.detail-body` with padding `40px 56px` and unchanged content, and the Transcript component's root `.tx` with padding `24px 40px 48px`, max-width 820px, gap 24px.
 - `detailTab` and `focus` live in `Deck` and survive session changes.
 - **Loading**: `Detail` calls `getTranscript` when the selected id changes, whatever the tab. While `session.live`, it calls again on every `sessionsChanged`. A stale response (id changed meanwhile) is dropped.
 
@@ -143,7 +143,7 @@ In-source, named by behaviour:
 - `transcripts.ts`: tails appended lines without reparsing, resets on shrink, evicts beyond four, `output` range errors.
 - `lines.ts`: a line split across chunks; a multibyte character across a chunk boundary.
 - `panes.ts`: clamps, the detail-pane floor, reading a bad stored value.
-- Renderer static renders: tab bar with count and Focus label; a tool row with diff stat, an open diff grid, a group row, the two end-bar labels; `Deck` in focus renders no sidebar or list; `Detail` on the Transcript tab.
+- Renderer static renders: tab bar with count and Focus label; a tool row with hidden-output meta, the diff grid, a group row, the two end-bar labels; `Detail` on the Transcript tab in focus. Focus hiding the two panes is checked by hand in the verification task, since static renders cannot set `Deck` state.
 - `npm run typecheck` clean; after `npm run build`, `grep -r "import.meta.vitest" out/` finds nothing.
 
 ## 11. Files
