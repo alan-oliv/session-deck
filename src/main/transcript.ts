@@ -18,6 +18,7 @@ export interface Agg {
   effort: string | null
   permissionMode: string | null
   pr: PullRequest | null
+  prs: PullRequest[]
   forkedFrom: string | null
   awaySummary: string | null
   files: Record<string, { added: number; removed: number }>
@@ -45,6 +46,7 @@ export interface Facts {
   effort: string | null
   permissionMode: string | null
   pr: PullRequest | null
+  prs: PullRequest[]
   forkedFrom: string | null
   prompts: string[]
   summary: { did: string; next: string[] } | null
@@ -88,7 +90,7 @@ const str = (v: unknown): string | null => (typeof v === 'string' && v.length > 
 export function emptyAgg(id: string): Agg {
   return {
     id, customTitle: null, firstPrompt: null, prompts: [], cwd: null, branch: null, entrypoint: null,
-    start: null, end: null, model: null, effort: null, permissionMode: null, pr: null, forkedFrom: null,
+    start: null, end: null, model: null, effort: null, permissionMode: null, pr: null, prs: [], forkedFrom: null,
     awaySummary: null, files: {}, commits: [], artifacts: {}, lastEvent: 'normal', sum: zero(),
     lastMsgId: null, lastMsgUsage: zero(), context: 0, compactions: 0, costState: null,
   }
@@ -129,7 +131,10 @@ function reduceRecord(agg: Agg, r: Rec): void {
     case 'pr-link': {
       const n = num(r.prNumber)
       const url = str(r.prUrl)
-      if (n > 0 && url) agg.pr = { repo: str(r.prRepository) ?? '', number: n, url }
+      if (n > 0 && url) {
+        agg.pr = { repo: str(r.prRepository) ?? '', number: n, url }
+        if (!agg.prs.some((p) => p.url === url)) agg.prs.push(agg.pr)
+      }
       break
     }
     case 'cost-state':
@@ -315,6 +320,7 @@ export function finalize(agg: Agg): Facts | null {
     effort: agg.effort,
     permissionMode: agg.permissionMode,
     pr: agg.pr,
+    prs: agg.prs,
     forkedFrom: agg.forkedFrom,
     prompts: agg.prompts,
     summary: agg.awaySummary ? splitSummary(agg.awaySummary) : null,
@@ -475,15 +481,18 @@ if (import.meta.vitest) {
     expect(splitSummary('Fixed it. Next, once the run ends, I tune.')).toEqual({ did: 'Fixed it.', next: ['Once the run ends, I tune.'] })
   })
 
-  it('reads the PR link, the fork parent and the number of compactions', () => {
+  it('keeps every distinct PR the session linked, the latest as its PR, plus the fork parent and compactions', () => {
     const f = run(
       { type: 'attachment', forkedFrom: { sessionId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', messageUuid: 'x' }, ...base, timestamp: '2026-10-06T09:00:00.000Z' },
       user('go'),
+      { type: 'pr-link', sessionId: id, prNumber: '28', prUrl: 'https://github.com/alan-oliv/meetnotes/pull/28', prRepository: 'alan-oliv/meetnotes' },
+      { type: 'pr-link', sessionId: id, prNumber: '29', prUrl: 'https://github.com/alan-oliv/meetnotes/pull/29', prRepository: 'alan-oliv/meetnotes' },
       { type: 'pr-link', sessionId: id, prNumber: '28', prUrl: 'https://github.com/alan-oliv/meetnotes/pull/28', prRepository: 'alan-oliv/meetnotes' },
       { type: 'system', subtype: 'compact_boundary', ...base, timestamp: '2026-10-06T09:50:00.000Z' },
     )
     expect(f?.forkedFrom).toBe('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee')
     expect(f?.pr).toEqual({ repo: 'alan-oliv/meetnotes', number: 28, url: 'https://github.com/alan-oliv/meetnotes/pull/28' })
+    expect(f?.prs.map((x) => x.number)).toEqual([28, 29])
     expect(f?.compactions).toBe(1)
   })
 

@@ -58,10 +58,18 @@ function haystack(s: Session): string {
     s.title, s.repo?.name ?? '', s.cwd, tildify(s.cwd), s.branch ?? '', s.prompts.join(' '),
     s.summary ? `${s.summary.did} ${s.summary.next.join(' ')}` : '',
     s.files.map((f) => f.path).join(' '),
-    s.pr ? `${s.pr.repo}#${s.pr.number} #${s.pr.number}` : '',
+    s.prs.map((p) => `${p.repo}#${p.number} #${p.number} ${p.url}`).join(' '),
     s.commits.map((c) => `${c.sha} ${c.msg}`).join(' '),
     s.artifacts.map((a) => a.name).join(' '),
   ].join(' ').toLowerCase()
+}
+
+const PR_URL = /^(?:https?:\/\/)?(?:www\.)?github\.com\/([^/\s]+\/[^/\s]+)\/pull\/(\d+)(?:[/?#]\S*)?$/i
+
+// A pasted PR link: the whole query must be the URL, so prose that merely mentions one stays a text search.
+export function parsePrUrl(q: string): { repo: string; number: number } | null {
+  const m = PR_URL.exec(q.trim())
+  return m ? { repo: m[1], number: Number(m[2]) } : null
 }
 
 export function matches(s: Session, q: string): boolean {
@@ -85,7 +93,7 @@ export function ask(s: Session, q: string): { score: number; pct: number; reason
   const fields: [string, string][] = [
     ...s.files.map((f): [string, string] => [`Changed ${f.path}`, f.path]),
     ...s.artifacts.map((a): [string, string] => [`Created ${a.name}`, `${a.name} ${a.kind} ${a.preview}`]),
-    ...(s.pr ? [[`PR ${s.pr.repo}#${s.pr.number}`, `${s.pr.repo}#${s.pr.number}`] as [string, string]] : []),
+    ...s.prs.map((p): [string, string] => [`PR ${p.repo}#${p.number}`, `${p.repo}#${p.number}`]),
     ...(first ? [[`Prompt: “${first.length > 80 ? `${first.slice(0, 79)}…` : first}”`, s.prompts.join(' ')] as [string, string]] : []),
     ...(s.summary ? [[`Summary: ${s.summary.did}`, `${s.summary.did} ${s.summary.next.join(' ')}`] as [string, string]] : []),
     [`Title: ${s.title}`, `${s.title} ${s.repo?.name ?? ''}`],
@@ -228,14 +236,18 @@ export function search(all: Session[], kind: KindId, query: string, ctx: SearchC
     case 'prs': {
       const rows: Result[] = []
       const qn = ql.replace(/^#/, '')
+      const link = parsePrUrl(q)
       for (const s of shown) {
-        if (s.pr) {
-          const label = `${s.pr.repo}#${s.pr.number}`
-          if (!q || label.toLowerCase().includes(qn)) {
-            rows.push(row(s, { key: `${s.id}:pr`, icon: 'Branch', iconColor: 'var(--app-green)', title: label, sub: s.title, right: `#${s.pr.number}`, reason: `Opened ${label}` }))
+        for (const pr of s.prs) {
+          const label = `${pr.repo}#${pr.number}`
+          const hit = link
+            ? pr.number === link.number && pr.repo.toLowerCase() === link.repo.toLowerCase()
+            : !q || label.toLowerCase().includes(qn)
+          if (hit) {
+            rows.push(row(s, { key: `${s.id}:pr:${label}`, icon: 'Branch', iconColor: 'var(--app-green)', title: label, sub: s.title, right: `#${pr.number}`, reason: `Opened ${label}` }))
           }
         }
-        if (!q) continue
+        if (!q || link) continue
         for (const c of s.commits) {
           if (!`${c.sha} ${c.msg}`.toLowerCase().includes(ql)) continue
           rows.push(row(s, { key: `${s.id}:c:${c.sha}`, icon: 'Code2', iconColor: TERTIARY, title: c.msg, sub: `${c.sha} · ${s.title}`, mono: true, reason: `Commit ${c.sha} ${c.msg}` }))
@@ -299,6 +311,10 @@ if (import.meta.vitest) {
     files: [{ path: 'src/transcribe/diarize.ts', added: 141, removed: 52 }],
     commits: [{ sha: '4e9c1b7', msg: 'Stream partial transcripts to the live view', at: at(6) }],
     pr: { repo: 'alan-oliv/meetnotes', number: 27, url: 'https://github.com/alan-oliv/meetnotes/pull/27' },
+    prs: [
+      { repo: 'alan-oliv/meetnotes', number: 26, url: 'https://github.com/alan-oliv/meetnotes/pull/26' },
+      { repo: 'alan-oliv/meetnotes', number: 27, url: 'https://github.com/alan-oliv/meetnotes/pull/27' },
+    ],
     artifacts: [{ name: 'veracity-report.md', kind: 'markdown', path: '/Users/me/code/app/.claude/veracity-report.md', bytes: 9000, preview: '# Veracity report' }],
   })
   const team8 = makeSession({ title: 'perf pass', end: at(5), repo: { name: 'team8', root: '/Users/me/code/team8' }, cwd: '/Users/me/code/team8' })
@@ -352,6 +368,15 @@ if (import.meta.vitest) {
     expect(titles(search(all, 'prs', '#27', ctx))).toEqual(['alan-oliv/meetnotes#27'])
     expect(titles(search(all, 'prs', '4e9c', ctx))).toEqual(['Stream partial transcripts to the live view'])
     expect(search(all, 'prs', '', ctx)[0].label).toBe('Pull requests')
+  })
+  it('finds the session behind a pasted GitHub PR link, including an earlier PR it opened', () => {
+    expect(titles(search(all, 'prs', 'https://github.com/alan-oliv/meetnotes/pull/26', ctx))).toEqual(['alan-oliv/meetnotes#26'])
+    expect(titles(search(all, 'prs', 'github.com/Alan-Oliv/meetnotes/pull/27/files?w=1', ctx))).toEqual(['alan-oliv/meetnotes#27'])
+    expect(titles(search(all, 'prs', 'https://github.com/alan-oliv/other/pull/27', ctx))).toEqual([])
+    expect(search(all, 'prs', 'https://github.com/alan-oliv/meetnotes/pull/26', ctx)[0].results[0]).toMatchObject({ type: 'session', session: { id: live.id } })
+    expect(titles(search(all, 'sessions', 'https://github.com/alan-oliv/meetnotes/pull/26', ctx))).toEqual(['live-meeting'])
+    expect(parsePrUrl('see https://github.com/a/b/pull/31')).toBeNull()
+    expect(parsePrUrl('  https://github.com/a/b/pull/31#discussion  ')).toEqual({ repo: 'a/b', number: 31 })
   })
   it('suggests places until the first word names one, then searches inside it', () => {
     expect(titles(search(all, 'in', '', ctx))).toEqual(['app', 'team8', '~/code'])

@@ -53,6 +53,7 @@ export interface Session {
   status: Status
   live: boolean
   pr: PullRequest | null
+  prs: PullRequest[]
   forkedFrom: string | null
   forks: number
   prompts: string[]

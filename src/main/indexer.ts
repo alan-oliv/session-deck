@@ -12,7 +12,7 @@ import { writeJsonAtomic } from './settings'
 import { emptyAgg, finalize, reduceLine, type Agg, type Facts } from './transcript'
 
 // Bump whenever transcript.ts changes what it extracts, so every file is reparsed.
-export const CACHE_VERSION = 2
+export const CACHE_VERSION = 3
 const DAY_MS = 86_400_000
 const DEBOUNCE_MS = 300
 // The cache can be tens of MB; write it at most this often, and on stop().
@@ -107,6 +107,7 @@ export function toSession(f: Facts, x: SessionContext): Session {
     status: statusOf(f, x.live),
     live: !!x.live,
     pr: f.pr,
+    prs: f.prs,
     forkedFrom: f.forkedFrom,
     forks: x.forks,
     prompts: f.prompts,
@@ -353,7 +354,7 @@ if (import.meta.vitest) {
   const facts = (over: Partial<Facts> = {}): Facts => ({
     id, title: 't', named: false, cwd: '/r/app/src', branch: 'main', hidden: false,
     start: '2026-10-06T09:00:00.000Z', end: '2026-10-06T10:00:00.000Z', model: 'claude-opus-5-5', effort: 'high',
-    permissionMode: 'default', pr: null, forkedFrom: null, prompts: [], summary: null,
+    permissionMode: 'default', pr: null, prs: [], forkedFrom: null, prompts: [], summary: null,
     files: [{ path: '/r/app/src/a.ts', added: 1, removed: 0 }, { path: '/tmp/x.md', added: 2, removed: 0 }],
     commits: [], artifacts: [], lastEvent: 'normal',
     tokens: { input: 10, output: 5, cacheRead: 980, cacheWrite: 10 }, context: 1000, compactions: 0,
