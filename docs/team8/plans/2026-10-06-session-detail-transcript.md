@@ -1010,7 +1010,7 @@ if (import.meta.vitest) {
   })
   it('writes the turn label and meta line from every item, not just the shown ones', () => {
     const v = transcriptView(t, state({ filter: 'msg' }))
-    expect(v.turns[0]).toMatchObject({ index: 0, label: 'Turn 1', meta: '6 steps · 1 edit' })
+    expect(v.turns[0]).toMatchObject({ index: 0, label: 'Turn 1', meta: '5 steps · 1 edit' })
     expect(v.turns[1]).toMatchObject({ index: 1, label: 'Turn 2', meta: '1 step' })
   })
   it('shows prompts and recaps under All and Messages, footers under All only', () => {
@@ -1514,7 +1514,7 @@ if (import.meta.vitest) {
     expect(html).toContain('All<span class="seg-count tnum">8</span>')
     expect(html).toContain('Errors<span class="seg-count tnum">1</span>')
     expect(html).toContain('>Turn 1<')
-    expect(html).toContain('>6 steps · 1 edit<')
+    expect(html).toContain('>5 steps · 1 edit<')
     expect(html).toContain('>Bash</span>')
     expect(html).toContain('>+108 lines<')
     expect(html).toContain('>4 steps</span>')
