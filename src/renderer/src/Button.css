@@ -1,0 +1,37 @@
+.btn {
+  height: 28px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--app-radius);
+  font: 500 13px/1 var(--app-font);
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--app-focus);
+}
+
+.btn-primary {
+  background: var(--app-brand);
+  color: var(--app-on-primary);
+  box-shadow: var(--app-shadow-primary);
+}
+
+.btn-primary:hover {
+  background: var(--app-brand-hover);
+}
+
+.btn-secondary {
+  background: var(--app-elevated);
+  color: var(--app-text);
+  box-shadow: var(--app-shadow-secondary);
+}
+
+.btn-secondary:hover {
+  background: var(--app-hover);
+  box-shadow: var(--app-shadow-secondary-hover);
+}

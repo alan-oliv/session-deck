@@ -1,0 +1,98 @@
+:root {
+  --app-bg: #181921;
+  --app-sidebar: #191a23;
+  --app-surface: #1d1e2b;
+  --app-elevated: #292a35;
+  --app-hover: #2c2d42;
+  --app-selected: #393a4b;
+  --app-modal: #202128;
+  --app-border: #2c2d3c;
+  --app-border-strong: #393a4b;
+  --app-border-hover: #444556;
+  --app-divider: rgba(89, 89, 116, 0.25);
+  --app-wash: rgba(149, 149, 189, 0.125);
+  --app-scrim: rgba(29, 30, 43, 0.498);
+  --app-text: #eeeffc;
+  --app-text-2: #d2d3e0;
+  --app-text-3: #858699;
+  --app-text-disabled: #6b6f76;
+  --app-link: #6c79ff;
+  --app-link-hover: #7477f0;
+  --app-on-primary: #ffffff;
+  --app-brand: #575bc7;
+  --app-brand-hover: #666be2;
+  --app-focus: #5e6ad2;
+  --app-green: #4cb782;
+  --app-yellow: #f2c94c;
+  --app-orange: #f2994a;
+  --app-red: #eb5757;
+  --app-blue: #4ea7fc;
+  --app-violet: #bb87fc;
+  --app-font: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --app-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --app-radius: 4px;
+  --app-radius-track: 5px;
+  --app-radius-panel: 8px;
+  --app-radius-meter: 3px;
+  --app-shadow-panel: 0 16px 70px rgba(0, 0, 0, 0.5);
+  --app-shadow-primary: inset 0 0 0 1px #575bc7, 0 1px 2px rgba(0, 0, 0, 0.09);
+  --app-shadow-secondary: inset 0 0 0 1px #393a4b, 0 1px 1px rgba(0, 0, 0, 0.15);
+  --app-shadow-secondary-hover: inset 0 0 0 1px #444556, 0 1px 1px rgba(0, 0, 0, 0.15);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--app-bg);
+  color: var(--app-text);
+  font-family: var(--app-font);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  cursor: default;
+  overflow: hidden;
+}
+
+input::placeholder {
+  color: var(--app-text-3);
+}
+
+.keycap {
+  font-size: 11px;
+  line-height: 18px;
+  padding: 0 5px;
+  border-radius: var(--app-radius);
+  background: var(--app-elevated);
+  box-shadow: inset 0 0 0 1px var(--app-border-strong);
+  color: var(--app-text-3);
+  white-space: nowrap;
+}
+
+.keycap:hover {
+  color: var(--app-text);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.mono {
+  font-family: var(--app-mono);
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}

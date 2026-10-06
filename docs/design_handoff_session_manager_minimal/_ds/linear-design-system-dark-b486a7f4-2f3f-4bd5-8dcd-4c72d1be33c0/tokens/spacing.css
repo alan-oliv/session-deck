@@ -1,0 +1,4 @@
+/* Spacing, radii and fixed layout dimensions observed across the kit. Values are literal to the file (14px button padding, 220px sidebar, 5px section radius). */
+:root{--space-1:4px;--space-2:8px;--space-3:12px;--space-3-5:14px;--space-4:16px;--space-5:20px;--space-6:24px;--space-8:32px;--space-15:60px;
+--radius-sm:4px;--radius-md:5px;--radius-lg:8px;--radius-xl:12px;--radius-full:9999px;
+--sidebar-width:220px;--topbar-height:56px;--right-sidebar-width:340px;--row-height:44px;--control-height-sm:24px;--control-height-md:32px;--control-height-lg:40px;--icon-sm:14px;--icon-md:16px;--icon-lg:24px;--border-width:1px;--divider-width:.5px}

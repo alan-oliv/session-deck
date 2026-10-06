@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="stylesheet" href="_ds/linear-design-system-dark-b486a7f4-2f3f-4bd5-8dcd-4c72d1be33c0/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/linear-design-system-dark-b486a7f4-2f3f-4bd5-8dcd-4c72d1be33c0/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/linear-design-system-dark-b486a7f4-2f3f-4bd5-8dcd-4c72d1be33c0/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/linear-design-system-dark-b486a7f4-2f3f-4bd5-8dcd-4c72d1be33c0/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/linear-design-system-dark-b486a7f4-2f3f-4bd5-8dcd-4c72d1be33c0/tokens/shadows.css">
+  <link rel="stylesheet" href="_ds/linear-design-system-dark-b486a7f4-2f3f-4bd5-8dcd-4c72d1be33c0/components/fig-assets.css">
+  <link rel="stylesheet" href="_ds/linear-design-system-dark-b486a7f4-2f3f-4bd5-8dcd-4c72d1be33c0/styles.css">
+  <script src="_ds/linear-design-system-dark-b486a7f4-2f3f-4bd5-8dcd-4c72d1be33c0/_ds_bundle.js"></script>
+  <script src="sessions-data.js"></script>
+  <style>html,body{margin:0;background:#151621;}*{box-sizing:border-box;}a{color:var(--text-link);text-decoration:none;}a:hover{color:var(--purple-2);text-decoration:underline;}input::placeholder{color:var(--text-tertiary);}</style>
+</helmet>
+<section style="padding:56px; display:flex; flex-direction:column; gap:28px; font-family:var(--font-sans); color:var(--text-primary);">
+  <div style="display:flex; flex-direction:column; gap:8px; max-width:720px;">
+    <div style="font-size:12px; line-height:16px; color:var(--text-tertiary);">Session Manager · Minimal</div>
+    <h1 style="margin:0; font-size:24px; line-height:32px; font-weight:500;">Tree, list and detail</h1>
+    <p style="margin:0; font-size:13px; line-height:20px; color:var(--text-secondary); text-wrap:pretty;">Press ⌘⇧P for a Raycast-style command bar with nine kinds of search: plain text, ask in your own words (?), files (file:), artifacts (art:), PRs and commits (pr:), repository (in:), status (is:), time (when:) and actions on the selected session (&gt;). Type / to list them. Each kind shows examples in the preview pane.</p>
+    
+  </div>
+  <div id="2a" style="display:flex; flex-direction:column; gap:12px;">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <span style="font-size:12px; font-weight:500; padding:3px 7px; border-radius:4px; background:var(--brand); color:var(--text-on-primary);">2a</span>
+      <span style="font-size:13px; color:var(--text-secondary);">Tree, list and detail</span>
+    </div>
+    <div style="position:relative; width:1360px; height:820px; display:flex; border-radius:8px; overflow:hidden; background:var(--bg-app); box-shadow:inset 0 0 0 1px var(--border-default), var(--shadow-2xl);">
+      <sc-if value="{{ p.open }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ p.close }}" style="position:absolute; inset:0; z-index:10; background:var(--ui-overlay); display:flex; justify-content:center; align-items:flex-start; padding-top:96px;">
+          <div onClick="{{ p.stop }}" style="width:780px; height:500px; display:flex; flex-direction:column; border-radius:8px; overflow:hidden; background:var(--bg-modal); box-shadow:inset 0 0 0 1px var(--border-strong), var(--shadow-2xl);">
+            <div style="height:56px; flex-shrink:0; display:flex; align-items:center; gap:10px; padding:0 16px; box-shadow:inset 0 -1px 0 var(--ui-divider);">
+              <sc-if value="{{ p.hasChip }}" hint-placeholder-val="{{ false }}">
+                <span onClick="{{ p.clearKind }}" title="Remove search kind" style="display:flex; align-items:center; gap:6px; height:24px; padding:0 8px; border-radius:4px; background:var(--bg-selected); font-size:12px; color:var(--text-primary); white-space:nowrap; cursor:default;"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="{{ p.chipIcon }}" size="12" hint-size="12px,12px"></x-import>{{ p.chipLabel }}</span>
+              </sc-if>
+              <sc-if value="{{ p.noChip }}" hint-placeholder-val="{{ true }}"><span style="display:flex; color:var(--text-tertiary);"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="Search1" size="16" hint-size="16px,16px"></x-import></span></sc-if>
+              <input ref="{{ palRef }}" value="{{ p.text }}" onChange="{{ p.onQ }}" onKeyDown="{{ p.onKey }}" placeholder="{{ p.placeholder }}" style="flex:1; min-width:0; border:0; outline:0; background:transparent; font:inherit; font-size:15px; color:var(--text-primary);">
+              <span style="font-size:11px; line-height:18px; padding:0 5px; border-radius:4px; background:var(--bg-elevated); box-shadow:inset 0 0 0 1px var(--border-strong); color:var(--text-tertiary);">esc</span>
+            </div>
+            <div style="flex:1; min-height:0; display:flex;">
+              <div style="width:380px; flex-shrink:0; overflow-y:auto; padding:6px; box-shadow:inset -1px 0 0 var(--ui-divider);">
+                <sc-for list="{{ p.groups }}" as="g" hint-placeholder-count="2">
+                  <div style="display:flex; flex-direction:column; gap:1px;">
+                    <div style="padding:10px 10px 6px; font-size:12px; line-height:16px; color:var(--text-tertiary);">{{ g.label }}</div>
+                    <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="4">
+                      <div onClick="{{ it.onClick }}" onMouseMove="{{ it.onHover }}" style="display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:4px; background:{{ it.bg }}; cursor:default;">
+                        <span style="display:flex; color:{{ it.iconColor }};"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="{{ it.icon }}" size="14" hint-size="14px,14px"></x-import></span>
+                        <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;">
+                          <span style="font-size:13px; line-height:16px; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ it.title }}</span>
+                          <sc-if value="{{ it.hasSub }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px; line-height:16px; color:var(--text-tertiary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-family:{{ it.subFont }};">{{ it.sub }}</span></sc-if>
+                        </div>
+                        <sc-if value="{{ it.hasKey }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px; line-height:18px; padding:0 5px; border-radius:4px; background:var(--bg-elevated); box-shadow:inset 0 0 0 1px var(--border-strong); color:var(--text-secondary); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; white-space:nowrap;">{{ it.key }}</span></sc-if>
+                        <sc-if value="{{ it.hasRight }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px; color:var(--text-tertiary); white-space:nowrap;">{{ it.right }}</span></sc-if>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ p.empty }}" hint-placeholder-val="{{ false }}"><div style="padding:40px 16px; text-align:center; font-size:13px; color:var(--text-tertiary);">{{ p.emptyText }}</div></sc-if>
+              </div>
+              <div style="flex:1; min-width:0; overflow-y:auto; padding:20px 22px;">
+                <sc-if value="{{ p.pv.isKind }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex; flex-direction:column; gap:14px;">
+                    <div style="display:flex; align-items:center; gap:8px;"><span style="display:flex; color:var(--text-secondary);"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="{{ p.pv.icon }}" size="16" hint-size="16px,16px"></x-import></span><span style="font-size:15px; font-weight:500;">{{ p.pv.title }}</span></div>
+                    <p style="margin:0; font-size:13px; line-height:20px; color:var(--text-secondary); text-wrap:pretty;">{{ p.pv.desc }}</p>
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                      <span style="font-size:12px; color:var(--text-tertiary);">Try</span>
+                      <sc-for list="{{ p.pv.examples }}" as="ex" hint-placeholder-count="3">
+                        <span onClick="{{ ex.onClick }}" style="align-self:flex-start; padding:5px 8px; border-radius:4px; background:var(--bg-surface); box-shadow:inset 0 0 0 1px var(--border-default); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; color:var(--text-secondary); cursor:default;" style-hover="color:var(--text-primary); box-shadow:inset 0 0 0 1px var(--border-hover)">{{ ex.q }}</span>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ p.pv.isSession }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex; flex-direction:column; gap:16px;">
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                      <span style="font-size:15px; line-height:20px; font-weight:500; text-wrap:pretty;">{{ p.pv.title }}</span>
+                      <span style="font-size:12px; color:var(--text-tertiary);">{{ p.pv.when }}</span>
+                    </div>
+                    <sc-if value="{{ p.pv.hasReason }}" hint-placeholder-val="{{ false }}">
+                      <div style="display:flex; gap:8px; padding:8px 10px; border-radius:4px; background:var(--bg-surface); box-shadow:inset 0 0 0 1px var(--border-default); font-size:12px; line-height:18px; color:var(--text-secondary);"><span style="display:flex; padding-top:2px; color:var(--purple-1);"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="Bolt" size="12" hint-size="12px,12px"></x-import></span><span>{{ p.pv.reason }}</span></div>
+                    </sc-if>
+                    <div style="display:grid; grid-template-columns:72px minmax(0,1fr); row-gap:8px; column-gap:12px; font-size:12px; line-height:16px;">
+                      <sc-for list="{{ p.pv.facts }}" as="f" hint-placeholder-count="3">
+                        <span style="color:var(--text-tertiary);">{{ f.k }}</span>
+                        <span style="min-width:0; color:var(--text-secondary); font-family:{{ f.font }}; word-break:break-all;">{{ f.v }}</span>
+                      </sc-for>
+                    </div>
+                    <p style="margin:0; font-size:13px; line-height:20px; color:var(--text-secondary); text-wrap:pretty;">{{ p.pv.summary }}</p>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ p.pv.isArtifact }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex; flex-direction:column; gap:12px;">
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                      <span style="font-size:15px; line-height:20px; font-weight:500;">{{ p.pv.title }}</span>
+                      <span style="font-size:12px; color:var(--text-tertiary);">{{ p.pv.when }}</span>
+                    </div>
+                    <span style="font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:11px; line-height:16px; color:var(--text-tertiary); word-break:break-all;">{{ p.pv.path }}</span>
+                    <sc-if value="{{ p.pv.hasBody }}" hint-placeholder-val="{{ false }}">
+                      <pre style="margin:0; padding:10px 12px; border-radius:4px; background:var(--bg-surface); box-shadow:inset 0 0 0 1px var(--border-default); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; line-height:18px; color:var(--text-secondary); white-space:pre-wrap; word-break:break-word;">{{ p.pv.body }}</pre>
+                    </sc-if>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ p.pv.isCommand }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex; flex-direction:column; gap:10px;">
+                    <span style="font-size:12px; color:var(--text-tertiary);">Runs on</span>
+                    <span style="font-size:15px; line-height:20px; font-weight:500;">{{ p.pv.title }}</span>
+                    <span style="font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; line-height:18px; color:var(--text-secondary); word-break:break-all;">{{ p.pv.detail }}</span>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+            <div style="height:40px; flex-shrink:0; display:flex; align-items:center; gap:16px; padding:0 12px 0 16px; box-shadow:inset 0 1px 0 var(--ui-divider); font-size:12px; color:var(--text-tertiary);">
+              <span style="display:flex; align-items:center; gap:6px;"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="{{ p.footIcon }}" size="12" hint-size="12px,12px"></x-import>{{ p.footLabel }}</span>
+              <span style="flex:1;"></span>
+              <span style="display:flex; align-items:center; gap:6px; color:var(--text-secondary);">{{ p.primary }}<span style="font-size:11px; line-height:18px; padding:0 5px; border-radius:4px; background:var(--bg-elevated); box-shadow:inset 0 0 0 1px var(--border-strong);">↵</span></span>
+              <span style="width:1px; height:14px; background:var(--ui-divider);"></span>
+              <span style="display:flex; align-items:center; gap:6px;">Search kinds<span style="font-size:11px; line-height:18px; padding:0 5px; border-radius:4px; background:var(--bg-elevated); box-shadow:inset 0 0 0 1px var(--border-strong);">/</span></span>
+              <span style="display:flex; align-items:center; gap:6px;">Actions<span style="font-size:11px; line-height:18px; padding:0 5px; border-radius:4px; background:var(--bg-elevated); box-shadow:inset 0 0 0 1px var(--border-strong);">&gt;</span></span>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+      <aside style="width:220px; flex-shrink:0; display:flex; flex-direction:column; background:var(--bg-sidebar); box-shadow:inset -1px 0 0 var(--ui-divider);">
+        <div style="height:38px; flex-shrink:0; display:flex; align-items:center; gap:8px; padding:0 14px;">
+          <span style="width:12px; height:12px; border-radius:50%; background:#ff5f57;"></span>
+          <span style="width:12px; height:12px; border-radius:50%; background:#febc2e;"></span>
+          <span style="width:12px; height:12px; border-radius:50%; background:#28c840;"></span>
+        </div>
+        <div style="flex:1; min-height:0; overflow-y:auto; padding:6px 8px 16px; display:flex; flex-direction:column; gap:16px;">
+          <div onClick="{{ c.allNode.onClick }}" style="display:flex; align-items:center; gap:8px; height:28px; padding:0 8px; border-radius:4px; background:{{ c.allNode.bg }}; color:{{ c.allNode.color }}; font-size:13px; cursor:default;" style-hover="background:var(--ui-hover-1); color:var(--text-primary)">
+            <span style="display:flex; color:var(--text-tertiary);"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="AllItems" size="14" hint-size="14px,14px"></x-import></span>
+            <span style="flex:1;">All sessions</span>
+            <span style="font-size:12px; color:var(--text-tertiary);">{{ c.allNode.count }}</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:1px;">
+            <div style="padding:0 8px 6px; font-size:12px; line-height:16px; color:var(--text-tertiary);">Repositories</div>
+            <sc-for list="{{ c.repos }}" as="r" hint-placeholder-count="3">
+              <div style="display:flex; flex-direction:column; gap:1px;">
+                <div onClick="{{ r.onClick }}" style="display:flex; align-items:center; gap:6px; height:28px; padding:0 8px 0 2px; border-radius:4px; background:{{ r.bg }}; color:{{ r.color }}; font-size:13px; cursor:default;" style-hover="background:var(--ui-hover-1); color:var(--text-primary)">
+                  <span onClick="{{ r.onToggle }}" style="width:16px; height:16px; display:flex; align-items:center; justify-content:center; color:var(--text-tertiary);"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="ChevronDown2" style="{{ r.chevStyle }}" size="10" hint-size="10px,10px"></x-import></span>
+                  <span style="display:flex; color:var(--text-tertiary);"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="Box" size="14" hint-size="14px,14px"></x-import></span>
+                  <span style="flex:1; min-width:0; margin-left:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ r.label }}</span>
+                  <span style="font-size:12px; color:var(--text-tertiary);">{{ r.count }}</span>
+                </div>
+                <sc-if value="{{ r.open }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex; flex-direction:column; gap:1px; margin-left:17px; padding-left:8px; box-shadow:inset 1px 0 0 var(--ui-divider);">
+                    <sc-for list="{{ r.kids }}" as="k" hint-placeholder-count="2">
+                      <div onClick="{{ k.onClick }}" title="{{ k.title }}" style="display:flex; align-items:center; gap:8px; height:26px; padding:0 8px; border-radius:4px; background:{{ k.bg }}; color:{{ k.color }}; font-size:12px; cursor:default;" style-hover="background:var(--ui-hover-1); color:var(--text-primary)">
+                        <span style="display:flex; color:var(--text-tertiary);"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="{{ k.icon }}" size="12" hint-size="12px,12px"></x-import></span>
+                        <span style="flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-decoration:{{ k.deco }};">{{ k.label }}</span>
+                        <span style="color:var(--text-tertiary);">{{ k.count }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:1px;">
+            <div style="padding:0 8px 6px; font-size:12px; line-height:16px; color:var(--text-tertiary);">Folders</div>
+            <sc-for list="{{ c.folders }}" as="r" hint-placeholder-count="2">
+              <div onClick="{{ r.onClick }}" style="display:flex; align-items:center; gap:8px; height:28px; padding:0 8px; border-radius:4px; background:{{ r.bg }}; color:{{ r.color }}; font-size:13px; cursor:default;" style-hover="background:var(--ui-hover-1); color:var(--text-primary)">
+                <span style="display:flex; color:var(--text-tertiary);"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="Storage" size="14" hint-size="14px,14px"></x-import></span>
+                <span style="flex:1; min-width:0; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ r.label }}</span>
+                <span style="font-size:12px; color:var(--text-tertiary);">{{ r.count }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </aside>
+      <div style="width:380px; flex-shrink:0; display:flex; flex-direction:column; box-shadow:inset -1px 0 0 var(--ui-divider);">
+        <div style="padding:14px 16px 10px; flex-shrink:0; display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; align-items:baseline; gap:8px; padding:0 2px;">
+            <span style="font-size:15px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ c.scopeLabel }}</span>
+            <span style="flex:1; font-size:12px; color:var(--text-tertiary); white-space:nowrap;">{{ c.count }}</span>
+            <span onClick="{{ p.openIt }}" title="Command bar" style="font-size:11px; line-height:18px; padding:0 5px; border-radius:4px; background:var(--bg-elevated); box-shadow:inset 0 0 0 1px var(--border-strong); color:var(--text-tertiary); cursor:default;" style-hover="color:var(--text-primary)">⌘⇧P</span>
+          </div>
+          <sc-if value="{{ c.showModes }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex; gap:2px; padding:2px; border-radius:5px; background:var(--bg-surface); box-shadow:inset 0 0 0 1px var(--border-default);">
+              <sc-for list="{{ c.modes }}" as="m" hint-placeholder-count="5">
+                <div onClick="{{ m.onClick }}" title="{{ m.label }}" style="flex:{{ m.flex }}; display:flex; align-items:center; justify-content:center; gap:6px; height:28px; padding:0 10px; border-radius:4px; background:{{ m.bg }}; color:{{ m.color }}; font-size:13px; font-weight:500; cursor:default;" style-hover="color:var(--text-primary)">
+                  <x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="{{ m.icon }}" size="14" hint-size="14px,14px"></x-import>
+                  <sc-if value="{{ m.cur }}" hint-placeholder-val="{{ false }}"><span>{{ m.label }}</span></sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+        <div style="flex:1; min-height:0; overflow-y:auto; padding:0 8px 16px;">
+          <sc-if value="{{ c.isCal }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:4px 8px 12px; display:flex; flex-direction:column; gap:8px;">
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="flex:1; font-size:13px; font-weight:500;">{{ c.cal.title }}</span>
+                <span onClick="{{ c.cal.prev }}" title="Previous month" style="display:flex; padding:4px; border-radius:4px; color:var(--text-tertiary); cursor:default;" style-hover="background:var(--ui-hover-1); color:var(--text-primary)"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="ArrowRight" style="transform:rotate(180deg)" size="12" hint-size="12px,12px"></x-import></span>
+                <span onClick="{{ c.cal.next }}" title="Next month" style="display:flex; padding:4px; border-radius:4px; color:var(--text-tertiary); cursor:default;" style-hover="background:var(--ui-hover-1); color:var(--text-primary)"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="ArrowRight" size="12" hint-size="12px,12px"></x-import></span>
+              </div>
+              <div style="display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); row-gap:2px;">
+                <sc-for list="{{ c.cal.dows }}" as="w" hint-placeholder-count="7"><span style="padding:4px 0; text-align:center; font-size:11px; color:var(--text-tertiary);">{{ w.d }}</span></sc-for>
+                <sc-for list="{{ c.cal.cells }}" as="d" hint-placeholder-count="35">
+                  <div onClick="{{ d.onClick }}" style="height:38px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; border-radius:4px; background:{{ d.bg }}; box-shadow:{{ d.ring }}; cursor:default;" style-hover="background:var(--ui-hover-1)">
+                    <span style="font-size:12px; line-height:14px; color:{{ d.color }}; font-variant-numeric:tabular-nums;">{{ d.day }}</span>
+                    <span style="display:flex; gap:2px; height:4px;"><sc-for list="{{ d.dots }}" as="x" hint-placeholder-count="0"><span style="width:4px; height:4px; border-radius:50%; background:{{ x.c }};"></span></sc-for></span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+          <sc-for list="{{ c.groups }}" as="g" hint-placeholder-count="1">
+            <div style="display:flex; flex-direction:column;">
+              <sc-if value="{{ g.hasLabel }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex; align-items:baseline; gap:8px; padding:14px 10px 6px;">
+                  <span style="font-size:12px; line-height:16px; color:var(--text-secondary); font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ g.label }}</span>
+                  <span style="font-size:12px; color:var(--text-tertiary);">{{ g.count }}</span>
+                  <sc-if value="{{ g.hasNote }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px; color:var(--yellow);">{{ g.note }}</span></sc-if>
+                </div>
+              </sc-if>
+              <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="8">
+                <div onClick="{{ r.onClick }}" style="display:grid; grid-template-columns:{{ r.cols }}; column-gap:10px; align-items:start; padding:10px 10px; border-radius:4px; background:{{ r.bg }}; cursor:default;" style-hover="background:var(--ui-hover-1)">
+                  <sc-if value="{{ r.hasTime }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px; line-height:16px; color:var(--text-tertiary); font-variant-numeric:tabular-nums;">{{ r.time }}</span></sc-if>
+                  <div style="min-width:0; display:flex; flex-direction:column; gap:5px;">
+                    <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+                      <sc-if value="{{ r.hasDot }}" hint-placeholder-val="{{ false }}"><span title="{{ r.dotTitle }}" style="width:6px; height:6px; flex-shrink:0; border-radius:50%; background:{{ r.dot }};"></span></sc-if>
+                      <span style="flex:1; min-width:0; font-size:13px; line-height:16px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ r.title }}</span>
+                      <sc-if value="{{ r.hasAgo }}" hint-placeholder-val="{{ true }}"><span style="font-size:12px; color:var(--text-tertiary); white-space:nowrap;">{{ r.agoShort }}</span></sc-if>
+                    </div>
+                    <span style="font-size:12px; line-height:16px; color:var(--text-tertiary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ r.repoLine }}</span>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+          <sc-if value="{{ c.empty }}" hint-placeholder-val="{{ false }}"><div style="padding:48px 12px; text-align:center; font-size:13px; color:var(--text-tertiary);">No sessions here.</div></sc-if>
+        </div>
+      </div>
+      <div style="flex:1; min-width:0; overflow-y:auto; padding:72px 56px 40px;">
+        <sc-if value="{{ c.hasSel }}" hint-placeholder-val="{{ true }}">
+          <div style="max-width:560px; display:flex; flex-direction:column; gap:28px;">
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <h2 style="margin:0; font-size:22px; line-height:28px; font-weight:500; text-wrap:pretty;">{{ c.sel.title }}</h2>
+              <span style="font-size:13px; color:var(--text-tertiary);">{{ c.sel.when }}</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div onClick="{{ c.sel.onResume }}" style="display:flex; cursor:default;"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Buttons" hierarchy="primary" size="sm" text1="Resume" hint-size="76px,28px"></x-import></div>
+              <div onClick="{{ c.sel.onCopy }}" style="display:flex; cursor:default;"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Buttons" hierarchy="secondary" size="sm" text1="{{ c.sel.copyLabel }}" hint-size="112px,28px"></x-import></div>
+              <div onClick="{{ c.sel.onFork }}" title="Copies claude --resume … --fork-session" style="display:flex; cursor:default;"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Buttons" hierarchy="secondary" size="sm" text1="{{ c.sel.forkLabel }}" hint-size="56px,28px"></x-import></div>
+              <div onClick="{{ c.sel.onFolder }}" style="display:flex; cursor:default;"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Buttons" hierarchy="secondary" size="sm" text1="Open folder" hint-size="96px,28px"></x-import></div>
+              <sc-if value="{{ c.sel.hasPR }}" hint-placeholder-val="{{ false }}"><span onClick="{{ c.sel.onPR }}" title="Copies claude --from-pr" style="margin-left:6px; font-size:12px; color:var(--text-link); cursor:default;" style-hover="text-decoration:underline">{{ c.sel.prLabel }}</span></sc-if>
+            </div>
+            <div style="display:grid; grid-template-columns:96px minmax(0,1fr); row-gap:12px; column-gap:16px; font-size:13px; line-height:18px;">
+              <sc-for list="{{ c.sel.facts }}" as="f" hint-placeholder-count="4">
+                <span style="color:var(--text-tertiary);">{{ f.k }}</span>
+                <span style="min-width:0; color:var(--text-secondary); font-family:{{ f.font }}; font-size:{{ f.size }}; word-break:{{ f.wb }}; text-wrap:pretty;">{{ f.v }}</span>
+              </sc-for>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:14px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:12px; color:var(--text-tertiary);">Usage</span>
+                <span style="flex:1;"></span>
+                <span style="font-size:12px; color:var(--text-secondary);">{{ c.sel.usage.model }}</span>
+                <span style="font-size:11px; line-height:18px; padding:0 6px; border-radius:4px; box-shadow:inset 0 0 0 1px var(--border-strong); color:var(--text-secondary);">{{ c.sel.usage.effort }}</span>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; align-items:baseline; gap:8px; font-size:13px;">
+                  <span style="color:var(--text-secondary);">Context</span>
+                  <span style="flex:1;"></span>
+                  <span style="color:var(--text-primary); font-variant-numeric:tabular-nums;">{{ c.sel.usage.ctxLabel }}</span>
+                  <span style="color:var(--text-tertiary); font-variant-numeric:tabular-nums;">{{ c.sel.usage.ctxPct }}</span>
+                </div>
+                <div style="height:6px; border-radius:3px; background:var(--bg-elevated); box-shadow:inset 0 0 0 1px var(--border-default); overflow:hidden;"><div style="height:100%; width:{{ c.sel.usage.ctxW }}; background:{{ c.sel.usage.ctxColor }}; border-radius:3px;"></div></div>
+                <sc-if value="{{ c.sel.usage.hasPlan }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px; color:var(--text-tertiary);">{{ c.sel.usage.plan }}</span></sc-if>
+              </div>
+              <div style="display:flex; flex-direction:column; border-radius:4px; box-shadow:inset 0 0 0 1px var(--border-default);">
+                <sc-for list="{{ c.sel.usage.rows }}" as="row" hint-placeholder-count="4">
+                  <div style="display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); box-shadow:inset 0 -1px 0 var(--ui-divider);">
+                    <sc-for list="{{ row.cells }}" as="t" hint-placeholder-count="3">
+                      <div style="display:flex; flex-direction:column; gap:6px; padding:10px 12px; box-shadow:inset -1px 0 0 var(--ui-divider); min-width:0;">
+                        <span style="font-size:12px; line-height:14px; color:var(--text-tertiary);">{{ t.k }}</span>
+                        <div style="display:flex; align-items:baseline; gap:6px; min-width:0;">
+                          <span style="font-size:15px; line-height:18px; color:var(--text-primary); font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ t.v }}</span>
+                          <sc-if value="{{ t.hasSub }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px; color:var(--text-tertiary); white-space:nowrap;">{{ t.sub }}</span></sc-if>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <span style="font-size:12px; color:var(--text-tertiary);">Where it stopped</span>
+              <p style="margin:0; font-size:13px; line-height:20px; color:var(--text-secondary); text-wrap:pretty;">{{ c.sel.summary }}</p>
+            </div>
+            <sc-if value="{{ c.sel.hasNext }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <span style="font-size:12px; color:var(--text-tertiary);">Next</span>
+                <sc-for list="{{ c.sel.next }}" as="n" hint-placeholder-count="2">
+                  <span style="font-size:13px; line-height:20px; color:var(--text-secondary);">{{ n.t }}</span>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ c.sel.hasFiles }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <span style="font-size:12px; color:var(--text-tertiary);">{{ c.sel.filesLabel }}</span>
+                <sc-for list="{{ c.sel.files }}" as="p" hint-placeholder-count="3">
+                  <span style="font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; line-height:18px; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ p.p }}</span>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { ready: false, qa: '', qb: '', fa: false, fb: false, selA: 's1', selB: 's1', scope: 'all', copied: null, toast: '' };
+  palRef = React.createRef();
+  KINDS = [
+    { id: 'text', prefix: '', label: 'Sessions', icon: 'Search1', desc: 'Match words in titles, prompts, summaries and paths. This is what you get when you just type.', ex: ['transcript', 'board performance', 'marketplaces'] },
+    { id: 'ask', prefix: '?', label: 'Ask', icon: 'Bolt', desc: 'Describe the session in your own words. Results are ranked by meaning and say why they matched.', ex: ['? where did I fix the failed transcript', '? the one that made team8 faster', '? telling speakers apart'] },
+    { id: 'file', prefix: 'file:', label: 'Files', icon: 'Document', desc: 'Find sessions by a file they changed. Partial names and paths work.', ex: ['file:diarize', 'file:useVirtualRows', 'file:.claude/commands'] },
+    { id: 'art', prefix: 'art:', label: 'Artifacts', icon: 'Attachment2', desc: 'Find what a session produced: plans, reports, docs, commands and screenshots, even when the session name says nothing about them.', ex: ['art:report', 'art:.md', 'art:profile'] },
+    { id: 'pr', prefix: 'pr:', label: 'PRs and commits', icon: 'Branch', desc: 'Look up a PR number, PR title, commit hash or commit message.', ex: ['pr:27', 'pr:audio-sync', 'pr:virtualize'] },
+    { id: 'in', prefix: 'in:', label: 'Repository', icon: 'Box', desc: 'Limit to one repository or folder, then keep typing to search inside it.', ex: ['in:team8', 'in:meetnotes live', 'in:~/code'] },
+    { id: 'is', prefix: 'is:', label: 'Status', icon: 'Loader', desc: 'Running, interrupted, paused or completed sessions.', ex: ['is:running', 'is:interrupted', 'is:paused'] },
+    { id: 'when', prefix: 'when:', label: 'Time', icon: 'ClockOutline', desc: 'Today, yesterday or this week.', ex: ['when:today', 'when:yesterday', 'when:week'] },
+    { id: 'cmd', prefix: '>', label: 'Actions', icon: 'Code', desc: 'Run an action on the selected session without leaving the keyboard.', ex: ['> resume', '> copy', '> open pr'] }
+  ];
+  STOP = new Set('the a an one session sessions where when which that i we me my claude did do was is to of for in on with and or about it this from made make work worked fix fixed find found'.split(' '));
+  componentDidMount() {
+    const go = () => (window.CSM_DATA && window.LinearDesignSystemDark_b486a7) ? this.setState({ ready: true }) : (this._t = setTimeout(go, 40)); go();
+    this._k = (e) => { if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); this.state.pOpen === false ? this.openPal() : this.setState({ pOpen: false }); } };
+    window.addEventListener('keydown', this._k);
+  }
+  componentWillUnmount() { clearTimeout(this._t); clearTimeout(this._c); window.removeEventListener('keydown', this._k); }
+  openPal() { this.setState({ pOpen: true, pk: 'text', pq: '', pIdx: 0 }); setTimeout(() => this.palRef.current && this.palRef.current.focus(), 30); }
+  setKind(id, rest) { this.setState({ pk: id, pq: rest || '', pIdx: 0 }); setTimeout(() => this.palRef.current && this.palRef.current.focus(), 10); }
+  sem(s, q) {
+    const toks = q.toLowerCase().replace(/[^a-z0-9#./_\-\s]/g, ' ').split(/\s+/).filter(t => t && !this.STOP.has(t)).map(t => t.length > 4 ? t.replace(/(ing|ed|er|es|s)$/, '') : t);
+    if (!toks.length) return null;
+    const F = s.fileList.map(f => ['Changed ' + f.p, f.p]).concat((s.artifacts || []).map(a => ['Created ' + a.name, a.name + ' ' + a.kind + ' ' + (a.preview || '')])).concat(s.pr ? [['PR ' + (s.pr.repoFull || s.repo) + '#' + s.pr.n + ' ' + s.pr.title, s.pr.title]] : [], [['Prompt: \u201c' + s.prompt + '\u201d', s.prompt], ['Summary: ' + s.summary.did, s.summary.goal + ' ' + s.summary.did], ['Topics: ' + s.concepts.slice(0, 4).join(', '), s.concepts.join(' ') + ' ' + s.title + ' ' + s.repo]]);
+    let hit = 0, reason = '';
+    toks.forEach(t => { const f = F.find(x => x[1].toLowerCase().includes(t)); if (f) { hit++; if (!reason) reason = f[0]; } });
+    const sc = hit / toks.length; return sc >= 0.5 ? { sc, reason, pct: Math.round(58 + sc * 36) } : null;
+  }
+  pVals(all) {
+    const S = this.state, open = S.pOpen !== false, kid = S.pk || 'text', K = this.KINDS.find(k => k.id === kid), q = (S.pq || '').trim(), ql = q.toLowerCase();
+    const mono = 'ui-monospace, SFMono-Regular, Menlo, monospace', sans = 'var(--font-sans)';
+    const selC = this.D.sessions.find(s => s.id === S.selC) || all[0];
+    const groups = [], flat = [];
+    const add = (label, items) => { if (items.length) groups.push({ label, items }); };
+    const it = (o) => { const i = flat.length; flat.push(o); return o; };
+    const sItem = (s, extra) => it(Object.assign({ kind: 'session', s, icon: this.dot(s) ? 'Loader' : 'Document', iconColor: this.dot(s) ? this.dot(s)[0] : 'var(--text-tertiary)', title: s.title, sub: (this.isRepo(s) ? s.repo + ' · ' : '') + this.agoShort(s), subFont: sans, right: '', key: '' }, extra || {}));
+    const kItem = (k) => it({ kind: 'kind', k, icon: k.icon, iconColor: 'var(--text-secondary)', title: k.label, sub: k.ex[0], subFont: mono, key: k.prefix || 'type', right: '' });
+    const optItem = (label, sub, fn, icon) => it({ kind: 'opt', icon: icon || K.icon, iconColor: 'var(--text-secondary)', title: label, sub, subFont: sans, key: '', right: '', fn });
+    if (kid === 'text' && (q === '' || q === '/')) {
+      add('Search kinds', this.KINDS.filter(k => k.id !== 'text').map(kItem));
+      if (q === '') add('Recent', all.slice(0, 3).map(s => sItem(s)));
+    } else if (kid === 'text') {
+      add('Sessions', all.filter(s => this.match(s, q)).map(s => sItem(s)));
+      add('Search kinds', this.KINDS.filter(k => k.id !== 'text' && (k.label.toLowerCase().includes(ql) || k.prefix.startsWith(ql))).map(kItem));
+    } else if (kid === 'ask') {
+      if (!q) add('Examples', K.ex.map(e => optItem(e.slice(2), 'Ask', () => this.setKind('ask', e.slice(2)), 'Bolt')));
+      else add('Best matches', all.map(s => ({ s, m: this.sem(s, q) })).filter(o => o.m).sort((a, b) => b.m.sc - a.m.sc).map(o => sItem(o.s, { right: o.m.pct + '%', reason: o.m.reason })));
+    } else if (kid === 'file') {
+      const rows = []; all.forEach(s => s.fileList.forEach(f => { if (!q || f.p.toLowerCase().includes(ql)) rows.push(sItem(s, { icon: 'Document', iconColor: 'var(--text-tertiary)', title: f.p.split('/').pop(), sub: f.p.split('/').slice(0, -1).join('/') + ' · ' + s.title, subFont: mono, right: '+' + f.a, reason: 'Changed ' + f.p })); }));
+      add(q ? 'Files' : 'Recently changed files', rows.slice(0, 40));
+    } else if (kid === 'art') {
+      const rows = []; all.forEach(s => (s.artifacts || []).forEach(a => { if (!q || (a.name + ' ' + a.kind + ' ' + a.path + ' ' + (a.preview || '')).toLowerCase().includes(ql)) rows.push(sItem(s, { icon: 'Attachment2', iconColor: 'var(--text-secondary)', title: a.name, sub: a.kind + ' · ' + a.size + ' · ' + s.title, right: this.agoShort(s), art: a, reason: 'Created ' + a.path })); }));
+      add(q ? 'Artifacts' : 'All artifacts', rows);
+    } else if (kid === 'pr') {
+      const rows = [];
+      all.forEach(s => {
+        if (s.pr) { const lbl = (s.pr.repoFull || s.repo) + '#' + s.pr.n; if (!q || (lbl + ' ' + s.pr.title).toLowerCase().includes(ql.replace(/^#/, ''))) rows.push(sItem(s, { icon: 'Branch', iconColor: 'var(--green)', title: s.pr.title, sub: lbl + ' · ' + s.title, right: '#' + s.pr.n, reason: 'Opened ' + lbl })); }
+        s.commits.forEach(c => { if (q && (c.sha + ' ' + c.msg).toLowerCase().includes(ql)) rows.push(sItem(s, { icon: 'Code2', iconColor: 'var(--text-tertiary)', title: c.msg, sub: c.sha + ' · ' + s.title, subFont: mono, reason: 'Commit ' + c.sha + ' ' + c.msg })); });
+      });
+      add(q ? 'Matches' : 'Pull requests', rows);
+    } else if (kid === 'in') {
+      const places = this.D.repos.filter(r => all.some(s => s.repo === r.id)).map(r => ({ id: this.isRepo({ repo: r.id }) ? r.id : r.path, test: (s) => this.isRepo({ repo: r.id }) ? s.repo === r.id : (!this.isRepo(s) && this.path(s) === r.path) }));
+      const [first, ...rest] = q.split(/\s+/); const pl = places.find(p => p.id.toLowerCase() === (first || '').toLowerCase());
+      if (pl) add('In ' + pl.id, all.filter(s => pl.test(s) && this.match(s, rest.join(' '))).map(s => sItem(s)));
+      else add('Repositories and folders', places.filter(p => !q || p.id.toLowerCase().includes(ql)).map(p => optItem(p.id, all.filter(p.test).length + ' sessions', () => this.setKind('in', p.id + ' '), 'Box')));
+    } else if (kid === 'is' || kid === 'when') {
+      const opts = kid === 'is' ? [['running', s => s.status === 'active'], ['interrupted', s => s.status === 'interrupted'], ['paused', s => s.status === 'paused'], ['completed', s => s.status === 'completed']] : [['today', s => this.days(s) === 0], ['yesterday', s => this.days(s) === 1], ['week', s => this.days(s) <= 7]];
+      const o = opts.find(x => x[0] === ql);
+      if (o) add(K.label + ': ' + o[0], all.filter(o[1]).map(s => sItem(s)));
+      else add(K.label, opts.filter(x => !q || x[0].startsWith(ql)).map(x => optItem(x[0], all.filter(x[1]).length + ' sessions', () => this.setKind(kid, x[0]))));
+    } else if (kid === 'cmd' && selC) {
+      const acts = [['Resume', 'ArrowRight', () => { this.copy(selC); this.setState({ pOpen: false }); }], ['Copy resume command', 'Clipboard', () => this.copy(selC)], ['Fork into a new session', 'Layers', () => this.copy(selC, 'fork')], ['Open folder', 'Storage', () => this.setState({ pOpen: false })]];
+      if (selC.pr) acts.push(['Open PR ' + (selC.pr.repoFull || selC.repo) + '#' + selC.pr.n, 'Link', () => this.setState({ pOpen: false })], ['All sessions for PR #' + selC.pr.n, 'Branch', () => this.copy(selC, 'pr')]);
+      if (this.isRepo(selC)) acts.push(['Show ' + selC.repo + ' in the tree', 'Box', () => this.setState({ pOpen: false, cScope: { type: 'repo', id: selC.repo } })]);
+      acts.push(['Rename session', 'Edit', () => this.setState({ pOpen: false })], ['Archive session', 'Archive', () => this.setState({ pOpen: false })]);
+      add('Actions on \u201c' + selC.title + '\u201d', acts.filter(a => !q || a[0].toLowerCase().includes(ql)).map(a => it({ kind: 'cmd', icon: a[1], iconColor: 'var(--text-secondary)', title: a[0], sub: '', subFont: sans, key: '', right: '', fn: a[2] })));
+    }
+    const idx = Math.min(S.pIdx || 0, Math.max(0, flat.length - 1)), cur = flat[idx];
+    const activate = (o) => {
+      if (!o) return;
+      if (o.kind === 'kind') return this.setKind(o.k.id, '');
+      if (o.kind === 'session') { this.copy(o.s); return this.setState({ selC: o.s.id, pOpen: false }); }
+      o.fn && o.fn();
+    };
+    groups.forEach(g => g.items = g.items.map(o => { const i = flat.indexOf(o); const { s: _s, k: _k, art: _a, fn: _f, ...lite } = o; return Object.assign(lite, { hasSub: !!o.sub, hasKey: !!o.key, hasRight: !!o.right, bg: i === idx ? 'var(--bg-selected)' : 'transparent', onHover: () => { if ((this.state.pIdx || 0) !== i) this.setState({ pIdx: i }); }, onClick: () => o.kind === 'session' ? this.setState({ selC: o.s.id, pOpen: false }) : activate(o) }); }));
+    let pv = { isKind: true, isSession: false, isCommand: false, icon: K.icon, title: K.label, desc: K.desc, examples: [] };
+    const exFor = (k) => k.ex.map(e => ({ q: e, onClick: (ev) => { ev.stopPropagation(); const kk = this.KINDS.find(x => x.prefix && e.startsWith(x.prefix)); kk ? this.setKind(kk.id, e.slice(kk.prefix.length).trim()) : this.setKind('text', e); } }));
+    if (cur && cur.kind === 'kind') pv = { isKind: true, icon: cur.k.icon, title: cur.k.label, desc: cur.k.desc, examples: exFor(cur.k) };
+    else if (cur && cur.kind === 'session' && cur.art) { const a = cur.art, s = cur.s; pv = { isKind: false, isArtifact: true, title: a.name, when: a.kind + ' · ' + a.size + ' · from \u201c' + s.title + '\u201d', path: this.path(s) + '/' + a.path, body: a.preview || '', hasBody: !!a.preview }; }
+    else if (cur && cur.kind === 'session') { const s = cur.s; pv = { isKind: false, isSession: true, title: s.title, when: this.ago(s) + ' · ' + s.size, hasReason: !!cur.reason, reason: cur.reason || '', summary: s.summary.state, facts: [['Folder', this.path(s), mono]].concat(this.isRepo(s) ? [['Repo', s.repo + (s.branch !== 'HEAD' ? ' · ' + s.branch : ''), sans]] : [], s.pr ? [['PR', (s.pr.repoFull || s.repo) + '#' + s.pr.n, sans]] : []).map(([k, v, font]) => ({ k, v, font })) }; }
+    else if (cur && cur.kind === 'cmd' && selC) pv = { isKind: false, isCommand: true, title: selC.title, detail: this.cmd(selC) };
+    else pv.examples = exFor(K);
+    pv.isKind = !!pv.isKind; pv.isSession = !!pv.isSession; pv.isCommand = !!pv.isCommand; pv.isArtifact = !!pv.isArtifact;
+    const copied = S.copied && cur && cur.s && S.copied === cur.s.id;
+    return {
+      open, hasChip: kid !== 'text', noChip: kid === 'text', chipIcon: K.icon, chipLabel: K.label,
+      text: S.pq || '', placeholder: kid === 'text' ? 'Search sessions, or type / for search kinds' : K.desc.split('.')[0] + '…',
+      groups, empty: flat.length === 0, emptyText: kid === 'ask' ? 'Nothing close. Try different words or a file name.' : 'No matches.',
+      pv, footIcon: copied ? 'Check' : K.icon, footLabel: copied ? 'Copied resume command' : K.label,
+      primary: cur ? (cur.kind === 'kind' ? 'Choose' : cur.kind === 'session' ? 'Resume' : 'Run') : 'Resume',
+      openIt: () => this.openPal(), close: () => this.setState({ pOpen: false }), stop: (e) => e.stopPropagation(),
+      clearKind: () => this.setKind('text', S.pq || ''),
+      onQ: (e) => {
+        const v = e.target.value;
+        if (kid === 'text') { const k = this.KINDS.filter(x => x.prefix && v.toLowerCase().startsWith(x.prefix)).sort((a, b) => b.prefix.length - a.prefix.length)[0]; if (k) return this.setKind(k.id, v.slice(k.prefix.length).replace(/^\s+/, '')); }
+        this.setState({ pq: v, pIdx: 0 });
+      },
+      onKey: (e) => {
+        if (e.key === 'ArrowDown') { e.preventDefault(); this.setState({ pIdx: Math.min(flat.length - 1, idx + 1) }); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); this.setState({ pIdx: Math.max(0, idx - 1) }); }
+        else if (e.key === 'Enter') { e.preventDefault(); activate(cur); }
+        else if (e.key === 'Escape') { e.preventDefault(); kid !== 'text' ? this.setKind('text', '') : this.setState({ pOpen: false }); }
+        else if (e.key === 'Backspace' && !(S.pq || '') && kid !== 'text') { e.preventDefault(); this.setKind('text', ''); }
+      }
+    };
+  }
+  get D() { return window.CSM_DATA; }
+  now() { return new Date(2026, 9, 6, 11, 0); }
+  dt(s) { return new Date(s.start); }
+  days(s) { const a = this.dt(s); a.setHours(0, 0, 0, 0); const b = this.now(); b.setHours(0, 0, 0, 0); return Math.round((b - a) / 864e5); }
+  hm(d) { let h = d.getHours(); const m = d.getMinutes(); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return h + ':' + String(m).padStart(2, '0') + ' ' + ap; }
+  ago(s) { const n = this.days(s); if (n === 0) return 'Today, ' + this.hm(this.dt(s)); if (n === 1) return 'Yesterday'; return n + ' days ago'; }
+  agoShort(s) { const n = this.days(s); return n === 0 ? this.hm(this.dt(s)) : n === 1 ? '1d' : n + 'd'; }
+  repo(s) { return this.D.repos.find(r => r.id === s.repo); }
+  wt(s) { return s.wt ? this.D.worktrees.find(w => w.id === s.wt) : null; }
+  path(s) { const w = this.wt(s); return w ? w.path : (s.cwd || this.repo(s.repo).path); }
+  isRepo(s) { return !['code', 'home'].includes(s.repo); }
+  cmd(s) { return 'claude --resume ' + (!s.auto ? s.title : s.sid); }
+  tk(s) { const v = (s.tokens && s.tokens.in) || '0'; const n = parseFloat(v); return /M$/.test(v) ? n * 1e6 : /k$/.test(v) ? n * 1e3 : n; }
+  num(v) { const n = parseFloat(v); return /M$/.test(v) ? n * 1e6 : /k$/.test(v) ? n * 1e3 : n || 0; }
+  fmt(n) { return n >= 1e6 ? (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'k' : String(Math.round(n)); }
+  usage(s) {
+    if (s.usage) return s.usage;
+    const opus = /Opus/.test(s.model), inT = this.num(s.tokens.in) * 0.004, out = this.num(s.tokens.out), cached = this.num(s.tokens.cache), read = Math.min(cached, this.num(s.tokens.in) * 0.9), write = this.num(s.tokens.in) * 0.02;
+    const ctxMax = opus ? 1e6 : 2e5, ctxUsed = Math.min(ctxMax * 0.92, read + write + inT);
+    const p = opus ? [5, 25, 0.5, 6.25] : [3, 15, 0.3, 3.75];
+    return { effort: opus ? 'high' : 'medium', ctxUsed, ctxMax, inTok: inT, outTok: out, total: inT + out + cached + write, cacheHit: Math.round(read / Math.max(1, read + write + inT) * 1000) / 10, cacheRead: read, cacheWrite: write, cached, cost: Math.round(((inT * p[0] + out * p[1] + cached * p[2] + write * p[3]) / 1e6) * 100) / 100, compactions: s.dur > 120 ? 1 : 0, agents: 0, mode: 'Default', style: '', durMin: s.dur, lines: [s.add, s.del] };
+  }
+  keep(s) { const d = new Date(this.dt(s).getTime() + (s.dur || 0) * 60000 + 30 * 864e5); return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getDate(); }
+  dot(s) { return s.status === 'active' ? ['var(--green)', 'Running'] : s.status === 'waiting' ? ['var(--yellow)', 'Waiting for you'] : s.status === 'interrupted' ? ['var(--yellow)', 'Interrupted'] : s.status === 'failed' ? ['var(--red)', 'Failed'] : null; }
+  match(s, q) {
+    if (!q) return true;
+    const hay = [s.title, s.repo, this.path(s), s.branch, s.prompt, s.summary.goal, s.summary.did, s.concepts.join(' '), s.fileList.map(f => f.p).join(' '), s.pr ? '#' + s.pr.n + ' ' + s.pr.title : '', s.commits.map(c => c.sha + ' ' + c.msg).join(' ')].join(' ').toLowerCase();
+    return q.toLowerCase().split(/\s+/).filter(Boolean).every(t => hay.includes(t));
+  }
+  copy(s, which) { which = which || 'resume'; const t = which === 'fork' ? this.cmd(s) + ' --fork-session' : which === 'pr' ? 'claude --from-pr ' + s.pr.n : this.cmd(s); try { navigator.clipboard && navigator.clipboard.writeText(t); } catch (e) {} clearTimeout(this._c); this.setState({ copied: which === 'resume' ? s.id : s.id + ':' + which }); this._c = setTimeout(() => this.setState({ copied: null }), 1600); }
+  ring(f) { return f ? 'inset 0 0 0 1px var(--brand-focus-ring)' : 'inset 0 0 0 1px var(--border-default)'; }
+  where(s) { const w = this.wt(s); const r = this.isRepo(s) ? s.repo : null; const p = this.path(s); return [r, w ? w.name + ' worktree' : null, p].filter(Boolean).join(' · '); }
+
+  renderVals() {
+    if (!this.state.ready) return { a: { groups: [], scopes: [] }, b: { rows: [], hasSel: false, sel: { facts: [], next: [], files: [] } }, c: { allNode: {}, repos: [], folders: [], groups: [], modes: [], cal: { cells: [], dows: [] }, hasSel: false, sel: { facts: [], next: [], files: [], usage: { rows: [] } } }, p: { open: false, groups: [], pv: {} } };
+    const S = this.state, all = this.D.sessions.filter(s => s.status !== 'archived').sort((x, y) => this.dt(y) - this.dt(x));
+
+    // 1a
+    const scopes = [['all', 'All'], ['meetnotes', 'meetnotes'], ['team8', 'team8'], ['other', 'Other']];
+    const inScope = s => S.scope === 'all' || (S.scope === 'other' ? !['meetnotes', 'team8', 'audio-sync'].includes(s.repo) : S.scope === 'meetnotes' ? ['meetnotes', 'audio-sync'].includes(s.repo) : s.repo === S.scope);
+    const la = all.filter(s => inScope(s) && this.match(s, S.qa));
+    const G = [], m = {};
+    la.forEach(s => {
+      const n = this.days(s), k = n === 0 ? 'Today' : n <= 7 ? 'This week' : 'Earlier';
+      if (!m[k]) { m[k] = { label: k, rows: [] }; G.push(m[k]); }
+      const d = this.dot(s), open = S.selA === s.id;
+      m[k].rows.push({
+        title: s.title, meta: this.where(s), ago: this.ago(s), hasDot: !!d, dot: d ? d[0] : '', dotTitle: d ? d[1] : '',
+        bg: open ? 'var(--bg-surface)' : 'transparent', open,
+        summary: s.summary.state === 'Done.' ? s.summary.did : s.summary.did + ' ' + s.summary.state,
+        cmd: this.cmd(s), copyLabel: S.copied === s.id ? 'Copied' : 'Copy',
+        hasPR: !!s.pr, pr: s.pr ? (s.pr.repoFull || s.repo) + '#' + s.pr.n : '',
+        onClick: () => this.setState({ selA: open ? null : s.id }),
+        onCopy: (e) => { e && e.stopPropagation(); this.copy(s); },
+        onResume: () => this.copy(s), onFolder: () => {}, onPR: (e) => e.preventDefault()
+      });
+    });
+    const a = {
+      q: S.qa, onQ: (e) => this.setState({ qa: e.target.value }), onFocus: () => this.setState({ fa: true }), onBlur: () => this.setState({ fa: false }), searchRing: this.ring(S.fa),
+      scopes: scopes.map(([id, label]) => ({ label, color: S.scope === id ? 'var(--text-primary)' : 'var(--text-tertiary)', onClick: () => this.setState({ scope: id }) })),
+      groups: G, empty: la.length === 0,
+      status: la.length + (la.length === 1 ? ' session' : ' sessions') + (S.qa ? ' match' : '')
+    };
+
+    // 1b
+    const lb = all.filter(s => this.match(s, S.qb));
+    const sel = this.D.sessions.find(s => s.id === S.selB);
+    const b = {
+      q: S.qb, onQ: (e) => this.setState({ qb: e.target.value }), onFocus: () => this.setState({ fb: true }), onBlur: () => this.setState({ fb: false }), searchRing: this.ring(S.fb),
+      rows: lb.map(s => { const d = this.dot(s); return { title: s.title, agoShort: this.agoShort(s), repoLine: (this.isRepo(s) ? s.repo + ' · ' : '') + this.path(s), hasDot: !!d, dot: d ? d[0] : '', dotTitle: d ? d[1] : '', bg: s.id === S.selB ? 'var(--bg-selected)' : 'transparent', onClick: () => this.setState({ selB: s.id }) }; }),
+      hasSel: !!sel,
+      sel: sel ? (() => {
+        const w = this.wt(sel), mono = 'ui-monospace, SFMono-Regular, Menlo, monospace', sans = 'var(--font-sans)';
+        const facts = [['Folder', this.path(sel), true]];
+        if (this.isRepo(sel)) facts.push(['Repository', sel.repo + (sel.branch !== 'HEAD' ? ' · ' + sel.branch : ''), false]);
+        if (w) facts.push(['Worktree', w.name + (w.stale ? ' (removed ' + w.removed + ')' : ''), false]);
+        if (sel.pr) facts.push(['Pull request', (sel.pr.repoFull || sel.repo) + '#' + sel.pr.n + ' ' + sel.pr.title, false]);
+        facts.push(['Session', sel.sid, true]);
+        return {
+          title: sel.title, when: this.ago(sel) + ' · ' + sel.model.replace('Claude ', '') + ' · ' + sel.size,
+          facts: facts.map(([k, v, mo]) => ({ k, v, font: mo ? mono : sans, size: mo ? '12px' : '13px', wb: mo ? 'break-all' : 'normal' })),
+          summary: sel.summary.did + ' ' + sel.summary.state,
+          hasNext: sel.summary.next.length > 0, next: sel.summary.next.map(t => ({ t })),
+          hasFiles: sel.fileList.length > 0, filesLabel: sel.files + (sel.files === 1 ? ' file changed' : ' files changed'), files: sel.fileList.map(f => ({ p: f.p })),
+          copyLabel: S.copied === sel.id ? 'Copied' : 'Copy command',
+          onResume: () => this.copy(sel), onCopy: () => this.copy(sel), onFolder: () => {}
+        };
+      })() : { facts: [], next: [], files: [] }
+    };
+    return { c: this.cVals(all), p: this.pVals(all), palRef: this.palRef };
+  }
+  selVm(sel) {
+    const S = this.state, w = this.wt(sel), mono = 'ui-monospace, SFMono-Regular, Menlo, monospace', sans = 'var(--font-sans)';
+    const facts = [['Folder', this.path(sel), true]];
+    if (this.isRepo(sel)) facts.push(['Repository', sel.repo + (sel.branch !== 'HEAD' ? ' · ' + sel.branch : ''), false]);
+    if (w) facts.push(['Worktree', w.name + (w.stale ? ' (removed ' + w.removed + ')' : ''), false]);
+    if (sel.pr) facts.push(['Pull request', (sel.pr.repoFull || sel.repo) + '#' + sel.pr.n + ' ' + sel.pr.title, false]);
+    facts.push(['Title', sel.auto ? 'Generated from the first prompt. Rename to resume it by name.' : 'Named. Resumes by name from any folder.', false]);
+    if (sel.forks) facts.push(['Forks', sel.forks + (sel.forks === 1 ? ' branch of this conversation' : ' branches of this conversation'), false]);
+    const big = this.tk(sel) > 1e5;
+    if (big) facts.push(['Resuming', 'Over 100k tokens. After an hour idle, Claude offers to continue from a summary.', false]);
+    facts.push(['Kept until', this.keep(sel) + ', then deleted by the 30-day cleanup', false]);
+    facts.push(['Session ID', sel.sid, true]);
+    return {
+      usage: (() => { const u = this.usage(sel), pct = Math.round(u.ctxUsed / u.ctxMax * 100), dm = u.durMin >= 60 ? Math.floor(u.durMin / 60) + 'h ' + (u.durMin % 60) + 'm' : u.durMin + 'm';
+        const tile = (k, v, sub) => ({ k, v: String(v), sub: sub || '', hasSub: !!sub });
+        return {
+          model: sel.model.replace('Claude ', ''), effort: u.effort, isLive: sel.status === 'active',
+          ctxLabel: this.fmt(u.ctxUsed) + ' / ' + this.fmt(u.ctxMax), ctxPct: pct + '%', ctxW: Math.max(2, pct) + '%', ctxColor: pct >= 80 ? 'var(--orange)' : pct >= 60 ? 'var(--yellow)' : 'var(--brand)',
+          hasPlan: !!u.plan, plan: u.plan ? u.plan.used + '% of plan used · resets in ' + u.plan.reset : '',
+          rows: [
+            [tile('In', this.fmt(u.inTok)), tile('Out', this.fmt(u.outTok)), tile('Total', this.fmt(u.total))],
+            [tile('Cache hit', u.cacheHit + '%'), tile('Cache read', this.fmt(u.cacheRead), (Math.round(u.cacheRead / Math.max(1, u.cacheRead + u.cacheWrite) * 1000) / 10) + '%'), tile('Cache write', this.fmt(u.cacheWrite), (Math.round(u.cacheWrite / Math.max(1, u.cacheRead + u.cacheWrite) * 1000) / 10) + '%')],
+            [tile('Cost', '$' + u.cost.toFixed(2)), tile('Duration', dm), tile('Lines', '+' + u.lines[0] + ' −' + u.lines[1])],
+            [tile('Mode', u.mode), tile('Compactions', u.compactions), tile(u.style ? 'Output style' : 'Agents', u.style || u.agents, u.style && u.agents ? u.agents + ' agents' : '')]
+          ].map(r => ({ cells: r }))
+        }; })(),
+      forkLabel: S.copied === sel.id + ':fork' ? 'Copied' : 'Fork', onFork: () => this.copy(sel, 'fork'),
+      hasPR: !!sel.pr, prLabel: sel.pr ? (S.copied === sel.id + ':pr' ? 'Copied' : 'All sessions for #' + sel.pr.n) : '', onPR: () => this.copy(sel, 'pr'),
+      title: sel.title, when: this.ago(sel) + ' · ' + sel.model.replace('Claude ', '') + ' · ' + sel.size,
+      facts: facts.map(([k, v, mo]) => ({ k, v, font: mo ? mono : sans, size: mo ? '12px' : '13px', wb: mo ? 'break-all' : 'normal' })),
+      summary: sel.summary.did + ' ' + sel.summary.state,
+      hasNext: sel.summary.next.length > 0, next: sel.summary.next.map(t => ({ t })),
+      hasFiles: sel.fileList.length > 0, filesLabel: sel.files + (sel.files === 1 ? ' file changed' : ' files changed'), files: sel.fileList.map(f => ({ p: f.p })),
+      copyLabel: S.copied === sel.id ? 'Copied' : 'Copy command',
+      onResume: () => this.copy(sel), onCopy: () => this.copy(sel), onFolder: () => {}
+    };
+  }
+  viewVm(all, list0, sc, selId0) {
+    const S = this.state, mode = sc.type === 'all' ? (S.cMode || 'list') : 'list', MON = ['January','February','March','April','May','June','July','August','September','October','November','December'], DW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const ymd = (d) => d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+    let list = list0;
+    let cal = { cells: [], dows: [] };
+    if (mode === 'calendar') {
+      const mo = S.cMonth == null ? 9 : S.cMonth, y = 2026, first = new Date(y, mo, 1), last = new Date(y, mo + 1, 0), dayKey = S.cDay || ymd(this.dt(all[0]));
+      const cells = [];
+      for (let i = 0; i < Math.ceil((first.getDay() + last.getDate()) / 7) * 7; i++) {
+        const d = new Date(y, mo, 1 - first.getDay() + i), k = ymd(d), on = list0.filter(s => ymd(this.dt(s)) === k), inM = d.getMonth() === mo, cur = k === dayKey, today = k === ymd(this.now());
+        cells.push({ day: d.getDate(), color: cur ? 'var(--text-primary)' : inM ? (on.length ? 'var(--text-secondary)' : 'var(--text-tertiary)') : 'var(--grey-6)', bg: cur ? 'var(--bg-selected)' : 'transparent', ring: today && !cur ? 'inset 0 0 0 1px var(--border-strong)' : 'none', dots: on.slice(0, 3).map(s => ({ c: (this.dot(s) || ['var(--text-tertiary)'])[0] })), onClick: () => this.setState({ cDay: k }) });
+      }
+      cal = { title: MON[mo] + ' ' + y, cells, dows: DW.map(x => ({ d: x[0] })), prev: () => this.setState({ cMonth: Math.max(8, mo - 1) }), next: () => this.setState({ cMonth: Math.min(9, mo + 1) }) };
+      list = list0.filter(s => ymd(this.dt(s)) === dayKey);
+    }
+    const selId = list.some(s => s.id === selId0) ? selId0 : selId0;
+    const timeCol = mode === 'timeline';
+    const row = (s) => { const d = this.dot(s); return { title: s.title, agoShort: this.agoShort(s), hasAgo: !timeCol, time: this.hm(this.dt(s)).replace(' ', '\u00a0'), hasTime: timeCol, cols: timeCol ? '58px minmax(0,1fr)' : 'minmax(0,1fr)', repoLine: (mode === 'repo' ? '' : (this.isRepo(s) ? s.repo + ' · ' : '')) + this.path(s) + (s.forks ? ' · ' + s.forks + (s.forks === 1 ? ' fork' : ' forks') : ''), hasDot: !!d, dot: d ? d[0] : '', dotTitle: d ? d[1] : '', bg: s.id === selId ? 'var(--bg-selected)' : 'transparent', onClick: () => this.setState({ selC: s.id }) }; };
+    const G = [], m = {};
+    const push = (k, label, note) => { if (!m[k]) { m[k] = { label, note: note || '', rows: [] }; G.push(m[k]); } return m[k]; };
+    list.forEach(s => {
+      let g;
+      if (mode === 'timeline') { const n = this.days(s), d = this.dt(s); g = push(ymd(d), n === 0 ? 'Today' : n === 1 ? 'Yesterday' : DW[d.getDay()] + ', ' + MON[d.getMonth()].slice(0, 3) + ' ' + d.getDate()); }
+      else if (mode === 'repo') g = this.isRepo(s) ? push('r:' + s.repo, s.repo) : push('f:' + this.path(s), this.path(s) + ' (not a repository)');
+      else if (mode === 'worktree') { const w = this.wt(s); g = w ? push('w:' + w.id, w.name + ' worktree', w.stale ? 'removed' : '') : push('m:' + s.repo, this.isRepo(s) ? s.repo + ' · main checkout' : this.path(s)); }
+      else if (mode === 'calendar') { const d = this.dt(s); g = push('c', DW[d.getDay()] + ', ' + MON[d.getMonth()].slice(0, 3) + ' ' + d.getDate()); }
+      else g = push('all', '');
+      g.rows.push(row(s));
+    });
+    if (mode === 'timeline') G.forEach(g => g.rows.sort((a, b) => 0));
+    const modes = [['list', 'List', 'ViewList'], ['timeline', 'Timeline', 'Timeline'], ['repo', 'Repository', 'Box'], ['worktree', 'Worktree', 'Layers'], ['calendar', 'Calendar', 'CalendarEmpty']].map(([id, label, icon]) => ({ label, icon, cur: id === mode, flex: id === mode ? '1 1 auto' : '0 0 auto', bg: id === mode ? 'var(--bg-selected)' : 'transparent', color: id === mode ? 'var(--text-primary)' : 'var(--text-tertiary)', onClick: () => this.setState({ cMode: id }) }));
+    return { showModes: sc.type === 'all', modes, isCal: mode === 'calendar', cal, groups: G.map(g => Object.assign(g, { hasLabel: !!g.label, count: g.rows.length, hasNote: !!g.note })), dayEmpty: mode === 'calendar' && list.length === 0 };
+  }
+  cVals(all) {
+    const S = this.state, sc = S.cScope || { type: 'all' }, exp = S.cExp || { meetnotes: true, team8: true };
+    const eq = (x) => x.type === sc.type && x.id === sc.id && (x.repo || null) === (sc.repo || null);
+    const fits = (s, x) => x.type === 'all' ? true : x.type === 'repo' ? s.repo === x.id : x.type === 'branch' ? s.repo === x.repo && s.branch === x.id && !s.wt : x.type === 'wt' ? s.wt === x.id : x.type === 'folder' ? (!this.isRepo(s) && this.path(s) === x.id) : true;
+    const n = (x) => all.filter(s => fits(s, x)).length;
+    const node = (x) => ({ bg: eq(x) ? 'var(--bg-selected)' : 'transparent', color: eq(x) ? 'var(--text-primary)' : 'var(--text-secondary)', count: n(x), onClick: () => this.setState({ cScope: x }) });
+    const repos = this.D.repos.filter(r => !['code', 'home'].includes(r.id) && all.some(s => s.repo === r.id)).map(r => {
+      const open = !!exp[r.id], x = { type: 'repo', id: r.id };
+      const branches = [...new Set(all.filter(s => s.repo === r.id && !s.wt && s.branch !== 'HEAD').map(s => s.branch))];
+      const kids = branches.map(b => Object.assign(node({ type: 'branch', id: b, repo: r.id }), { label: b, icon: 'Branch', deco: 'none', title: 'Branch ' + b }))
+        .concat(this.D.worktrees.filter(w => w.repo === r.id).map(w => Object.assign(node({ type: 'wt', id: w.id }), { label: w.name, icon: 'Layers', deco: w.stale ? 'line-through' : 'none', title: w.path + (w.stale ? ' (removed)' : '') })));
+      return Object.assign(node(x), { label: r.id, open: open && kids.length > 0, kids, chevStyle: { transform: open ? 'none' : 'rotate(-90deg)', opacity: kids.length ? 1 : 0.3 },
+        onToggle: (e) => { e.stopPropagation(); this.setState({ cExp: Object.assign({}, exp, { [r.id]: !open }) }); } });
+    });
+    const folders = [...new Set(all.filter(s => !this.isRepo(s)).map(s => this.path(s)))].map(p => Object.assign(node({ type: 'folder', id: p }), { label: p }));
+    const list = all.filter(s => fits(s, sc));
+    const selId = list.some(s => s.id === S.selC) ? S.selC : (list[0] && list[0].id);
+    const sel = this.D.sessions.find(s => s.id === selId);
+    const label = sc.type === 'all' ? 'All sessions' : sc.type === 'branch' ? sc.repo + ' / ' + sc.id : sc.type === 'wt' ? (this.D.worktrees.find(w => w.id === sc.id) || {}).name + ' worktree' : sc.id;
+    return {
+      allNode: node({ type: 'all' }), repos, folders, scopeLabel: label, count: list.length + (list.length === 1 ? ' session' : ' sessions'),
+      q: S.qc || '', onQ: (e) => this.setState({ qc: e.target.value }), onFocus: () => this.setState({ fc: true }), onBlur: () => this.setState({ fc: false }), searchRing: this.ring(S.fc),
+      ...this.viewVm(all, list, sc, selId),
+      empty: list.length === 0 || (sc.type === 'all' && (S.cMode === 'calendar') && this.viewVm(all, list, sc, selId).dayEmpty), hasSel: !!sel, sel: sel ? this.selVm(sel) : { facts: [], next: [], files: [], usage: { rows: [] } }
+    };
+  }
+}
+</script>
+</body>
+</html>

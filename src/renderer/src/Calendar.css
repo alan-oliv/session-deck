@@ -1,0 +1,82 @@
+.cal {
+  padding: 4px 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cal-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cal-title {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.cal-nav {
+  display: flex;
+  padding: 4px;
+  border-radius: var(--app-radius);
+  color: var(--app-text-3);
+}
+
+.cal-nav:hover {
+  background: var(--app-wash);
+  color: var(--app-text);
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  row-gap: 2px;
+}
+
+.cal-dow {
+  padding: 4px 0;
+  text-align: center;
+  font-size: 11px;
+  color: var(--app-text-3);
+}
+
+.cal-day {
+  height: 38px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border-radius: var(--app-radius);
+}
+
+.cal-day:hover {
+  background: var(--app-wash);
+}
+
+.cal-day.is-selected {
+  background: var(--app-selected);
+}
+
+.cal-day.is-today {
+  box-shadow: inset 0 0 0 1px var(--app-border-strong);
+}
+
+.cal-num {
+  font-size: 12px;
+  line-height: 14px;
+}
+
+.cal-dots {
+  display: flex;
+  gap: 2px;
+  height: 4px;
+}
+
+.cal-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+}

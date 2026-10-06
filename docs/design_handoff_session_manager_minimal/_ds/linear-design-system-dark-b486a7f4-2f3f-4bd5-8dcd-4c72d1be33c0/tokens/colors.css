@@ -1,0 +1,17 @@
+/* Linear Design System (Dark Mode) — colour palette transcribed from the Figma "Colour Palette" section. Base scales first, semantic aliases after. */
+:root{
+/* grey scale (purple-hued), light → dark, in the order the palette lists them */
+--grey-1:#ffffff;--grey-2:#eeeffc;--grey-3:#e0e1ec;--grey-4:#d2d3e0;--grey-5:#b0b5c0;--grey-6:#6b6f76;--grey-7:#8d8ba3;--grey-8:#858699;--grey-9:#393a4b;--grey-10:#4d4f69;--grey-11:#444556;--grey-12:#3c3d53;--grey-13:#313248;--grey-14:#292b41;--grey-15:#26293e;--grey-16:#2c2d42;--grey-17:#26273b;--grey-18:#292a35;--grey-19:#1d1e2b;--grey-20:#191a23;--grey-21:#151621;--grey-22:#272832;--grey-23:#2c2d3c;--grey-24:#1c1d2a;--grey-25:#181921;
+/* primary purple scale */
+--purple-1:#6c79ff;--purple-2:#7477f0;--purple-3:#6e79d6;--purple-4:#5e6ad2;--purple-5:#666be2;--purple-6:#5c67c7;--purple-7:#575bc7;--purple-8:#37466c;--purple-9:#222342;--purple-accent:#6e5ed2;
+/* ui-specific translucent fills (dividers, hover washes, overlays) */
+--ui-divider:rgba(89,89,116,.25);--ui-hover-1:rgba(149,149,189,.125);--ui-hover-2:rgba(124,124,164,.125);--ui-text-wash:rgba(220,216,254,.565);--ui-text-wash-2:rgba(220,216,254,.314);--ui-border-soft:rgba(133,134,152,.2);--ui-fill-1:rgba(82,82,111,.25);--ui-fill-2:rgba(104,107,134,.24);--ui-fill-3:rgba(94,93,123,.44);--ui-fill-4:rgba(67,69,99,.173);--ui-fill-5:rgba(82,82,111,.44);--ui-overlay:rgba(29,30,43,.498);--ui-scrim-light:linear-gradient(135deg,rgba(31,33,48,.0188) 0%,rgba(31,33,48,.1019) 100%);/* @kind color */--ui-scrim-dark:linear-gradient(135deg,rgba(31,33,48,.1372) 0%,rgba(31,33,48,.743) 100%);/* @kind color */--ui-modal-bg:linear-gradient(rgba(29,30,43,.498),rgba(29,30,43,.498)),#202128;
+/* decoration — label, status and priority colours */
+--teal:#00b2bf;--red:#eb5757;--red-2:#fa6563;--olive:#978200;--yellow:#f2c94c;--orange:#f2994a;--violet:#bb87fc;--blue:#4ea7fc;--slate:#95a2b3;--green:#4cb782;
+/* semantic aliases */
+--bg-app:var(--grey-25);--bg-sidebar:var(--grey-20);--bg-surface:var(--grey-19);--bg-elevated:var(--grey-18);--bg-modal:#202128;--bg-input:var(--grey-19);--bg-hover:var(--grey-16);--bg-selected:var(--grey-9);--bg-subtle:rgba(19,20,32,.298);
+--border-default:var(--grey-23);--border-strong:var(--grey-9);--border-hover:var(--grey-11);--border-input:#212234;--border-focus:var(--purple-7);
+--text-primary:var(--grey-2);--text-secondary:var(--grey-4);--text-tertiary:var(--grey-8);--text-muted:var(--grey-7);--text-disabled:var(--grey-6);--text-on-primary:#ffffff;--text-link:var(--purple-1);
+--brand:var(--purple-7);--brand-hover:var(--purple-6);--brand-focus-ring:var(--purple-4);--brand-muted:var(--purple-8);--brand-deep:var(--purple-9);
+--status-backlog:var(--grey-8);--status-todo:var(--grey-3);--status-in-progress:var(--yellow);--status-done:var(--purple-4);--status-canceled:var(--grey-8);
+--priority-urgent:var(--orange);--label-bug:var(--red);--label-feature:var(--violet);--label-improvement:var(--blue);--danger:var(--red);--success:var(--green)}
