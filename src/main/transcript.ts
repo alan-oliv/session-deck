@@ -77,15 +77,15 @@ const ARTIFACT_KINDS: Record<string, string> = {
 const SKIP_HEAD = /"type":"(?:file-history-snapshot|file-history-delta|queue-operation|atis-latch)"/
 const COMMIT_RE = /^\[([^\]\s]+)(?: \(root-commit\))? ([0-9a-f]{7,40})\] (.+)$/gm
 
-type Rec = Record<string, any>
+export type Rec = Record<string, any>
 
 const zero = (): Tokens => ({ input: 0, output: 0, cacheRead: 0, cacheWrite: 0 })
-const num = (v: unknown): number => {
+export const num = (v: unknown): number => {
   const n = Number(v)
   return Number.isFinite(n) ? n : 0
 }
 const lineCount = (s: unknown): number => (typeof s === 'string' && s.length > 0 ? s.split('\n').length : 0)
-const str = (v: unknown): string | null => (typeof v === 'string' && v.length > 0 ? v : null)
+export const str = (v: unknown): string | null => (typeof v === 'string' && v.length > 0 ? v : null)
 
 export function emptyAgg(id: string): Agg {
   return {

@@ -1,28 +1,20 @@
 import { clock } from '../shared/format'
 import { toolLabel, type DiffLine, type Item, type ToolItem, type Transcript } from '../shared/api'
-import { parseRecord, promptText, stripRecapSuffix } from './transcript'
+import { num, parseRecord, promptText, str, stripRecapSuffix, type Rec } from './transcript'
 
 const OUT_LINES = 3
 const DIFF_LINES = 400
 const ARG_CHARS = 400
-// ponytail: per-tool ceiling for lines kept in memory; the session file keeps the rest.
+// ponytail: per-tool ceiling for lines kept in memory; the session file keeps the rest. Read the record back from the file by offset if full output beyond this matters.
 const KEEP_LINES = 2000
 const ARG_KEYS = ['command', 'file_path', 'pattern', 'skill', 'query', 'prompt', 'url', 'description'] as const
 const EDIT_TOOLS = new Set(['Edit', 'MultiEdit', 'Write'])
 const PR_URL_RE = /https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/pull\/\d+/
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
-type Rec = Record<string, any>
-
 interface Entry { item: Item; lines: string[]; diff: DiffLine[] }
 interface TurnAgg { prompt: string; entries: Entry[]; footer?: string; recap?: string }
 export interface TurnsAgg { id: string; cli: string | null; turns: TurnAgg[]; open: Map<string, Entry> }
-
-const str = (v: unknown): string | null => (typeof v === 'string' && v.length > 0 ? v : null)
-const num = (v: unknown): number => {
-  const n = Number(v)
-  return Number.isFinite(n) ? n : 0
-}
 
 export const emptyTurnsAgg = (id: string): TurnsAgg => ({ id, cli: null, turns: [], open: new Map() })
 
@@ -106,8 +98,11 @@ function fillResult(e: Entry, item: ToolItem, b: Rec, tur: unknown): void {
   const text = resultText(b.content)
   e.lines = text ? text.replace(/\n$/, '').split('\n').slice(0, KEEP_LINES) : []
   if (b.is_error === true) item.err = true
-  const patch = tur && typeof tur === 'object' ? (tur as Rec).structuredPatch : null
-  if (EDIT_TOOLS.has(item.tool) && Array.isArray(patch)) e.diff = diffLines(patch)
+  const res: Rec | null = tur && typeof tur === 'object' ? tur : null
+  if (EDIT_TOOLS.has(item.tool) && Array.isArray(res?.structuredPatch)) e.diff = diffLines(res.structuredPatch)
+  // A Write that creates a file comes back with an empty patch and the whole text in `content`.
+  const created = item.tool === 'Write' && !e.diff.length && res?.type === 'create' ? str(res.content) : null
+  if (created) e.diff = created.replace(/\n$/, '').split('\n').map((text, i): DiffLine => [i + 1, '+', text])
   if (item.tool === 'Bash' && /\bgh pr create\b/.test(item.arg)) {
     const m = PR_URL_RE.exec(text)
     if (m) item.link = m[0]
@@ -296,5 +291,12 @@ if (import.meta.vitest) {
     const { t } = run(user('go'), assistant([use('t1', 'Bash', { command: 'x'.repeat(1000) })]))
     expect(tool(t, 0, 0).arg).toHaveLength(400)
     expect(tool(t, 0, 0).arg.endsWith('…')).toBe(true)
+  })
+
+  it('shows a created file as all added lines when the Write result has no patch', () => {
+    const { t } = run(user('go'), assistant([use('t1', 'Write', { file_path: '/new.md', content: 'a\nb' })]),
+      result('t1', 'File created successfully at: /new.md', {}, { type: 'create', filePath: '/new.md', content: 'a\nb', structuredPatch: [] }))
+    expect(tool(t, 0, 0)).toMatchObject({ a: 2, d: 0, diff: [[1, '+', 'a'], [2, '+', 'b']] })
+    expect(tool(t, 0, 0).out).toBeUndefined()
   })
 }

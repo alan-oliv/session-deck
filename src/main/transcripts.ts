@@ -5,7 +5,7 @@ import type { Transcript } from '../shared/api'
 import { tailLines } from './lines'
 import { emptyTurnsAgg, finalizeTurns, reduceTurnLine, toolLines, type TurnsAgg } from './turns'
 
-// ponytail: four parsed sessions in memory; a fifth evicts the least recently requested.
+// ponytail: four parsed sessions in memory; a fifth evicts the least recently requested. Raise KEEP or spill to disk if switching between many sessions gets slow.
 const KEEP = 4
 
 interface Entry { path: string; size: number; offset: number; agg: TurnsAgg }
@@ -25,7 +25,7 @@ export function createTranscriptStore(pathFor: (id: string) => string | undefine
     if (!path) throw new Error('Unknown session')
     const size = statSync(path).size
     let e = cache.get(id)
-    // ponytail: assumes append-only; a same-size rewrite is served from memory until the app restarts.
+    // ponytail: assumes append-only; a same-size rewrite is served from memory until the app restarts. Key on size+mtime if rewrites matter.
     if (!e || e.path !== path || size < e.offset) e = { path, size: -1, offset: 0, agg: emptyTurnsAgg(id) }
     if (size !== e.size) {
       const entry = e
@@ -80,9 +80,8 @@ if (import.meta.vitest) {
   it('parses a session once and tails only appended lines afterwards', async () => {
     const { paths, store } = fixture()
     expect((await store.get(a)).turns.map((t) => t.prompt)).toEqual(['first'])
-    appendFileSync(paths[a], prompt('second'))
+    writeFileSync(paths[a], prompt('FIRST') + prompt('second'))
     expect((await store.get(a)).turns.map((t) => t.prompt)).toEqual(['first', 'second'])
-    expect((await store.get(a)).turns).toHaveLength(2)
   })
   it('starts over when the file shrinks', async () => {
     const { paths, store } = fixture()
@@ -107,12 +106,12 @@ if (import.meta.vitest) {
     await expect(store.output(a, 0, 5)).rejects.toThrow('Unknown tool call')
     await expect(store.output(a, 9, 0)).rejects.toThrow('Unknown tool call')
   })
-  it('still serves a session after others pushed it out of memory', async () => {
+  it('reads a session from the start again once others pushed it out of memory', async () => {
     const { paths, store } = fixture()
     await store.get(a)
     await store.get(b)
-    appendFileSync(paths[a], prompt('second'))
-    expect((await store.get(a)).turns.map((t) => t.prompt)).toEqual(['first', 'second'])
+    writeFileSync(paths[a], prompt('FIRST') + prompt('second'))
+    expect((await store.get(a)).turns.map((t) => t.prompt)).toEqual(['FIRST', 'second'])
   })
   it('rejects a session the index does not know', async () => {
     const store = createTranscriptStore(() => undefined)
