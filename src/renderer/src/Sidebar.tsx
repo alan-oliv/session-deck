@@ -1,74 +1,28 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { makeSession } from '../../shared/fixtures'
 import { tildify } from '../../shared/format'
+import { PANES } from '../../shared/panes'
 import { buildTree, sameScope, type Scope, type Tree } from '../../shared/tree'
 import { Icon } from './icons'
+import { ResizeHandle } from './Resize'
 import './Sidebar.css'
-
-export const SIDEBAR_WIDTH = 220
-const MIN_WIDTH = 180
-const MAX_WIDTH = 360
-const KEY_STEP = 16
-
-export const clampSidebarWidth = (w: number): number => Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, Math.round(w)))
 
 export interface SidebarProps {
   tree: Tree
   scope: Scope
   expanded: Record<string, boolean>
   width: number
+  maxWidth: number
   onWidth(width: number): void
   onScope(scope: Scope): void
   onToggle(root: string): void
 }
 
-function ResizeHandle({ width, onWidth }: { width: number; onWidth(width: number): void }) {
-  return (
-    <div
-      className="sidebar-resize"
-      role="separator"
-      aria-orientation="vertical"
-      aria-label="Resize sidebar"
-      aria-valuenow={width}
-      aria-valuemin={MIN_WIDTH}
-      aria-valuemax={MAX_WIDTH}
-      tabIndex={0}
-      onPointerDown={(e) => {
-        if (e.button !== 0) return
-        e.preventDefault()
-        const startX = e.clientX
-        const startWidth = width
-        // Window listeners, ended by release, blur or a buttonless move, so a lost pointerup can't leave the drag stuck.
-        const end = () => {
-          window.removeEventListener('pointermove', move)
-          window.removeEventListener('pointerup', end)
-          window.removeEventListener('blur', end)
-          document.body.style.cursor = ''
-        }
-        const move = (ev: PointerEvent) => {
-          if (!(ev.buttons & 1)) return end()
-          onWidth(clampSidebarWidth(startWidth + ev.clientX - startX))
-        }
-        window.addEventListener('pointermove', move)
-        window.addEventListener('pointerup', end)
-        window.addEventListener('blur', end)
-        document.body.style.cursor = 'col-resize'
-      }}
-      onKeyDown={(e) => {
-        const step = e.key === 'ArrowLeft' ? -KEY_STEP : e.key === 'ArrowRight' ? KEY_STEP : 0
-        if (!step) return
-        e.preventDefault()
-        onWidth(clampSidebarWidth(width + step))
-      }}
-    />
-  )
-}
-
-export function Sidebar({ tree, scope, expanded, width, onWidth, onScope, onToggle }: SidebarProps) {
+export function Sidebar({ tree, scope, expanded, width, maxWidth, onWidth, onScope, onToggle }: SidebarProps) {
   const cls = (s: Scope, base: string) => (sameScope(s, scope) ? `${base} is-selected` : base)
   return (
     <nav className="sidebar" style={{ width }}>
-      <ResizeHandle width={width} onWidth={onWidth} />
+      <ResizeHandle width={width} min={PANES.side.min} max={maxWidth} defaultWidth={PANES.side.default} label="Resize sidebar" onWidth={onWidth} />
       <div className="sidebar-lights" />
       <div className="sidebar-scroll">
         <div className={cls({ type: 'all' }, 'side-item')} onClick={() => onScope({ type: 'all' })}>
@@ -141,16 +95,11 @@ if (import.meta.vitest) {
     makeSession({ repo: { name: 'team8', root: '/Users/me/code/team8' } }),
     makeSession({ repo: null, cwd: '/Users/me/code' }),
   ])
-  const render = (scope: Scope, expanded: Record<string, boolean>, width = SIDEBAR_WIDTH) =>
+  const render = (scope: Scope, expanded: Record<string, boolean>, width = PANES.side.default) =>
     renderToStaticMarkup(
-      <Sidebar tree={tree} scope={scope} expanded={expanded} width={width} onWidth={() => {}} onScope={() => {}} onToggle={() => {}} />,
+      <Sidebar tree={tree} scope={scope} expanded={expanded} width={width} maxWidth={360} onWidth={() => {}} onScope={() => {}} onToggle={() => {}} />,
     )
 
-  it('keeps the sidebar between 180 and 360 pixels wide, in whole pixels', () => {
-    expect(clampSidebarWidth(100)).toBe(180)
-    expect(clampSidebarWidth(1000)).toBe(360)
-    expect(clampSidebarWidth(250.4)).toBe(250)
-  })
   it('renders at the given width with a focusable resize separator on its edge', () => {
     const html = render({ type: 'all' }, {}, 250)
     expect(html).toContain('class="sidebar" style="width:250px"')
