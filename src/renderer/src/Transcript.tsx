@@ -91,7 +91,7 @@ function ToolRowView({ row, full, onToggle }: { row: ToolRow; full: string[] | u
         <div className="tx-body">
           {it.diff ? <DiffView item={it} /> : it.out?.length ? <Output item={it} full={full} /> : null}
           {it.link && (
-            <a className="tx-link" href={it.link} target="_blank" rel="noreferrer">
+            <a className="tx-box tx-link" href={it.link} target="_blank" rel="noreferrer">
               <Icon name="Branch" size={14} />
               <span className="tx-link-url">{it.link}</span>
             </a>
@@ -137,6 +137,7 @@ export function Transcript(p: TranscriptProps) {
   const scroll = useRef<HTMLDivElement>(null)
   const pinned = useRef(true)
   const grewFrom = useRef(0)
+  const loading = useRef(new Set<string>())
 
   const view = useMemo(
     () => (p.transcript ? transcriptView(p.transcript, { filter, expandAll, openRows, openGroups }) : null),
@@ -149,11 +150,12 @@ export function Transcript(p: TranscriptProps) {
     const el = scroll.current
     if (el && pinned.current) el.scrollTop = el.scrollHeight
   }, [p.transcript])
-  // Older turns were added above: keep what the reader was looking at in place.
+  // Older turns were added above: keep the reader's distance from the bottom. Assigning it, not adding the
+  // growth, stays right whether or not the browser's scroll anchoring already moved the view.
   useLayoutEffect(() => {
     const el = scroll.current
     if (el && grewFrom.current) {
-      el.scrollTop += el.scrollHeight - grewFrom.current
+      el.scrollTop = el.scrollHeight - grewFrom.current
       grewFrom.current = 0
     }
   }, [shown])
@@ -162,18 +164,18 @@ export function Transcript(p: TranscriptProps) {
     const el = scroll.current
     if (!el) return
     pinned.current = el.scrollHeight - el.clientHeight - el.scrollTop <= PIN_PX
-    if (el.scrollTop < TOP_PX && view && shown < view.turns.length) {
-      grewFrom.current = el.scrollHeight
+    if (el.scrollTop < TOP_PX && !grewFrom.current && view && shown < view.turns.length) {
+      grewFrom.current = el.scrollHeight - el.scrollTop
       setShown((n) => n + TURNS_PAGE)
     }
   }
   const toggleRow = (row: ToolRow) => {
     setOpenRows((o) => ({ ...o, [row.key]: !row.open }))
-    if (!row.open && row.item.more && !row.item.diff && !full[row.key]) {
-      p.loadOutput(row.turn, row.index).then(
-        (lines) => setFull((f) => ({ ...f, [row.key]: lines })),
-        () => {},
-      )
+    if (row.item.more && !row.item.diff && !full[row.key] && !loading.current.has(row.key)) {
+      loading.current.add(row.key)
+      p.loadOutput(row.turn, row.index)
+        .then((lines) => setFull((f) => ({ ...f, [row.key]: lines })), () => {})
+        .finally(() => loading.current.delete(row.key))
     }
   }
   const toggleGroup = (row: GroupRow) => setOpenGroups((o) => ({ ...o, [row.key]: !row.open }))
@@ -240,7 +242,7 @@ export function Transcript(p: TranscriptProps) {
             <span className="dot" style={{ background: s.live ? 'var(--app-green)' : 'var(--app-text-3)' }} />
             <span className="tx-end-label">{s.live ? 'Waiting for your next message' : `Session ended ${agoLong(s.end, p.now)}`}</span>
             <span className="tx-spacer" />
-            <Button kind="primary" onClick={p.onResume}>Resume</Button>
+            <Button kind="primary" onClick={p.onResume} title="Opens claude --resume in your terminal">Resume</Button>
           </div>
         )}
       </div>
