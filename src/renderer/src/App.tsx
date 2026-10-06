@@ -2,26 +2,25 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { prCommand, resumeCommand, type Session, type Settings } from '../../shared/api'
 import { makeSession } from '../../shared/fixtures'
+import { clampPane, PANES_KEY, paneMax, readPaneWidths, type PaneKey, type PaneWidths } from '../../shared/panes'
 import { buildTree, defaultExpanded, inScope, scopeTitle, visible, type Scope } from '../../shared/tree'
 import { byRecent, dayKey, latestDay, listForView, type ViewMode, type YearMonth } from '../../shared/views'
 import { CommandBar, type BarAction, type BarOpen } from './CommandBar'
-import { Detail, type CopiedKey } from './Detail'
+import { Detail, type CopiedKey, type DetailTab } from './Detail'
 import { errorText, useNow, useSessions, useSettings } from './hooks'
 import { SessionList } from './SessionList'
-import { clampSidebarWidth, Sidebar, SIDEBAR_WIDTH } from './Sidebar'
+import { Sidebar } from './Sidebar'
 import './App.css'
 
 const COPIED_MS = 1600
-// Must match .list's width in SessionList.css: the detail pane's drag strip starts where the list ends.
-const LIST_WIDTH = 380
-const SIDEBAR_KEY = 'sidebarWidth'
+// Static renders in tests have no window; the default window width stands in.
+const windowWidth = () => (typeof window === 'undefined' ? 1360 : window.innerWidth)
 
-function savedSidebarWidth(): number {
+function savedPanes(): PaneWidths {
   try {
-    const n = Number(localStorage.getItem(SIDEBAR_KEY))
-    return n > 0 ? clampSidebarWidth(n) : SIDEBAR_WIDTH
+    return readPaneWidths(localStorage.getItem(PANES_KEY), windowWidth())
   } catch {
-    return SIDEBAR_WIDTH
+    return readPaneWidths(null, windowWidth())
   }
 }
 
@@ -46,7 +45,10 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
   const [bar, setBar] = useState<{ open: BarOpen; seq: number; pending?: Pending } | null>(null)
   const [note, setNote] = useState<string | null>(null)
   const [copied, setCopied] = useState<CopiedKey | null>(null)
-  const [sidebarWidth, setSidebarWidth] = useState(savedSidebarWidth)
+  const [panes, setPanes] = useState<PaneWidths>(savedPanes)
+  const [winWidth, setWinWidth] = useState(windowWidth)
+  const [detailTab, setDetailTab] = useState<DetailTab>('overview')
+  const [focus, setFocus] = useState(false)
   const barSeq = useRef(0)
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
@@ -58,6 +60,8 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
   const calDay = day ?? (latest ? dayKey(latest) : null)
   const listed = listForView(scoped, viewMode, calDay)
   const selected = all.find((s) => s.id === selectedId) ?? listed[0] ?? null
+  // Exit focus lives in the detail pane, so with nothing selected the tree and list come back.
+  if (focus && !selected) setFocus(false)
   // Membership, not order: live sessions reorder constantly and must not drop a selection made from the bar.
   const listKey = listed.map((s) => s.id).sort().join(',')
 
@@ -66,12 +70,25 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
   }, [listKey])
 
   useEffect(() => {
-    try {
-      localStorage.setItem(SIDEBAR_KEY, String(sidebarWidth))
-    } catch {
-      // Storage unavailable: the width just resets on the next launch.
+    // Re-clamp the stored widths too, or a narrowing window squeezes the detail pane under its floor.
+    const onResize = () => {
+      setWinWidth(window.innerWidth)
+      setPanes((p) => readPaneWidths(JSON.stringify(p), window.innerWidth))
     }
-  }, [sidebarWidth])
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PANES_KEY, JSON.stringify(panes))
+    } catch {
+      // Storage unavailable: the widths just reset on the next launch.
+    }
+  }, [panes])
+
+  const setPane = (k: PaneKey) => (w: number) =>
+    setPanes((p) => ({ ...p, [k]: clampPane(k, w, k === 'side' ? p.list : k === 'list' ? p.side : 0, winWidth) }))
 
   // The pending resume lives in the bar so dismissing the "Resume in" picker discards it.
   const openBar = (o: BarOpen, pending?: Pending) => {
@@ -173,37 +190,49 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
 
   return (
     <div className="app">
-      <div className="app-drag" style={{ left: sidebarWidth + LIST_WIDTH }} />
-      <Sidebar
-        tree={tree}
-        scope={scope}
-        expanded={open}
-        width={sidebarWidth}
-        onWidth={setSidebarWidth}
-        onScope={setScope}
-        onToggle={(root) => setExpanded({ ...open, [root]: !open[root] })}
-      />
-      <SessionList
-        title={scopeTitle(scope, tree)}
-        sessions={scoped}
-        showModes={scope.type === 'all'}
-        mode={viewMode}
-        onMode={setMode}
-        selectedId={selected?.id ?? null}
-        onSelect={setSelectedId}
-        onOpenBar={() => openBar({ kind: 'sessions', query: '' })}
-        now={now}
-        month={calMonth}
-        day={calDay}
-        onMonth={setMonth}
-        onDay={setDay}
-      />
+      {!selected && <div className="app-drag" style={{ left: panes.side + panes.list }} />}
+      {!focus && (
+        <Sidebar
+          tree={tree}
+          scope={scope}
+          expanded={open}
+          width={panes.side}
+          maxWidth={paneMax('side', panes.list, winWidth)}
+          onWidth={setPane('side')}
+          onScope={setScope}
+          onToggle={(root) => setExpanded({ ...open, [root]: !open[root] })}
+        />
+      )}
+      {!focus && (
+        <SessionList
+          title={scopeTitle(scope, tree)}
+          width={panes.list}
+          maxWidth={paneMax('list', panes.side, winWidth)}
+          onWidth={setPane('list')}
+          sessions={scoped}
+          showModes={scope.type === 'all'}
+          mode={viewMode}
+          onMode={setMode}
+          selectedId={selected?.id ?? null}
+          onSelect={setSelectedId}
+          onOpenBar={() => openBar({ kind: 'sessions', query: '' })}
+          now={now}
+          month={calMonth}
+          day={calDay}
+          onMonth={setMonth}
+          onDay={setDay}
+        />
+      )}
       {selected ? (
         <Detail
           session={selected}
           now={now}
           copied={copied}
           teeOn={settings.statusTee}
+          tab={detailTab}
+          focus={focus}
+          onTab={setDetailTab}
+          onFocus={() => setFocus(!focus)}
           onResume={() => void resume(selected.id, false)}
           onCopy={() => copy(selected.id, 'resume', resumeCommand(selected.id, false))}
           onFork={() => void resume(selected.id, true)}
@@ -223,6 +252,8 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
           settings={settings}
           now={now}
           note={note}
+          resultsWidth={panes.pal}
+          onResultsWidth={setPane('pal')}
           onClose={closeBar}
           onAction={(a) => void onAction(a)}
         />
@@ -245,9 +276,18 @@ if (import.meta.vitest) {
     expect(html).toContain('>2 sessions<')
     expect(html).not.toContain('sdk run')
   })
-  it('shows the empty list and no detail when there are no sessions', () => {
+  it('shows the empty list, no detail, and the tree and list at their default widths with the drag strip after them', () => {
     const html = renderToStaticMarkup(<Deck all={[]} settings={settings} now={now} />)
     expect(html).toContain('No sessions here.')
     expect(html).not.toContain('<h2')
+    expect(html).toContain('class="app-drag" style="left:600px"')
+    expect(html).toContain('class="sidebar" style="width:220px"')
+    expect(html).toContain('class="list" style="width:380px"')
+  })
+  it('renders the detail tab bar on Overview for the selected session', () => {
+    const html = renderToStaticMarkup(<Deck all={[makeSession({ title: 'live-meeting' })]} settings={settings} now={now} />)
+    expect(html).toContain('tab is-active">Overview<')
+    expect(html).toContain('>Focus<')
+    expect(html).not.toContain('app-drag')
   })
 }

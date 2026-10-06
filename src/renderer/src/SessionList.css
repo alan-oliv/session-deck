@@ -1,5 +1,5 @@
 .list {
-  width: 380px;
+  position: relative;
   flex: none;
   display: flex;
   flex-direction: column;
