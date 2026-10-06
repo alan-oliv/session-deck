@@ -102,6 +102,8 @@ export interface Api {
   renameSession(id: string, title: string): Promise<void>
   setArchived(id: string, archived: boolean): Promise<void>
   setStatusTee(enabled: boolean): Promise<void>
+  getTranscript(id: string): Promise<Transcript>
+  getToolOutput(id: string, turn: number, item: number): Promise<string[]>
   onSessionsChanged(cb: () => void): () => void
   onSettingsChanged(cb: () => void): () => void
 }
@@ -120,6 +122,8 @@ export const API_METHODS = [
   'renameSession',
   'setArchived',
   'setStatusTee',
+  'getTranscript',
+  'getToolOutput',
 ] as const satisfies readonly ApiMethod[]
 
 // Fails to compile if a method is added to Api but not to API_METHODS.
