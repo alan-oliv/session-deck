@@ -26,6 +26,7 @@ export function makeSession(over: Partial<Session> = {}): Session {
     status: 'completed',
     live: false,
     pr: null,
+    prs: [],
     forkedFrom: null,
     forks: 0,
     prompts: [],
