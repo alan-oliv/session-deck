@@ -112,7 +112,7 @@ transcriptView(t: Transcript, s: ViewState): {
 
 - **Focus** unmounts `Sidebar` and `SessionList`. The drag strip's left edge is `0` in focus, otherwise `side + list`.
 - **`Resize.tsx`** (`ResizeHandle` moved out of `Sidebar.tsx`): props `width, min, max, defaultWidth, label, onWidth`. 5px strip at the pane's right edge, `cursor: col-resize`, z-index above the pane's content; hover, active and focus-visible show `box-shadow: inset -2px 0 0 var(--app-focus)`. Pointer drag with window listeners ending on release, blur or a buttonless move; while dragging, `document.body` gets `cursor: col-resize; user-select: none`. Double-click → `defaultWidth`. Arrow keys step 16px. `role="separator"` with the aria values.
-- **Limits** (default / min / max): tree 220 / 160 / 360; list 380 / 280 / 600; command bar results 380 / 260 / 520. For the tree and list, max = `min(max, window.innerWidth − 360 − other pane)`, recomputed on `resize`. The clamp lives in `src/shared/panes.ts` (pure): `PANES`, `clampPane(key, w, other, windowWidth)`, `readPaneWidths(raw)`.
+- **Limits** (default / min / max): tree 220 / 160 / 360; list 380 / 280 / 600; command bar results 380 / 260 / 520. For the tree and list, max = `min(max, window.innerWidth − 360 − other pane)`, recomputed on `resize`. The clamp lives in `src/shared/panes.ts` (pure): `PANES`, `paneMax(key, other, windowWidth)`, `clampPane(key, w, other, windowWidth)`, `readPaneWidths(raw, windowWidth)`.
 - **Persistence**: `localStorage.paneWidths = { side, list, pal }`, read once on mount and clamped; written on change. The old `sidebarWidth` key is no longer read.
 - `SessionList` and `.bar-results` take their width from a prop; the CSS width rules go.
 
