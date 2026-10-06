@@ -1,8 +1,83 @@
 .detail {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The tab bar is the window's drag strip over the detail pane; its controls opt out. */
+.detail-tabs {
+  height: 44px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 16px;
+  box-shadow: inset 0 -1px 0 var(--app-divider);
+  -webkit-app-region: drag;
+}
+
+.detail-tabs > * {
+  -webkit-app-region: no-drag;
+}
+
+/* In focus the pane starts at the window's left edge, under the traffic lights. */
+.detail-tabs.is-focus {
+  padding-left: 84px;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--app-radius);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--app-text-3);
+}
+
+.tab:hover {
+  color: var(--app-text);
+}
+
+.tab.is-active {
+  background: var(--app-selected);
+  color: var(--app-text);
+}
+
+.tab-count {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--app-text-3);
+}
+
+.detail-tabs-spacer {
+  flex: 1;
+}
+
+.focus-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: var(--app-radius);
+  font-size: 12px;
+  color: var(--app-text-3);
+}
+
+.focus-btn:hover {
+  background: var(--app-wash);
+  color: var(--app-text);
+}
+
+.detail-body {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 72px 56px 40px;
+  padding: 40px 56px;
 }
 
 .detail-inner {
