@@ -1,0 +1,18 @@
+/* On the pane's right edge; no-drag keeps it grabbable inside a title-bar drag region. */
+.resize {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 5px;
+  height: 100%;
+  z-index: 5;
+  cursor: col-resize;
+  outline: none;
+  -webkit-app-region: no-drag;
+}
+
+.resize:hover,
+.resize:focus-visible,
+.resize.is-dragging {
+  box-shadow: inset -2px 0 0 var(--app-focus);
+}
