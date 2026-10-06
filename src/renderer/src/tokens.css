@@ -28,6 +28,8 @@
   --app-red: #eb5757;
   --app-blue: #4ea7fc;
   --app-violet: #bb87fc;
+  --app-diff-add: rgba(76, 183, 130, 0.12);
+  --app-diff-del: rgba(235, 87, 87, 0.12);
   --app-font: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --app-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   --app-radius: 4px;
