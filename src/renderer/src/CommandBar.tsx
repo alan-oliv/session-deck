@@ -223,8 +223,8 @@ export function CommandBar(p: CommandBarProps) {
     : 'No matches.'
 
   return (
-    <div className="bar-scrim" onClick={p.onClose}>
-      <div className="bar" onClick={(e) => e.stopPropagation()}>
+    <div className="bar-scrim" onPointerDown={(e) => e.target === e.currentTarget && p.onClose()}>
+      <div className="bar">
         <div className="bar-input-row">
           {kindId === 'sessions' ? (
             <span className="bar-search"><Icon name="Search1" size={16} /></span>

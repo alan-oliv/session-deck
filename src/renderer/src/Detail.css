@@ -17,7 +17,8 @@
   -webkit-app-region: drag;
 }
 
-.detail-tabs > * {
+.tab,
+.focus-btn {
   -webkit-app-region: no-drag;
 }
 
