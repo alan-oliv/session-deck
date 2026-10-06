@@ -88,14 +88,13 @@ export function transcriptView(t: Transcript, s: ViewState): View {
       i = j
     }
     shown += rows.length
-    // A failed tool call doesn't count as a completed step, though it still shows as a row.
-    const steps = turn.items.filter((it) => !isErr(it)).length
+    const tools = turn.items.filter((it) => it.k === 'tool').length
     const edits = turn.items.filter(isEdit).length
     const prompt = showPrompt && turn.prompt ? turn.prompt : null
     const footer = s.filter === 'all' && turn.footer ? turn.footer : null
     const recap = showPrompt && turn.recap ? turn.recap : null
     if (rows.length || prompt || footer || recap) {
-      turns.push({ index: ti, label: `Turn ${ti + 1}`, meta: `${plural(steps, 'step')}${edits ? ` · ${plural(edits, 'edit')}` : ''}`, prompt, rows, footer, recap })
+      turns.push({ index: ti, label: `Turn ${ti + 1}`, meta: `${plural(tools, 'step')}${edits ? ` · ${plural(edits, 'edit')}` : ''}`, prompt, rows, footer, recap })
     }
   })
 
@@ -121,7 +120,7 @@ if (import.meta.vitest) {
   })
   it('writes the turn label and meta line from every item, not just the shown ones', () => {
     const v = transcriptView(t, state({ filter: 'msg' }))
-    expect(v.turns[0]).toMatchObject({ index: 0, label: 'Turn 1', meta: '6 steps · 1 edit' })
+    expect(v.turns[0]).toMatchObject({ index: 0, label: 'Turn 1', meta: '5 steps · 1 edit' })
     expect(v.turns[1]).toMatchObject({ index: 1, label: 'Turn 2', meta: '1 step' })
   })
   it('shows prompts and recaps under All and Messages, footers under All only', () => {
