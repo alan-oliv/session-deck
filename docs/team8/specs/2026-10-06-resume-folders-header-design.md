@@ -37,7 +37,7 @@ export function resumeItems(s: Session): ResumeRow[]
 | resumeWindow | Layout | Resume in a new terminal window | — | — | `claude --resume <id>` |
 | separator | | | | | |
 | fork | Branch | Branch conversation | Starts a new session from this point. The original stays as it is. | B | `claude --resume <id> --fork-session` |
-| rename | Edit | Rename… | Give it a name so you can resume by name. (only while `!s.named`) | R | — |
+| rename | Edit | Rename… | Give it a name so you can resume by name. (sub-line only while `!s.named`; the item is always there) | R | — |
 | separator | | | | | |
 | copy | Clipboard | Copy resume command | — | — | `claude --resume <id>` |
 | openFolder | Storage | Open folder | `tildify(cwd)`, or "Folder no longer exists" when `!s.cwdExists` (then `disabled`) | — | — |
@@ -55,7 +55,7 @@ The PR link stays after the button, unchanged. The Copy command, Fork and Open f
 
 ## 3. Terminal launcher
 
-`Api.resumeSession(id, opts: { fork: boolean; newWindow: boolean })`. Main rejects a non-boolean `newWindow`.
+`Api.resumeSession(id, opts: { fork: boolean; newWindow?: boolean })`. Main rejects a present non-boolean `newWindow` and treats a missing one as `false` (optional so callers compile before and after the renderer passes it). The renderer passes `true` only for "Resume in a new terminal window".
 
 `launch(terminal, s, fork, newWindow)`:
 - iTerm, `newWindow: false`: `itermTabScript(cmd)`:

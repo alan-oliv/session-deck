@@ -10,9 +10,9 @@ pr: <url, at close>
 - spec rounds with the user: 3 (resume handle, resume target — unanswered, recommended option taken, design approved in one pass) + spec approved as written
 
 ## Plan
-- plan: written by the lead · self-review fixes: <n>
-- tasks: <n> · tracks: <n> · waves: <n> · peak: <n> at once · mode: <mode> — <reason>
-- estimate: ≈$<total> (per task in the plan's table)
+- plan: written by the lead · self-review fixes: 3 (spec: the Rename… item is always present with a conditional sub-line, per the prototype; `newWindow` made optional so the typecheck stays green between tracks; an unused import removed from the Task 3 code)
+- tasks: 5 · tracks: 2 (A shared + main, B renderer) · waves: 3 · peak: 2 at once · mode: teammates — tracks A and B share wave 2 with disjoint files
+- estimate: ≈$17.60 (2 opus tasks: 3, 4; 3 sonnet)
 
 ## Run
 - executors: <name> · <model> · <effort> · track <X> · wave <n>, one line each · peak <n> at once
