@@ -28,13 +28,13 @@ window.CSM_DATA = (function () {
   const sessions = [
     S({
       id: 's1', sid: 'c3f1a9d2-6b84-4e07-9a15-7d20e8b4f6a1', title: 'live-meeting', auto: false,
-      usage: { effort: 'xhigh', ctxUsed: 263e3, ctxMax: 1e6, inTok: 150, outTok: 190.9e3, total: 14.2e6, cacheHit: 99.2, cacheRead: 260.8e3, cacheWrite: 2.2e3, cached: 14.1e6, cost: 5.08, compactions: 0, agents: 3, mode: 'Bypass permissions', style: 'architecture', durMin: 40, plan: { used: 32.9, reset: '4h 7m' }, lines: [0, 0], pr: 30 },
+      usage: { effort: 'xhigh', ctxUsed: 380e3, ctxMax: 1e6, inTok: 542, outTok: 412.2e3, total: 67.1e6, cacheHit: 99.9, cacheRead: 379.3e3, cacheWrite: 282, cached: 66.7e6, cost: 15.47, compactions: 0, agents: 3, mode: 'Bypass permissions', style: 'architecture', durMin: 830, plan: { used: 47.5, reset: '4h 33m' }, lines: [0, 0] },
       repo: 'meetnotes', cwd: '~/code/meetnotes', branch: 'live-meeting', branchStart: 'main',
       start: '2026-10-06T09:12', dur: 40, status: 'active', model: 'Claude Opus 5.5', head: '4e9c1b7', size: '6.1MB',
       files: 9, add: 524, del: 131,
       fileList: [{ p: 'src/live/LiveMeetingView.tsx', a: 212, d: 18 }, { p: 'src/audio/streamCapture.ts', a: 141, d: 52 }, { p: 'src/transcribe/partialTranscript.ts', a: 96, d: 30 }, { p: 'src/ipc/channels.ts', a: 22, d: 4 }],
-      pr: null, commits: [{ sha: '4e9c1b7', msg: 'Stream partial transcripts to the live view', t: '10:31 AM' }],
-      uncommitted: [{ p: 'src/live/LiveMeetingView.tsx', s: 'M' }, { p: 'src/audio/streamCapture.ts', s: 'M' }, { p: 'src/live/SpeakerChips.tsx', s: 'A' }],
+      pr: { n: 30, title: 'Make a recording feel live, and stop before summarising it', state: 'open', base: 'main', repoFull: 'alan-oliv/meetnotes' }, commits: [{ sha: '5876f5f', msg: 'Move the recording bars with the real mic and call levels the helper reports', t: '3:24 PM' }, { sha: '955bda3', msg: 'Hear each live track on its own loop once 2 s of new audio arrive', t: '3:24 PM' }, { sha: 'dad9786', msg: "Keep a stopped meeting's live lines as its transcript", t: '3:25 PM' }],
+      uncommitted: [],
       running: true, fav: true, tags: ['meetnotes', 'transcription'], collections: ['Current Sprint'], project: 'Meetnote',
       prompt: 'Add a live meeting mode that shows the transcript while the meeting is still running.',
       concepts: ['live', 'meeting', 'transcript', 'streaming', 'audio', 'speaker', 'meetnote'],
