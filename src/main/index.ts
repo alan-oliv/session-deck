@@ -89,12 +89,13 @@ app.whenReady().then(() => {
     },
     resumeSession: async (id, opts): Promise<ResumeResult> => {
       if (!opts || typeof opts !== 'object' || typeof opts.fork !== 'boolean') throw new Error('Invalid options')
+      if (opts.newWindow !== undefined && typeof opts.newWindow !== 'boolean') throw new Error('Invalid options')
       const s = sessionFor(id)
       const fork = opts.fork
       const terminal = settings.get().terminal
       if (!terminal) return { ok: false, needsTerminal: true }
       try {
-        await launch(terminal, s, fork)
+        await launch(terminal, s, fork, opts.newWindow ?? false)
         return { ok: true }
       } catch (e) {
         clipboard.writeText(terminalCommand(s, fork))

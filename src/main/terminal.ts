@@ -43,6 +43,21 @@ export const itermScript = (cmd: string): string =>
     'end tell',
   ].join('\n')
 
+// A tab in the frontmost window when there is one; iTerm has no "current window" to tell otherwise.
+export const itermTabScript = (cmd: string): string =>
+  [
+    'tell application "iTerm"',
+    '  activate',
+    '  if (count of windows) = 0 then',
+    '    set w to (create window with default profile)',
+    '  else',
+    '    tell current window to create tab with default profile',
+    '    set w to current window',
+    '  end if',
+    `  tell current session of w to write text ${appleScriptString(cmd)}`,
+    'end tell',
+  ].join('\n')
+
 export const terminalAppScript = (cmd: string): string =>
   ['tell application "Terminal"', '  activate', `  do script ${appleScriptString(cmd)}`, 'end tell'].join('\n')
 
@@ -64,7 +79,8 @@ export const warpConfig = (title: string, cwd: string, cmd: string): string =>
 // Warp resolves the name inside ~/.warp/launch_configurations/. Warp has no run-command API besides launch configs.
 export const WARP_URI = `warp://launch/${encodeURIComponent(basename(PATHS.warpConfig))}`
 
-export async function launch(terminal: Terminal, s: Session, fork: boolean): Promise<void> {
+// Terminal.app and Warp have no scriptable new tab, so they open a window either way.
+export async function launch(terminal: Terminal, s: Session, fork: boolean, newWindow: boolean): Promise<void> {
   if (terminal === 'warp') {
     mkdirSync(dirname(PATHS.warpConfig), { recursive: true })
     writeFileSync(PATHS.warpConfig, warpConfig(s.title, cdTarget(s) ?? PATHS.home, resumeCommand(s.id, fork)))
@@ -72,8 +88,9 @@ export async function launch(terminal: Terminal, s: Session, fork: boolean): Pro
     return
   }
   const cmd = terminalCommand(s, fork)
+  const script = terminal === 'terminal' ? terminalAppScript(cmd) : newWindow ? itermScript(cmd) : itermTabScript(cmd)
   // execFile, never a shell: the script is a single argv entry.
-  await run('osascript', ['-e', terminal === 'iterm' ? itermScript(cmd) : terminalAppScript(cmd)])
+  await run('osascript', ['-e', script])
 }
 
 if (import.meta.vitest) {
@@ -108,8 +125,13 @@ if (import.meta.vitest) {
   it('escapes backslashes and quotes inside AppleScript strings', () => {
     expect(appleScriptString('say "hi" \\ ok')).toBe('"say \\"hi\\" \\\\ ok"')
   })
-  it('writes the command into a new iTerm window and a new Terminal tab', () => {
+  it('writes the command into a new iTerm window, a new iTerm tab with a window fallback, and a Terminal window', () => {
     expect(itermScript("cd '/x' && claude")).toContain(`write text "cd '/x' && claude"`)
+    expect(itermScript('claude')).toContain('create window with default profile')
+    const tab = itermTabScript('claude')
+    expect(tab).toContain('if (count of windows) = 0 then')
+    expect(tab).toContain('tell current window to create tab with default profile')
+    expect(tab).toContain('write text "claude"')
     expect(terminalAppScript('claude')).toContain('do script "claude"')
   })
   it('writes a Warp launch config with every value JSON-quoted', () => {
@@ -121,6 +143,7 @@ if (import.meta.vitest) {
   it.skipIf(!process.env.SESSION_DECK_LAUNCH)('opens a harmless echo in iTerm, Terminal and Warp', async () => {
     const echo = 'echo session-deck-check'
     await run('osascript', ['-e', itermScript(echo)])
+    await run('osascript', ['-e', itermTabScript(echo)])
     await run('osascript', ['-e', terminalAppScript(echo)])
     mkdirSync(dirname(PATHS.warpConfig), { recursive: true })
     writeFileSync(PATHS.warpConfig, warpConfig('session-deck-check', PATHS.home, echo))

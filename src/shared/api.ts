@@ -96,7 +96,7 @@ export interface Api {
   listSessions(): Promise<Session[]>
   getSettings(): Promise<Settings>
   saveSettings(patch: SettingsPatch): Promise<Settings>
-  resumeSession(id: string, opts: { fork: boolean }): Promise<ResumeResult>
+  resumeSession(id: string, opts: { fork: boolean; newWindow?: boolean }): Promise<ResumeResult>
   openFolder(id: string): Promise<void>
   openPr(id: string): Promise<void>
   renameSession(id: string, title: string): Promise<void>
