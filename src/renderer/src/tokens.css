@@ -30,6 +30,11 @@
   --app-violet: #bb87fc;
   --app-diff-add: rgba(76, 183, 130, 0.12);
   --app-diff-del: rgba(235, 87, 87, 0.12);
+  --app-brand-wash: rgba(255, 255, 255, 0.08);
+  --app-brand-wash-open: rgba(255, 255, 255, 0.12);
+  --app-brand-divider: rgba(255, 255, 255, 0.2);
+  --app-shadow-button: 0 1px 1px rgba(0, 0, 0, 0.15);
+  --app-shadow-menu: inset 0 0 0 1px #393a4b, 0 7px 24px rgba(0, 0, 0, 0.35);
   --app-font: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --app-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   --app-radius: 4px;

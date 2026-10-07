@@ -142,7 +142,7 @@ export const prCommand = (n: number): string => `claude --from-pr ${n}`
 export const ICON_NAMES = [
   'AllItems', 'Box', 'Branch', 'Layers', 'Storage', 'ChevronDown2', 'Search1', 'Bolt', 'Document', 'Attachment2',
   'Loader', 'ClockOutline', 'Code', 'Code2', 'ViewList', 'Timeline', 'CalendarEmpty', 'ArrowRight', 'Clipboard',
-  'Link', 'Edit', 'Archive', 'Check', 'Edit2', 'Expand',
+  'Link', 'Edit', 'Archive', 'Check', 'Edit2', 'Expand', 'Layout',
 ] as const
 export type IconName = (typeof ICON_NAMES)[number]
 
