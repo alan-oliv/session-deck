@@ -4,7 +4,7 @@ import { agoShort, attention, daysAgo, fileSize, plural, tildify } from './forma
 import { visible } from './tree'
 import { byRecent } from './views'
 
-export type KindId = 'sessions' | 'ask' | 'files' | 'artifacts' | 'prs' | 'in' | 'is' | 'when' | 'actions' | 'terminal' | 'rename'
+export type KindId = 'sessions' | 'ask' | 'files' | 'artifacts' | 'prs' | 'in' | 'is' | 'when' | 'actions' | 'terminal'
 export interface Kind { id: KindId; prefix: string; label: string; icon: IconName; desc: string; examples: string[] }
 export type ActionId =
   | 'resume' | 'copy' | 'fork' | 'openFolder' | 'openPr' | 'copyPr' | 'showRepo'
@@ -34,7 +34,6 @@ export const KINDS: Kind[] = [
 ]
 const INTERNAL_KINDS: Kind[] = [
   { id: 'terminal', prefix: '', label: 'Resume in', icon: 'Code', desc: 'Pick the terminal that resumes and forks sessions. Change it later with > Change terminal.', examples: [] },
-  { id: 'rename', prefix: '', label: 'Rename', icon: 'Edit', desc: 'Type a new title and press Enter. Named sessions resume by name from any folder.', examples: [] },
 ]
 export const kindById = (id: KindId): Kind => [...KINDS, ...INTERNAL_KINDS].find((k) => k.id === id) ?? KINDS[0]
 
@@ -151,7 +150,7 @@ function actionsFor(s: Session, settings: Settings): Result[] {
   }
   if (s.repo) list.push(a('showRepo', `Show ${s.repo.name} in the tree`, 'Box', tildify(s.repo.root)))
   list.push(
-    a('rename', 'Rename session', 'Edit', 'Appends a custom-title record to the transcript, as /rename does.'),
+    a('rename', 'Rename session', 'Edit', 'Opens the title for editing. Enter saves, Esc cancels.'),
     s.archived
       ? a('unarchive', 'Unarchive session', 'Archive', 'Shows it in the tree and list again.')
       : a('archive', 'Archive session', 'Archive', 'Hides it from the tree and list. is:archived still finds it.'),
@@ -292,8 +291,6 @@ export function search(all: Session[], kind: KindId, query: string, ctx: SearchC
         type: 'terminal', terminal: t.id, key: `t:${t.id}`, icon: 'Code', iconColor: SECONDARY, title: t.label,
         sub: ctx.settings.terminal === t.id ? 'Current' : '', mono: false, right: '', keycap: '',
       })))
-      break
-    case 'rename':
       break
   }
   return groups

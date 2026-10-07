@@ -22,7 +22,7 @@ export type BarAction =
   | { type: 'openPr'; id: string }
   | { type: 'showRepo'; id: string }
   | { type: 'archive'; id: string; archived: boolean }
-  | { type: 'rename'; id: string; title: string }
+  | { type: 'startRename'; id: string }
   | { type: 'terminal'; terminal: Terminal }
   | { type: 'tee'; enabled: boolean }
 
@@ -73,7 +73,7 @@ export function activate(r: Result): Step {
         case 'unarchive':
           return { type: 'emit', action: { type: 'archive', id, archived: false } }
         case 'rename':
-          return { type: 'kind', kind: 'rename', query: r.session.title }
+          return { type: 'emit', action: { type: 'startRename', id } }
         case 'changeTerminal':
           return { type: 'kind', kind: 'terminal', query: '' }
         case 'teeOn':
@@ -85,8 +85,7 @@ export function activate(r: Result): Step {
   }
 }
 
-const primaryVerb = (kind: KindId, cur: Result | undefined): string => {
-  if (kind === 'rename') return 'Rename'
+const primaryVerb = (cur: Result | undefined): string => {
   if (!cur) return 'Resume'
   if (cur.type === 'session') return 'Resume'
   if (cur.type === 'action') return 'Run'
@@ -183,7 +182,6 @@ export function CommandBar(p: CommandBarProps) {
   const groups = search(p.sessions, kindId, query, { now: p.now, selected: p.selected, settings: p.settings })
   const flat = groups.flatMap((g) => g.results)
   const cur = flat[Math.min(idx, Math.max(0, flat.length - 1))]
-  const renameBlocked = kindId === 'rename' && !!p.selected?.live
 
   useEffect(() => {
     listRef.current?.querySelector('.bar-row.is-active')?.scrollIntoView({ block: 'nearest' })
@@ -202,13 +200,7 @@ export function CommandBar(p: CommandBarProps) {
     setCopied(!!step.copied)
     p.onAction(step.action)
   }
-  const onEnter = () => {
-    if (kindId === 'rename') {
-      if (p.selected && !renameBlocked) p.onAction({ type: 'rename', id: p.selected.id, title: query })
-      return
-    }
-    run(cur)
-  }
+  const onEnter = () => run(cur)
   const onExample = (e: string) => {
     const d = detectKind(e)
     if (d) setKind(d.kind, d.rest)
@@ -216,11 +208,8 @@ export function CommandBar(p: CommandBarProps) {
   }
 
   const footIcon: IconName = copied ? 'Check' : kind.icon
-  const footLabel = p.note ?? (renameBlocked ? "Can't rename a running session" : copied ? 'Copied resume command' : kind.label)
-  const emptyText =
-    kindId === 'ask' ? 'Nothing close. Try different words or a file name.'
-    : kindId === 'rename' ? (p.selected ? `Press ↵ to rename “${p.selected.title}”.` : 'Select a session first.')
-    : 'No matches.'
+  const footLabel = p.note ?? (copied ? 'Copied resume command' : kind.label)
+  const emptyText = kindId === 'ask' ? 'Nothing close. Try different words or a file name.' : 'No matches.'
 
   return (
     <div className="bar-scrim" onPointerDown={(e) => e.target === e.currentTarget && p.onClose()}>
@@ -309,7 +298,7 @@ export function CommandBar(p: CommandBarProps) {
         <div className="bar-footer">
           <span className="bar-footer-item"><Icon name={footIcon} size={12} />{footLabel}</span>
           <span className="bar-footer-spacer" />
-          <span className="bar-footer-item bar-footer-primary">{primaryVerb(kindId, cur)}<span className="keycap">↵</span></span>
+          <span className="bar-footer-item bar-footer-primary">{primaryVerb(cur)}<span className="keycap">↵</span></span>
           <span className="bar-footer-divider" />
           <span className="bar-footer-item">Search kinds<span className="keycap">/</span></span>
           <span className="bar-footer-item">Actions<span className="keycap">&gt;</span></span>
@@ -360,8 +349,7 @@ if (import.meta.vitest) {
   it('says nothing is close when Ask finds no match', () => {
     expect(render({ kind: 'ask', query: 'kubernetes billing' })).toContain('Nothing close. Try different words or a file name.')
   })
-  it('refuses to rename a running session and shows errors from the app in the footer', () => {
-    expect(render({ kind: 'rename', query: 'x' }, { selected: { ...s, live: true } })).toContain("Can&#x27;t rename a running session")
+  it('shows errors from the app in the footer', () => {
     expect(render({ kind: 'sessions', query: '' }, { note: 'Unknown session' })).toContain('Unknown session')
   })
   it('maps each highlighted result to a kind switch or an app action', () => {
@@ -369,7 +357,7 @@ if (import.meta.vitest) {
     const byAction = (id: string) => groups[0].results.find((r) => r.type === 'action' && r.action === id)!
     expect(activate(byAction('fork'))).toEqual({ type: 'emit', action: { type: 'resume', id: s.id, fork: true } })
     expect(activate(byAction('copy'))).toEqual({ type: 'emit', action: { type: 'copy', id: s.id, what: 'resume', text: `claude --resume ${s.id}` }, copied: true })
-    expect(activate(byAction('rename'))).toEqual({ type: 'kind', kind: 'rename', query: 'live-meeting' })
+    expect(activate(byAction('rename'))).toEqual({ type: 'emit', action: { type: 'startRename', id: s.id } })
     expect(activate(byAction('changeTerminal'))).toEqual({ type: 'kind', kind: 'terminal', query: '' })
     expect(activate(byAction('archive'))).toEqual({ type: 'emit', action: { type: 'archive', id: s.id, archived: true } })
     expect(activate(byAction('teeOn'))).toEqual({ type: 'emit', action: { type: 'tee', enabled: true } })

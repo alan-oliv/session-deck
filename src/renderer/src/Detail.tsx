@@ -1,11 +1,12 @@
-import { Fragment, useEffect, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { Session, Transcript as TranscriptData } from '../../shared/api'
 import { makeSession } from '../../shared/fixtures'
 import { agoLong, fileSize, modelLabel, monthDay, plural, tildify } from '../../shared/format'
-import { Button } from './Button'
+import type { ResumeAction } from '../../shared/resume'
 import { errorText } from './hooks'
 import { Icon } from './icons'
+import { ResumeMenu } from './ResumeMenu'
 import { Transcript } from './Transcript'
 import { Usage, tiles } from './Usage'
 import './Detail.css'
@@ -26,10 +27,13 @@ export interface DetailProps {
   focus: boolean
   onTab(tab: DetailTab): void
   onFocus(): void
-  onResume(): void
-  onCopy(): void
-  onFork(): void
-  onOpenFolder(): void
+  menuOpen: boolean
+  onMenuToggle(): void
+  onMenuClose(): void
+  onResumeAction(a: ResumeAction): void
+  renaming: boolean
+  onStartRename(): void
+  onRename(title: string | null): void
   onCopyPr(): void
   onEnableTee(): void
 }
@@ -84,6 +88,41 @@ function useTranscript(id: string, live: boolean): Loaded {
   return state.id === id ? state : { id, transcript: null, error: null }
 }
 
+function RenameField({ title, onDone }: { title: string; onDone(title: string | null): void }) {
+  const [value, setValue] = useState(title)
+  // Enter unmounts the input, which fires blur; report once.
+  const done = useRef(false)
+  const finish = (v: string | null) => {
+    if (done.current) return
+    done.current = true
+    onDone(v)
+  }
+  return (
+    <div className="rename">
+      <input
+        className="rename-input"
+        value={value}
+        placeholder="Session name"
+        autoFocus
+        onFocus={(e) => e.currentTarget.select()}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={() => finish(value.trim())}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            finish(value.trim())
+          } else if (e.key === 'Escape') {
+            e.preventDefault()
+            e.stopPropagation()
+            finish(null)
+          }
+        }}
+      />
+      <span className="rename-hint">Enter to save · Esc to cancel. A name lets you resume from any folder with claude --resume &lt;name&gt;.</span>
+    </div>
+  )
+}
+
 function Section({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="detail-section">
@@ -116,16 +155,22 @@ export function Detail(p: DetailProps) {
         <div className="detail-body">
           <div className="detail-inner">
             <div className="detail-head">
-              <h2 className="detail-title">{s.title}</h2>
+              {p.renaming ? (
+                <RenameField key={s.id} title={s.title} onDone={p.onRename} />
+              ) : (
+                <h2 className="detail-title" title="Double-click to rename" onDoubleClick={p.onStartRename}>{s.title}</h2>
+              )}
               <span className="detail-when">{`${agoLong(s.end, p.now)} · ${modelLabel(s.model)} · ${fileSize(s.sizeBytes)}`}</span>
             </div>
             <div className="detail-actions">
-              <Button kind="primary" onClick={p.onResume} title="Opens claude --resume in your terminal">Resume</Button>
-              <Button kind="secondary" onClick={p.onCopy}>{copied('resume') ? 'Copied' : 'Copy command'}</Button>
-              <Button kind="secondary" onClick={p.onFork} title="Opens claude --resume … --fork-session in your terminal">
-                {copied('fork') ? 'Copied' : 'Fork'}
-              </Button>
-              {s.cwdExists && <Button kind="secondary" onClick={p.onOpenFolder}>Open folder</Button>}
+              <ResumeMenu
+                session={s}
+                open={p.menuOpen}
+                copied={copied('resume') || copied('fork')}
+                onToggle={p.onMenuToggle}
+                onClose={p.onMenuClose}
+                onAction={p.onResumeAction}
+              />
               {s.pr && (
                 <span className="detail-pr" title="Copies claude --from-pr" onClick={p.onCopyPr}>
                   {copied('pr') ? 'Copied' : `All sessions for #${s.pr.number}`}
@@ -172,7 +217,7 @@ export function Detail(p: DetailProps) {
           transcript={transcript}
           error={error}
           now={p.now}
-          onResume={p.onResume}
+          onResume={() => p.onResumeAction('resume')}
           loadOutput={(turn, item) => window.api.getToolOutput(s.id, turn, item)}
         />
       )}
@@ -185,7 +230,11 @@ if (import.meta.vitest) {
   const now = new Date(2026, 9, 6, 11, 0)
   const pr = { repo: 'alan-oliv/meetnotes', number: 27, url: 'https://github.com/alan-oliv/meetnotes/pull/27' }
   const noop = () => {}
-  const handlers = { tab: 'overview' as DetailTab, focus: false, onTab: noop, onFocus: noop, onResume: noop, onCopy: noop, onFork: noop, onOpenFolder: noop, onCopyPr: noop, onEnableTee: noop }
+  const handlers = {
+    tab: 'overview' as DetailTab, focus: false, onTab: noop, onFocus: noop,
+    menuOpen: false, onMenuToggle: noop, onMenuClose: noop, onResumeAction: noop,
+    renaming: false, onStartRename: noop, onRename: noop, onCopyPr: noop, onEnableTee: noop,
+  }
 
   it('shows the tab bar with Focus, and swaps the overview for the transcript tab', () => {
     const s = makeSession({ title: 'live-meeting' })
@@ -233,18 +282,34 @@ if (import.meta.vitest) {
     const styled = makeSession({ usage: { ...makeSession().usage, outputStyle: 'architecture' } })
     expect(tiles(styled)[3][2]).toEqual({ k: 'Output style', v: 'architecture', sub: '3 agents' })
   })
-  it('renders the title, the sub-line, the actions and the PR link', () => {
+  it('renders the title with its rename tooltip, the sub-line, the Resume split button and the PR link', () => {
     const html = renderToStaticMarkup(<Detail session={makeSession({ title: 'live-meeting', pr })} now={now} copied={null} teeOn={false} {...handlers} />)
-    expect(html).toContain('>live-meeting</h2>')
+    expect(html).toContain('title="Double-click to rename">live-meeting</h2>')
     expect(html).toContain('Today, 9:12 AM · Opus 5.5 · 6.1MB')
-    for (const label of ['Resume', 'Copy command', 'Fork', 'Open folder', 'All sessions for #27']) expect(html).toContain(`>${label}<`)
+    expect(html).toContain('class="rm-main" title="Opens claude --resume in your terminal">Resume</span>')
+    expect(html).toContain('>All sessions for #27<')
+    expect(html).not.toContain('Copy command')
+    expect(html).not.toContain('>Fork<')
   })
   it('swaps a label to Copied for the copy that just happened', () => {
     const s = makeSession({ pr })
-    const html = renderToStaticMarkup(<Detail session={s} now={now} copied={{ id: s.id, what: 'pr' }} teeOn={false} {...handlers} />)
-    expect(html).toContain('>Copied<')
-    expect(html).toContain('>Copy command<')
-    expect(html).not.toContain('All sessions for #27')
+    const prCopied = renderToStaticMarkup(<Detail session={s} now={now} copied={{ id: s.id, what: 'pr' }} teeOn={false} {...handlers} />)
+    expect(prCopied).toContain('class="detail-pr" title="Copies claude --from-pr">Copied</span>')
+    expect(prCopied).toContain('>Resume</span>')
+    const forkCopied = renderToStaticMarkup(<Detail session={s} now={now} copied={{ id: s.id, what: 'fork' }} teeOn={false} {...handlers} />)
+    expect(forkCopied).toContain('class="rm-main" title="Opens claude --resume in your terminal">Copied</span>')
+  })
+  it('replaces the title with the rename field while renaming', () => {
+    const html = renderToStaticMarkup(<Detail session={makeSession({ title: 'live-meeting' })} now={now} copied={null} teeOn={false} {...handlers} renaming />)
+    expect(html).not.toContain('<h2')
+    expect(html).toContain('class="rename-input"')
+    expect(html).toContain('value="live-meeting"')
+    expect(html).toContain('placeholder="Session name"')
+    expect(html).toContain('Enter to save · Esc to cancel. A name lets you resume from any folder with claude --resume &lt;name&gt;.')
+  })
+  it('shows the open Resume menu when asked', () => {
+    const html = renderToStaticMarkup(<Detail session={makeSession()} now={now} copied={null} teeOn={false} {...handlers} menuOpen />)
+    expect(html.match(/class="rm-item"/g)).toHaveLength(6)
   })
   it('shows where it stopped, what is next and the changed files', () => {
     const s = makeSession({
