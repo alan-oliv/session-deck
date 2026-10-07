@@ -109,6 +109,33 @@
   color: var(--app-text-3);
 }
 
+.rename {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rename-input {
+  height: 36px;
+  margin: 0 -8px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  outline: none;
+  font: 500 22px/28px var(--app-font);
+  color: var(--app-text);
+}
+
+.rename-input:focus {
+  box-shadow: inset 0 0 0 1px var(--app-focus);
+}
+
+.rename-hint {
+  font-size: 12px;
+  color: var(--app-text-3);
+}
+
 .detail-actions {
   display: flex;
   align-items: center;

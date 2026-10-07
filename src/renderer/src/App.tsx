@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { prCommand, resumeCommand, type Session, type Settings } from '../../shared/api'
 import { makeSession } from '../../shared/fixtures'
 import { clampPane, PANES_KEY, paneMax, readPaneWidths, type PaneKey, type PaneWidths } from '../../shared/panes'
+import type { ResumeAction } from '../../shared/resume'
 import { buildTree, defaultExpanded, inScope, scopeTitle, visible, type Scope } from '../../shared/tree'
 import { byRecent, dayKey, latestDay, listForView, type ViewMode, type YearMonth } from '../../shared/views'
 import { CommandBar, type BarAction, type BarOpen } from './CommandBar'
@@ -10,9 +11,11 @@ import { Detail, type CopiedKey, type DetailTab } from './Detail'
 import { errorText, useNow, useSessions, useSettings } from './hooks'
 import { SessionList } from './SessionList'
 import { Sidebar } from './Sidebar'
+import { Toast } from './Toast'
 import './App.css'
 
 const COPIED_MS = 1600
+const TOAST_MS = 3000
 // Static renders in tests have no window; the default window width stands in.
 const windowWidth = () => (typeof window === 'undefined' ? 1360 : window.innerWidth)
 
@@ -24,7 +27,7 @@ function savedPanes(): PaneWidths {
   }
 }
 
-type Pending = { id: string; fork: boolean }
+type Pending = { id: string; fork: boolean; newWindow: boolean }
 
 export function App() {
   const sessions = useSessions()
@@ -49,6 +52,10 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
   const [winWidth, setWinWidth] = useState(windowWidth)
   const [detailTab, setDetailTab] = useState<DetailTab>('overview')
   const [focus, setFocus] = useState(false)
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const barSeq = useRef(0)
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
@@ -103,6 +110,13 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
     setBar((b) => b ?? { open: { kind: 'sessions', query: '' }, seq })
     setNote(errorText(e))
   }
+  // Detail-pane actions report here; a toast needs no bar to be open.
+  const showToast = (text: string) => {
+    setToast(text)
+    clearTimeout(toastTimer.current)
+    toastTimer.current = setTimeout(() => setToast(null), TOAST_MS)
+  }
+  const report = (e: unknown) => showToast(errorText(e))
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -123,17 +137,17 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
     copyTimer.current = setTimeout(() => setCopied(null), COPIED_MS)
   }
   const copy = (id: string, what: CopiedKey['what'], text: string) => {
-    void navigator.clipboard.writeText(text).then(() => flash({ id, what }), fail)
+    void navigator.clipboard.writeText(text).then(() => flash({ id, what }), report)
   }
-  const resume = async (id: string, fork: boolean) => {
+  const resume = async (id: string, fork: boolean, newWindow: boolean) => {
     try {
-      const r = await window.api.resumeSession(id, { fork })
+      const r = await window.api.resumeSession(id, { fork, newWindow })
       if (r.ok) return
-      if ('needsTerminal' in r) return openBar({ kind: 'terminal', query: '' }, { id, fork })
+      if ('needsTerminal' in r) return openBar({ kind: 'terminal', query: '' }, { id, fork, newWindow })
       flash({ id, what: fork ? 'fork' : 'resume' })
-      fail(new Error(`Couldn't open the terminal, so the command was copied. ${r.error}`))
+      showToast(`Couldn't open the terminal, so the command was copied. ${r.error}`)
     } catch (e) {
-      fail(e)
+      report(e)
     }
   }
   const call = async (fn: () => Promise<unknown>, after?: () => void) => {
@@ -142,6 +156,38 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
       after?.()
     } catch (e) {
       fail(e)
+    }
+  }
+  const startRename = (id: string) => {
+    setSelectedId(id)
+    setDetailTab('overview')
+    setMenuOpenId(null)
+    setRenamingId(id)
+  }
+  const rename = async (s: Session, title: string | null) => {
+    setRenamingId(null)
+    if (!title || title === s.title) return
+    try {
+      await window.api.renameSession(s.id, title)
+      showToast(`Renamed. Resume with claude --resume "${title}"`)
+    } catch (e) {
+      report(e)
+    }
+  }
+  const onResumeAction = (s: Session, a: ResumeAction) => {
+    switch (a) {
+      case 'resume':
+        return void resume(s.id, false, false)
+      case 'resumeWindow':
+        return void resume(s.id, false, true)
+      case 'fork':
+        return void resume(s.id, true, false)
+      case 'rename':
+        return setRenamingId(s.id)
+      case 'copy':
+        return copy(s.id, 'resume', resumeCommand(s.id, false))
+      case 'openFolder':
+        return void window.api.openFolder(s.id).catch(report)
     }
   }
 
@@ -154,7 +200,7 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
       case 'resume':
         setSelectedId(a.id)
         closeBar()
-        return resume(a.id, a.fork)
+        return resume(a.id, a.fork, false)
       case 'copy':
         return copy(a.id, a.what, a.text)
       case 'openFolder':
@@ -171,8 +217,9 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
       }
       case 'archive':
         return call(() => window.api.setArchived(a.id, a.archived), closeBar)
-      case 'rename':
-        return call(() => window.api.renameSession(a.id, a.title), closeBar)
+      case 'startRename':
+        closeBar()
+        return startRename(a.id)
       case 'tee':
         return call(() => window.api.setStatusTee(a.enabled), closeBar)
       case 'terminal': {
@@ -181,7 +228,7 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
           () => window.api.saveSettings({ terminal: a.terminal }),
           () => {
             closeBar()
-            if (p) void resume(p.id, p.fork)
+            if (p) void resume(p.id, p.fork, p.newWindow)
           },
         )
       }
@@ -233,10 +280,13 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
           focus={focus}
           onTab={setDetailTab}
           onFocus={() => setFocus(!focus)}
-          onResume={() => void resume(selected.id, false)}
-          onCopy={() => copy(selected.id, 'resume', resumeCommand(selected.id, false))}
-          onFork={() => void resume(selected.id, true)}
-          onOpenFolder={() => void call(() => window.api.openFolder(selected.id))}
+          menuOpen={menuOpenId === selected.id}
+          onMenuToggle={() => setMenuOpenId(menuOpenId === selected.id ? null : selected.id)}
+          onMenuClose={() => setMenuOpenId(null)}
+          onResumeAction={(a) => onResumeAction(selected, a)}
+          renaming={renamingId === selected.id}
+          onStartRename={() => setRenamingId(selected.id)}
+          onRename={(title) => void rename(selected, title)}
           onCopyPr={() => selected.pr && copy(selected.id, 'pr', prCommand(selected.pr.number))}
           onEnableTee={() => void call(() => window.api.setStatusTee(true))}
         />
@@ -258,6 +308,7 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
           onAction={(a) => void onAction(a)}
         />
       )}
+      {toast && <Toast text={toast} />}
     </div>
   )
 }
@@ -289,5 +340,7 @@ if (import.meta.vitest) {
     expect(html).toContain('tab is-active">Overview<')
     expect(html).toContain('>Focus<')
     expect(html).not.toContain('app-drag')
+    expect(html).toContain('title="More ways to resume"')
+    expect(html).not.toContain('class="toast"')
   })
 }
