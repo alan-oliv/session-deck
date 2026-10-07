@@ -127,9 +127,14 @@ Done when: changing the theme writes `settings.json` in `app.getPath('userData')
   ```
 - `binding.gyp`: `sources: ["blur.mm"]`; `xcode_settings`: `OTHER_LDFLAGS: ["-framework Cocoa", "-F/System/Library/PrivateFrameworks", "-framework SkyLight"]`, `CLANG_ENABLE_OBJC_ARC: "YES"`, `MACOSX_DEPLOYMENT_TARGET: "14.2"`.
 - `scripts/build-native.sh` builds it against **Electron's** headers: `node-gyp rebuild --target=$(node -p "require('electron/package.json').version") --arch=arm64 --dist-url=https://electronjs.org/headers`.
-- `main/blur.ts` loads it with `process.dlopen` (the bundler passes that through), from `process.resourcesPath/blur.node` when packaged and `native/blur/build/Release/blur.node` in dev. A missing or failing addon is logged, and the window stays usable without blur. Clamp the radius to 0–40 and apply it on `did-finish-load`.
+- `main/blur.ts` loads it with `process.dlopen` (the bundler passes that through), from `process.resourcesPath/blur.node` when packaged and `native/blur/build/Release/blur.node` in dev. A missing or failing addon is logged, and the window stays usable without blur. Clamp the radius to 0–40 and apply it on `did-finish-load` and again whenever the appearance settings are saved, so a blur slider updates live.
+- The radius is the user's blur value while the window tint is translucent, and 0 when opacity is 100%: a solid window has nothing to blur, and the slider's help text should say so.
+- Do not substitute Electron's own options for the addon; they look close but are not the same thing:
+  - `BrowserWindow.setVibrancy()` / `vibrancy:` wraps an `NSVisualEffectView`. It is a fixed system material: no radius, its own tint, and a different look from iTerm2 and Warp. A 0–40 px slider wired to it becomes an on/off switch.
+  - CSS `backdrop-filter` on the page root blurs only what Chromium itself composites. In a transparent window the desktop is not part of that backdrop, so it does nothing.
+- Add `native/blur/build/` to `.gitignore`; only `binding.gyp` and `blur.mm` are source.
 
-Done when: in `npm run dev` the desktop behind the window is blurred, and with `blur.node` renamed away the window still opens and works, unblurred.
+Done when: in `npm run dev` the desktop behind the window is blurred and the blur changes as the slider moves, and with `blur.node` renamed away the window still opens and works, unblurred. Check it with a full-screen `screencapture`: a window-only capture (`screencapture -l <id>`) renders the window without what is behind it, so it can never show the blur.
 
 ### 6. Secrets
 

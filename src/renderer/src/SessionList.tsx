@@ -3,6 +3,7 @@ import type { IconName, Session } from '../../shared/api'
 import { makeSession } from '../../shared/fixtures'
 import { agoShort, attention, clock, plural, tildify } from '../../shared/format'
 import { PANES } from '../../shared/panes'
+import { buildChips, sameScope, type Chip, type Scope } from '../../shared/tree'
 import { dayKey, groupSessions, listForView, type ViewMode, type YearMonth } from '../../shared/views'
 import { Calendar } from './Calendar'
 import { Icon } from './icons'
@@ -23,11 +24,15 @@ export interface SessionListProps {
   maxWidth: number
   onWidth(width: number): void
   sessions: Session[]
+  chips: Chip[]
+  scope: Scope
+  onScope(scope: Scope): void
   showModes: boolean
   mode: ViewMode
   onMode(m: ViewMode): void
   selectedId: string | null
   onSelect(id: string): void
+  onArchive(s: Session): void
   onOpenBar(): void
   now: Date
   month: YearMonth
@@ -36,16 +41,30 @@ export interface SessionListProps {
   onDay(key: string): void
 }
 
-function Row({ s, mode, now, selected, onSelect }: { s: Session; mode: ViewMode; now: Date; selected: boolean; onSelect(id: string): void }) {
+interface RowProps { s: Session; mode: ViewMode; now: Date; selected: boolean; onSelect(id: string): void; onScope(scope: Scope): void; onArchive(s: Session): void }
+
+function Row({ s, mode, now, selected, onSelect, onScope, onArchive }: RowProps) {
   const dot = attention(s.status)
   const timeline = mode === 'timeline'
   const where = `${mode !== 'repo' && s.repo ? `${s.repo.name} · ` : ''}${tildify(s.cwd)}${s.forks ? ` · ${plural(s.forks, 'fork')}` : ''}`
+  const branch = s.repo && s.branch && s.branch !== 'HEAD' ? { repo: s.repo.root, branch: s.branch } : null
   return (
     <div
       className={selected ? 'row is-selected' : 'row'}
       style={{ gridTemplateColumns: timeline ? '58px minmax(0, 1fr)' : 'minmax(0, 1fr)' }}
       onClick={() => onSelect(s.id)}
     >
+      <button
+        type="button"
+        className="row-archive"
+        title={s.archived ? 'Restore from archive' : 'Archive'}
+        onClick={(e) => {
+          e.stopPropagation()
+          onArchive(s)
+        }}
+      >
+        <Icon name="Archive" size={14} />
+      </button>
       {timeline && <span className="row-time tnum">{clock(new Date(s.end)).replace(' ', ' ')}</span>}
       <div className="row-main">
         <div className="row-line">
@@ -53,7 +72,22 @@ function Row({ s, mode, now, selected, onSelect }: { s: Session; mode: ViewMode;
           <span className="row-title">{s.title}</span>
           {!timeline && <span className="row-ago">{agoShort(s.end, now)}</span>}
         </div>
-        <span className="row-where">{where}</span>
+        <div className="row-where">
+          <span className="row-loc">{where}</span>
+          {branch && (
+            <span
+              className="row-branch"
+              title={`Last branch in this session. Click to show every session that ended on ${branch.branch}.`}
+              onClick={(e) => {
+                e.stopPropagation()
+                onScope({ type: 'branch', ...branch })
+              }}
+            >
+              <Icon name="Branch" size={10} />
+              <span className="row-branch-name">{branch.branch}</span>
+            </span>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -71,6 +105,25 @@ export function SessionList(p: SessionListProps) {
           <span className="list-count">{plural(p.sessions.length, 'session')}</span>
           <span className="keycap" title="Command bar" onClick={p.onOpenBar}>⌘⇧P</span>
         </div>
+        {p.chips.length > 0 && (
+          <div className="chips">
+            {p.chips.map((c) => {
+              const on = sameScope(c.scope, p.scope)
+              return (
+                <div
+                  key={c.label + c.scope.type}
+                  className={on ? 'chip is-selected' : 'chip'}
+                  title={c.title || undefined}
+                  onClick={() => p.onScope(on && c.scope.type !== 'repo' ? p.chips[0].scope : c.scope)}
+                >
+                  {c.icon && <Icon name={c.icon} size={10} className="chip-icon" />}
+                  <span className={c.removed ? 'chip-label is-removed' : 'chip-label'}>{c.label}</span>
+                  <span className="chip-count tnum">{c.count}</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
         {p.showModes && (
           <div className="modes">
             {MODES.map((m) => (
@@ -96,7 +149,7 @@ export function SessionList(p: SessionListProps) {
               </div>
             )}
             {g.sessions.map((s) => (
-              <Row key={s.id} s={s} mode={p.mode} now={p.now} selected={s.id === p.selectedId} onSelect={p.onSelect} />
+              <Row key={s.id} s={s} mode={p.mode} now={p.now} selected={s.id === p.selectedId} onSelect={p.onSelect} onScope={p.onScope} onArchive={p.onArchive} />
             ))}
           </div>
         ))}
@@ -110,8 +163,8 @@ if (import.meta.vitest) {
   const { it, expect } = import.meta.vitest
   const now = new Date(2026, 9, 6, 11, 0)
   const base = {
-    title: 'All sessions', width: 380, maxWidth: 600, onWidth: () => {}, showModes: true, mode: 'list' as ViewMode, onMode: () => {}, selectedId: null,
-    onSelect: () => {}, onOpenBar: () => {}, now, month: { year: 2026, month: 9 }, day: null, onMonth: () => {}, onDay: () => {},
+    title: 'All sessions', width: 380, maxWidth: 600, onWidth: () => {}, chips: [], scope: { type: 'all' } as Scope, onScope: () => {}, showModes: true, mode: 'list' as ViewMode, onMode: () => {}, selectedId: null,
+    onSelect: () => {}, onArchive: () => {}, onOpenBar: () => {}, now, month: { year: 2026, month: 9 }, day: null, onMonth: () => {}, onDay: () => {},
   }
   const live = makeSession({ title: 'live-meeting', status: 'running', forks: 1, end: new Date(2026, 9, 6, 9, 12).toISOString() })
   const old = makeSession({ title: 'old pass', end: new Date(2026, 9, 3, 9, 0).toISOString(), repo: null, cwd: '/Users/me/code' })
@@ -128,6 +181,23 @@ if (import.meta.vitest) {
     expect(html).toContain('>3d<')
     expect(html).toContain('app · ~/code/app · 1 fork')
     expect(html).toContain('title="Running"')
+  })
+  it('links the last branch on repository rows only, never for detached or folder sessions', () => {
+    const html = render()
+    expect(html).toContain('title="Last branch in this session. Click to show every session that ended on main."')
+    expect(html).toContain('row-branch-name">main<')
+    expect(html.match(/row-branch"/g)).toHaveLength(1)
+    expect(render({ sessions: [makeSession({ branch: 'HEAD' })] })).not.toContain('row-branch')
+  })
+  it('shows the filter chips, marking the active one and striking removed worktrees', () => {
+    const root = '/Users/me/code/app'
+    const all = [live, makeSession(), makeSession({ branch: 'feat' }), makeSession({ worktree: { name: 'old', path: `${root}/.worktrees/old`, removedSeen: '2026-10-02T00:00:00.000Z' } })]
+    const scope: Scope = { type: 'branch', repo: root, branch: 'main' }
+    const html = render({ sessions: all, chips: buildChips(all, scope), scope })
+    expect(html).toContain('chip" title="Includes 1 branch with one session"')
+    expect(html).toMatch(/chip is-selected" title="Sessions that ended on main"[^>]*>.*?chip-label">main<.*?chip-count tnum">3</)
+    expect(html).toContain('chip-label is-removed">old<')
+    expect(render()).not.toContain('class="chips"')
   })
   it('shows the view switcher only when asked, labelling just the current view', () => {
     expect(render()).toContain('mode is-current')
@@ -146,6 +216,10 @@ if (import.meta.vitest) {
     expect(html).toContain('October 2026')
     expect(html).toContain('old pass')
     expect(html).not.toContain('live-meeting')
+  })
+  it('gives every row an archive button that reads Restore for archived sessions', () => {
+    expect(render().match(/row-archive" title="Archive"/g)).toHaveLength(2)
+    expect(render({ sessions: [makeSession({ archived: true })] })).toContain('row-archive" title="Restore from archive"')
   })
   it('says so when there is nothing to show', () => {
     expect(render({ sessions: [] })).toContain('No sessions here.')

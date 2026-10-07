@@ -4,6 +4,9 @@ directories:
   output: dist
 files:
   - out/**
+extraResources:
+  - from: native/blur/build/Release/blur.node
+    to: blur.node
 mac:
   target: dir
   identity: 'Apple Development: alanbruno@gmail.com (8ENKTPJ3B3)'

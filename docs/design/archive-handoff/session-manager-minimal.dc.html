@@ -24,7 +24,7 @@
 <section style="padding:56px; display:flex; flex-direction:column; gap:28px; font-family:var(--font-sans); color:var(--text-primary);">
   <div style="display:flex; flex-direction:column; gap:8px; max-width:720px;">
     <div style="font-size:12px; line-height:16px; color:var(--text-tertiary);">Session Manager · Minimal</div>
-    <h1 style="margin:0; font-size:24px; line-height:32px; font-weight:500;">Tree, list and detail</h1>
+    <h1 style="margin:0; font-size:24px; line-height:32px; font-weight:500;">Projects, list and detail</h1>
     <p style="margin:0; font-size:13px; line-height:20px; color:var(--text-secondary); text-wrap:pretty;">Press ⌘⇧P for a Raycast-style command bar with nine kinds of search: plain text, ask in your own words (?), files (file:), artifacts (art:), PRs and commits (pr:), repository (in:), status (is:), time (when:) and actions on the selected session (&gt;). Type / to list them. Each kind shows examples in the preview pane.</p>
     
   </div>
@@ -49,15 +49,43 @@
   <div style="padding:12px 16px; color:var(--grey-5); white-space:pre;"><div><span style="color:var(--blue);">~/code/meetnotes</span> <span style="color:var(--grey-6);">on live-meeting</span></div><div style="color:var(--grey-3);">$ claude --resume</div><div> </div><div><span style="color:var(--green);">●</span> Streaming partial transcripts</div><div style="color:var(--grey-6);">  ⎿ pnpm dev --filter meetnotes</div><div>    chunk  12   2.0s   <span style="color:var(--green);">ok</span></div><div>    chunk  13   2.0s   <span style="color:var(--green);">ok</span></div><div>    chunk  14   2.0s   <span style="color:var(--green);">ok</span></div><div> </div><div><span style="color:var(--yellow);">●</span> Update(src/live/SpeakerChips.tsx)</div><div><span style="color:var(--green);">  +   &lt;SpeakerChip speaker={seg.speaker} /&gt;</span></div><div><span style="color:var(--red-2);">  -   &lt;span&gt;{seg.text}&lt;/span&gt;</span></div><div> </div><div><span style="color:var(--violet);">✻</span> Thinking about speaker colors…</div><div> </div><div style="color:var(--grey-3);">&gt; <span style="display:inline-block; width:8px; height:15px; vertical-align:-3px; background:var(--grey-5);"></span></div></div>
 </div>
     <div ref="{{ ap.winRef }}" style="position:relative; width:1360px; height:820px; display:flex; border-radius:8px; overflow:hidden; background:{{ ap.winBg }}; backdrop-filter:{{ ap.blur }}; -webkit-backdrop-filter:{{ ap.blur }}; box-shadow:inset 0 0 0 1px var(--border-default), var(--shadow-2xl);">
+      <sc-if value="{{ c.hasToast }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute; left:50%; bottom:20px; transform:translateX(-50%); z-index:25; display:flex; align-items:center; gap:12px; height:36px; padding:0 8px 0 14px; border-radius:5px; background:var(--bg-modal); box-shadow:inset 0 0 0 1px var(--border-strong), var(--shadow-lg); font-size:13px; color:var(--text-primary); white-space:nowrap;">
+          <span>{{ c.toast }}</span>
+          <sc-if value="{{ c.hasUndo }}" hint-placeholder-val="{{ false }}"><span onClick="{{ c.onUndo }}" style="padding:4px 8px; border-radius:4px; font-size:12px; font-weight:500; color:var(--text-link); cursor:default;" style-hover="background:var(--ui-hover-1)">Undo</span></sc-if>
+        </div>
+      </sc-if>
       <sc-if value="{{ ap.open }}" hint-placeholder-val="{{ false }}">
-        <div onClick="{{ ap.close }}" style="position:absolute; inset:0; z-index:12; background:var(--ui-overlay); display:flex; justify-content:center; align-items:flex-start; padding-top:120px;">
-          <div onClick="{{ ap.stop }}" style="width:560px; display:flex; flex-direction:column; border-radius:8px; background:var(--bg-modal); box-shadow:inset 0 0 0 1px var(--border-strong), var(--shadow-2xl);">
+        <div onClick="{{ ap.close }}" style="position:absolute; inset:0; z-index:12; background:var(--ui-overlay); display:flex; justify-content:center; align-items:flex-start; padding:56px 0;">
+          <div onClick="{{ ap.stop }}" style="width:560px; max-height:100%; display:flex; flex-direction:column; border-radius:8px; background:var(--bg-modal); box-shadow:inset 0 0 0 1px var(--border-strong), var(--shadow-2xl);">
             <div style="height:52px; display:flex; align-items:center; gap:10px; padding:0 12px 0 20px; box-shadow:inset 0 -1px 0 var(--ui-divider);">
-              <span style="flex:1; font-size:15px; font-weight:500;">Appearance</span>
+              <span style="flex:1; font-size:15px; font-weight:500;">Settings</span>
               <span onClick="{{ ap.close }}" title="Close" style="display:flex; padding:6px; border-radius:4px; color:var(--text-tertiary); cursor:default;" style-hover="background:var(--ui-hover-1); color:var(--text-primary)"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="Close" size="14" hint-size="14px,14px"></x-import></span>
             </div>
-            <div style="padding:4px 20px 0; display:flex; flex-direction:column;">
-              <div style="display:grid; grid-template-columns:minmax(0,1fr) 248px; column-gap:24px; align-items:center; padding:18px 0;">
+            <div style="flex:1; min-height:0; overflow-y:auto; padding:4px 20px 0; display:flex; flex-direction:column;">
+              <span style="padding:16px 0 2px; font-size:12px; line-height:16px; color:var(--text-tertiary);">Resuming</span>
+              <div style="display:grid; grid-template-columns:minmax(0,1fr) 248px; column-gap:24px; align-items:start; padding:14px 0 18px;">
+                <div style="display:flex; flex-direction:column; gap:3px;"><span style="font-size:13px; font-weight:500;">Terminal</span><span style="font-size:12px; line-height:16px; color:var(--text-tertiary); text-wrap:pretty;">Where Resume and Branch conversation open the session.</span></div>
+                <div style="display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:2px; padding:2px; border-radius:5px; background:var(--bg-surface); box-shadow:inset 0 0 0 1px var(--border-default);">
+                  <sc-for list="{{ ap.terms }}" as="tm" hint-placeholder-count="5">
+                    <div onClick="{{ tm.onClick }}" style="display:flex; align-items:center; gap:8px; height:28px; padding:0 8px; border-radius:4px; background:{{ tm.bg }}; color:{{ tm.color }}; font-size:13px; cursor:default;" style-hover="background:var(--ui-hover-1); color:var(--text-primary)">
+                      <span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ tm.name }}</span>
+                      <sc-if value="{{ tm.hasNote }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px; color:var(--text-tertiary); white-space:nowrap;">{{ tm.note }}</span></sc-if>
+                      <span style="display:flex; width:12px; color:var(--text-primary);"><sc-if value="{{ tm.cur }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="Check" size="12" hint-size="12px,12px"></x-import></sc-if></span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display:grid; grid-template-columns:minmax(0,1fr) 248px; column-gap:24px; align-items:center; padding:18px 0; box-shadow:inset 0 1px 0 var(--ui-divider);">
+                <div style="display:flex; flex-direction:column; gap:3px;"><span style="font-size:13px; font-weight:500;">Open in</span><span style="font-size:12px; line-height:16px; color:var(--text-tertiary); text-wrap:pretty;">What the main Resume button does.</span></div>
+                <div style="display:flex; gap:2px; padding:2px; border-radius:5px; background:var(--bg-surface); box-shadow:inset 0 0 0 1px var(--border-default);">
+                  <sc-for list="{{ ap.opens }}" as="o" hint-placeholder-count="2">
+                    <div onClick="{{ o.onClick }}" style="flex:1; display:flex; align-items:center; justify-content:center; height:24px; border-radius:4px; background:{{ o.bg }}; color:{{ o.color }}; font-size:12px; font-weight:500; white-space:nowrap; cursor:default;" style-hover="color:var(--text-primary)">{{ o.label }}</div>
+                  </sc-for>
+                </div>
+              </div>
+              <span style="padding:16px 0 2px; font-size:12px; line-height:16px; color:var(--text-tertiary); box-shadow:inset 0 1px 0 var(--ui-divider);">Appearance</span>
+              <div style="display:grid; grid-template-columns:minmax(0,1fr) 248px; column-gap:24px; align-items:center; padding:14px 0 18px;">
                 <div style="display:flex; flex-direction:column; gap:3px;"><span style="font-size:13px; font-weight:500;">Accent color</span><span style="font-size:12px; line-height:16px; color:var(--text-tertiary); text-wrap:pretty;">Used for Resume, selection marks and the context meter.</span></div>
                 <div style="display:flex; flex-direction:column; gap:8px;">
                   <div style="display:flex; gap:10px; align-items:center;">
@@ -200,45 +228,47 @@
             <span style="flex:1;">All sessions</span>
             <span style="font-size:12px; color:var(--text-tertiary);">{{ c.allNode.count }}</span>
           </div>
-          <div style="display:flex; flex-direction:column; gap:1px;">
-            <div style="padding:0 8px 6px; font-size:12px; line-height:16px; color:var(--text-tertiary);">Repositories</div>
-            <sc-for list="{{ c.repos }}" as="r" hint-placeholder-count="3">
-              <div style="display:flex; flex-direction:column; gap:1px;">
-                <div onClick="{{ r.onClick }}" style="display:flex; align-items:center; gap:6px; height:28px; padding:0 8px 0 2px; border-radius:4px; background:{{ r.bg }}; color:{{ r.color }}; font-size:13px; cursor:default;" style-hover="background:var(--ui-hover-1); color:var(--text-primary)">
-                  <span onClick="{{ r.onToggle }}" style="width:16px; height:16px; display:flex; align-items:center; justify-content:center; color:var(--text-tertiary);"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="ChevronDown2" style="{{ r.chevStyle }}" size="10" hint-size="10px,10px"></x-import></span>
-                  <span style="display:flex; color:var(--text-tertiary);"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="Box" size="14" hint-size="14px,14px"></x-import></span>
-                  <span style="flex:1; min-width:0; margin-left:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ r.label }}</span>
+          <div onClick="{{ c.archNode.onClick }}" title="Sessions you archived. Their files are kept." style="display:flex; align-items:center; gap:8px; height:28px; margin-top:-15px; padding:0 8px; border-radius:4px; background:{{ c.archNode.bg }}; color:{{ c.archNode.color }}; font-size:13px; cursor:default;" style-hover="background:var(--ui-hover-1); color:var(--text-primary)">
+            <span style="display:flex; color:var(--text-tertiary);"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="Archive" size="14" hint-size="14px,14px"></x-import></span>
+            <span style="flex:1;">Archived</span>
+            <span style="font-size:12px; color:var(--text-tertiary);">{{ c.archNode.count }}</span>
+          </div>
+          <sc-if value="{{ c.hasNeeds }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ c.needsNode.onClick }}" title="Waiting for you, interrupted or failed" style="display:flex; align-items:center; gap:8px; height:28px; margin-top:-15px; padding:0 8px; border-radius:4px; background:{{ c.needsNode.bg }}; color:{{ c.needsNode.color }}; font-size:13px; cursor:default;" style-hover="background:var(--ui-hover-1); color:var(--text-primary)">
+              <span style="width:14px; display:flex; justify-content:center;"><span style="width:6px; height:6px; border-radius:50%; background:var(--yellow);"></span></span>
+              <span style="flex:1;">Needs you</span>
+              <span style="font-size:12px; color:var(--text-tertiary);">{{ c.needsNode.count }}</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ c.hasRepoProjects }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex; flex-direction:column; gap:1px;">
+              <div style="padding:0 8px 6px; font-size:12px; line-height:16px; color:var(--text-tertiary);">Repositories</div>
+              <sc-for list="{{ c.repoProjects }}" as="r" hint-placeholder-count="4">
+                <div onClick="{{ r.onClick }}" title="{{ r.tip }}" style="display:flex; align-items:center; gap:8px; height:28px; padding:0 8px; border-radius:4px; background:{{ r.bg }}; color:{{ r.color }}; font-size:13px; cursor:default;" style-hover="background:var(--ui-hover-1); color:var(--text-primary)">
+                  <span style="display:flex; color:var(--text-tertiary);"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="{{ r.icon }}" size="14" hint-size="14px,14px"></x-import></span>
+                  <span style="flex:1; min-width:0; font-family:{{ r.ff }}; font-size:{{ r.fs }}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ r.label }}</span>
                   <span style="font-size:12px; color:var(--text-tertiary);">{{ r.count }}</span>
                 </div>
-                <sc-if value="{{ r.open }}" hint-placeholder-val="{{ false }}">
-                  <div style="display:flex; flex-direction:column; gap:1px; margin-left:17px; padding-left:8px; box-shadow:inset 1px 0 0 var(--ui-divider);">
-                    <sc-for list="{{ r.kids }}" as="k" hint-placeholder-count="2">
-                      <div onClick="{{ k.onClick }}" title="{{ k.title }}" style="display:flex; align-items:center; gap:8px; height:26px; padding:0 8px; border-radius:4px; background:{{ k.bg }}; color:{{ k.color }}; font-size:12px; cursor:default;" style-hover="background:var(--ui-hover-1); color:var(--text-primary)">
-                        <span style="display:flex; color:var(--text-tertiary);"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="{{ k.icon }}" size="12" hint-size="12px,12px"></x-import></span>
-                        <span style="flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-decoration:{{ k.deco }};">{{ k.label }}</span>
-                        <span style="color:var(--text-tertiary);">{{ k.count }}</span>
-                      </div>
-                    </sc-for>
-                  </div>
-                </sc-if>
-              </div>
-            </sc-for>
-          </div>
-          <div style="display:flex; flex-direction:column; gap:1px;">
-            <div style="padding:0 8px 6px; font-size:12px; line-height:16px; color:var(--text-tertiary);">Folders</div>
-            <sc-for list="{{ c.folders }}" as="r" hint-placeholder-count="2">
-              <div onClick="{{ r.onClick }}" style="display:flex; align-items:center; gap:8px; height:28px; padding:0 8px; border-radius:4px; background:{{ r.bg }}; color:{{ r.color }}; font-size:13px; cursor:default;" style-hover="background:var(--ui-hover-1); color:var(--text-primary)">
-                <span style="display:flex; color:var(--text-tertiary);"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="Storage" size="14" hint-size="14px,14px"></x-import></span>
-                <span style="flex:1; min-width:0; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ r.label }}</span>
-                <span style="font-size:12px; color:var(--text-tertiary);">{{ r.count }}</span>
-              </div>
-            </sc-for>
-          </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ c.hasFolderProjects }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex; flex-direction:column; gap:1px;">
+              <div style="padding:0 8px 6px; font-size:12px; line-height:16px; color:var(--text-tertiary);">Folders</div>
+              <sc-for list="{{ c.folderProjects }}" as="r" hint-placeholder-count="4">
+                <div onClick="{{ r.onClick }}" title="{{ r.tip }}" style="display:flex; align-items:center; gap:8px; height:28px; padding:0 8px; border-radius:4px; background:{{ r.bg }}; color:{{ r.color }}; font-size:13px; cursor:default;" style-hover="background:var(--ui-hover-1); color:var(--text-primary)">
+                  <span style="display:flex; color:var(--text-tertiary);"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="{{ r.icon }}" size="14" hint-size="14px,14px"></x-import></span>
+                  <span style="flex:1; min-width:0; font-family:{{ r.ff }}; font-size:{{ r.fs }}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ r.label }}</span>
+                  <span style="font-size:12px; color:var(--text-tertiary);">{{ r.count }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
         </div>
         <div style="flex-shrink:0; padding:8px; box-shadow:inset 0 1px 0 var(--ui-divider);">
           <div onClick="{{ ap.toggle }}" style="display:flex; align-items:center; gap:8px; height:28px; padding:0 8px; border-radius:4px; background:{{ ap.navBg }}; color:var(--text-secondary); font-size:13px; cursor:default;" style-hover="background:var(--ui-hover-1); color:var(--text-primary)">
             <span style="display:flex; color:var(--text-tertiary);"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="Settings" size="14" hint-size="14px,14px"></x-import></span>
-            <span style="flex:1;">Appearance</span>
+            <span style="flex:1;">Settings</span>
             <span style="font-size:11px; line-height:18px; padding:0 5px; border-radius:4px; background:var(--bg-elevated); box-shadow:inset 0 0 0 1px var(--border-strong); color:var(--text-tertiary);">⌘,</span>
           </div>
         </div>
@@ -251,6 +281,17 @@
             <span style="flex:1; font-size:12px; color:var(--text-tertiary); white-space:nowrap;">{{ c.count }}</span>
             <span onClick="{{ p.openIt }}" title="Command bar" style="font-size:11px; line-height:18px; padding:0 5px; border-radius:4px; background:var(--bg-elevated); box-shadow:inset 0 0 0 1px var(--border-strong); color:var(--text-tertiary); cursor:default;" style-hover="color:var(--text-primary)">⌘⇧P</span>
           </div>
+          <sc-if value="{{ c.hasFacets }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-wrap:wrap; gap:4px;">
+              <sc-for list="{{ c.facets }}" as="fc" hint-placeholder-count="3">
+                <div onClick="{{ fc.onClick }}" title="{{ fc.tip }}" style="display:flex; flex-shrink:0; align-items:center; gap:5px; max-width:100%; height:24px; padding:0 8px; border-radius:4px; background:{{ fc.bg }}; box-shadow:{{ fc.ring }}; color:{{ fc.color }}; font-size:12px; font-weight:500; cursor:default;" style-hover="color:var(--text-primary)">
+                  <sc-if value="{{ fc.hasIcon }}" hint-placeholder-val="{{ false }}"><span style="display:flex; flex-shrink:0; color:var(--text-tertiary);"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="{{ fc.icon }}" size="10" hint-size="10px,10px"></x-import></span></sc-if>
+                  <span style="min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-decoration:{{ fc.deco }};">{{ fc.label }}</span>
+                  <span style="font-weight:400; color:var(--text-tertiary); font-variant-numeric:tabular-nums;">{{ fc.count }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
           <sc-if value="{{ c.showModes }}" hint-placeholder-val="{{ true }}">
             <div style="display:flex; gap:2px; padding:2px; border-radius:5px; background:var(--bg-surface); box-shadow:inset 0 0 0 1px var(--border-default);">
               <sc-for list="{{ c.modes }}" as="m" hint-placeholder-count="5">
@@ -291,15 +332,21 @@
                 </div>
               </sc-if>
               <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="8">
-                <div onClick="{{ r.onClick }}" style="display:grid; grid-template-columns:{{ r.cols }}; column-gap:10px; align-items:start; padding:10px 10px; border-radius:4px; background:{{ r.bg }}; cursor:default;" style-hover="background:var(--ui-hover-1)">
+                <div onClick="{{ r.onClick }}" onMouseEnter="{{ r.onEnter }}" onMouseLeave="{{ r.onLeave }}" style="position:relative; display:grid; grid-template-columns:{{ r.cols }}; column-gap:10px; align-items:start; padding:10px 10px; border-radius:4px; background:{{ r.bg }}; cursor:default;" style-hover="background:var(--ui-hover-1)">
+                  <sc-if value="{{ r.showArc }}" hint-placeholder-val="{{ false }}">
+                    <span onClick="{{ r.onArc }}" title="{{ r.arcTip }}" style="position:absolute; top:6px; right:8px; z-index:1; display:flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:4px; background:var(--bg-elevated); box-shadow:inset 0 0 0 1px var(--border-strong); color:var(--text-secondary); cursor:default;" style-hover="background:var(--bg-hover); color:var(--text-primary)"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="Archive" size="14" hint-size="14px,14px"></x-import></span>
+                  </sc-if>
                   <sc-if value="{{ r.hasTime }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px; line-height:16px; color:var(--text-tertiary); font-variant-numeric:tabular-nums;">{{ r.time }}</span></sc-if>
                   <div style="min-width:0; display:flex; flex-direction:column; gap:5px;">
                     <div style="display:flex; align-items:center; gap:8px; min-width:0;">
                       <sc-if value="{{ r.hasDot }}" hint-placeholder-val="{{ false }}"><span title="{{ r.dotTitle }}" style="width:6px; height:6px; flex-shrink:0; border-radius:50%; background:{{ r.dot }};"></span></sc-if>
                       <span style="flex:1; min-width:0; font-size:13px; line-height:16px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ r.title }}</span>
-                      <sc-if value="{{ r.hasAgo }}" hint-placeholder-val="{{ true }}"><span style="font-size:12px; color:var(--text-tertiary); white-space:nowrap;">{{ r.agoShort }}</span></sc-if>
+                      <sc-if value="{{ r.hasAgo }}" hint-placeholder-val="{{ true }}"><span style="font-size:12px; color:var(--text-tertiary); white-space:nowrap; visibility:{{ r.agoVis }};">{{ r.agoShort }}</span></sc-if>
                     </div>
-                    <span style="font-size:12px; line-height:16px; color:var(--text-tertiary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ r.repoLine }}</span>
+                    <div style="display:flex; align-items:center; gap:8px; min-width:0; font-size:12px; line-height:16px; color:var(--text-tertiary);">
+                      <span style="flex:0 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ r.repoLine }}</span>
+                      <sc-if value="{{ r.hasBr }}" hint-placeholder-val="{{ false }}"><span onClick="{{ r.onBr }}" title="{{ r.brTip }}" style="flex:0 2 auto; min-width:24px; display:flex; align-items:center; gap:4px; padding:0 4px; margin:0 -4px; border-radius:3px; cursor:default;" style-hover="color:var(--text-primary); background:var(--ui-hover-1)"><span style="display:flex; flex-shrink:0;"><x-import component-from-global-scope="LinearDesignSystemDark_b486a7.Icon" name="Branch" size="10" hint-size="10px,10px"></x-import></span><span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ r.br }}</span></span></sc-if>
+                    </div>
                   </div>
                 </div>
               </sc-for>
@@ -552,7 +599,9 @@ class Component extends DCLogic {
   STOP = new Set('the a an one session sessions where when which that i we me my claude did do was is to of for in on with and or about it this from made make work worked fix fixed find found'.split(' '));
   winRef = React.createRef();
   AP_KEY = 'csm-minimal-appearance';
-  AP_DEF = { accent: 'brand', opacity: 88, blur: 24 };
+  AP_DEF = { accent: 'brand', opacity: 88, blur: 24, term: 'ghostty', open: 'tab' };
+  TERMS = [['terminal', 'Terminal', ''], ['iterm', 'iTerm2', ''], ['ghostty', 'Ghostty', ''], ['warp', 'Warp', ''], ['wezterm', 'WezTerm', ''], ['vscode', 'VS Code', '']];
+  termName() { const a = this.apGet(); return (this.TERMS.find(t => t[0] === a.term) || this.TERMS[0])[1]; }
   ACC = [['brand', 'Linear purple', '#575bc7'], ['blue', 'Blue', '#4ea7fc'], ['violet', 'Violet', '#bb87fc'], ['teal', 'Teal', '#26b5ce'], ['green', 'Green', '#4cb782'], ['orange', 'Orange', '#f2994a'], ['red', 'Red', '#eb5757']];
   apGet() { return Object.assign({}, this.AP_DEF, this.state.ap); }
   apSet(p) { this.setState(st => { const a = Object.assign({}, this.AP_DEF, st.ap, p); try { localStorage.setItem(this.AP_KEY, JSON.stringify(a)); } catch (e) {} return { ap: a }; }); }
@@ -572,14 +621,16 @@ class Component extends DCLogic {
       blurPx: A.blur, blurLabel: A.blur + ' px', onBlur: (e) => this.apSet({ blur: +e.target.value }),
       blurHelp: tr ? 'How much the desktop behind the window is blurred.' : 'Only visible when opacity is below 100%.',
       toggle: () => this.setState({ apOpen: !open, pOpen: false, rmOpen: false }), close: () => this.setState({ apOpen: false }), stop: (e) => e.stopPropagation(),
-      reset: () => this.apSet(Object.assign({}, this.AP_DEF))
+      reset: () => this.apSet(Object.assign({}, this.AP_DEF)),
+      terms: this.TERMS.map(([k, name, note]) => ({ name, note, hasNote: !!note, cur: k === A.term, bg: k === A.term ? 'var(--bg-selected)' : 'transparent', color: k === A.term ? 'var(--text-primary)' : 'var(--text-secondary)', onClick: () => this.apSet({ term: k }) })),
+      opens: [['tab', 'New tab'], ['window', 'New window']].map(([k, label]) => ({ label, bg: k === A.open ? 'var(--bg-selected)' : 'transparent', color: k === A.open ? 'var(--text-primary)' : 'var(--text-tertiary)', onClick: () => this.apSet({ open: k }) }))
     };
   }
   componentDidMount() {
     try { const a = JSON.parse(localStorage.getItem(this.AP_KEY) || 'null'); if (a) this.setState({ ap: a }); } catch (e) {}
     try { const r = JSON.parse(localStorage.getItem('csm-minimal-panes') || 'null'); if (r) this.setState({ rz: r }); } catch (e) {}
     const go = () => (window.CSM_DATA && window.LinearDesignSystemDark_b486a7) ? this.setState({ ready: true }) : (this._t = setTimeout(go, 40)); go();
-    this._k = (e) => { if ((e.metaKey || e.ctrlKey) && e.key === ',') { e.preventDefault(); this.setState(s => ({ apOpen: !s.apOpen })); return; } if (e.key === 'Escape' && this.state.apOpen) { this.setState({ apOpen: false }); return; } if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); this.state.pOpen === false ? this.openPal() : this.setState({ pOpen: false }); } };
+    this._k = (e) => { if ((e.key === 'e' || e.key === 'E') && this.state.rmOpen) { e.preventDefault(); const it = (this._rmE || null); it && it(); return; } if ((e.metaKey || e.ctrlKey) && e.key === ',') { e.preventDefault(); this.setState(s => ({ apOpen: !s.apOpen })); return; } if (e.key === 'Escape' && this.state.apOpen) { this.setState({ apOpen: false }); return; } if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); this.state.pOpen === false ? this.openPal() : this.setState({ pOpen: false }); } };
     window.addEventListener('keydown', this._k);
   }
   RZ = { side: [220, 160, 360], list: [380, 280, 600], pal: [380, 260, 520] };
@@ -622,10 +673,10 @@ class Component extends DCLogic {
     toks.forEach(t => { const f = F.find(x => x[1].toLowerCase().includes(t)); if (f) { hit++; if (!reason) reason = f[0]; } });
     const sc = hit / toks.length; return sc >= 0.5 ? { sc, reason, pct: Math.round(58 + sc * 36) } : null;
   }
-  pVals(all) {
+  pVals(all, arc) {
     const S = this.state, open = S.pOpen !== false, kid = S.pk || 'text', K = this.KINDS.find(k => k.id === kid), q = (S.pq || '').trim(), ql = q.toLowerCase();
     const mono = 'ui-monospace, SFMono-Regular, Menlo, monospace', sans = 'var(--font-sans)';
-    const selC = all.find(s => s.id === S.selC) || all[0];
+    const selC = all.concat(arc || []).find(s => s.id === S.selC) || all[0];
     const groups = [], flat = [];
     const add = (label, items) => { if (items.length) groups.push({ label, items }); };
     const it = (o) => { const i = flat.length; flat.push(o); return o; };
@@ -668,7 +719,7 @@ class Component extends DCLogic {
       const acts = [['Resume', 'ArrowRight', () => { this.copy(selC); this.setState({ pOpen: false }); }], ['Copy resume command', 'Clipboard', () => this.copy(selC)], ['Fork into a new session', 'Layers', () => this.copy(selC, 'fork')], ['Open folder', 'Storage', () => this.setState({ pOpen: false })]];
       if (selC.pr) acts.push(['Open PR ' + (selC.pr.repoFull || selC.repo) + '#' + selC.pr.n, 'Link', () => this.setState({ pOpen: false })], ['All sessions for PR #' + selC.pr.n, 'Branch', () => this.copy(selC, 'pr')]);
       if (this.isRepo(selC)) acts.push(['Show ' + selC.repo + ' in the tree', 'Box', () => this.setState({ pOpen: false, cScope: { type: 'repo', id: selC.repo } })]);
-      acts.push(['Rename session', 'Edit', () => this.setState({ pOpen: false, dTab: 'ov', selC: selC.id, rnId: selC.id, rnVal: selC.title }, () => { const i = this.rnRef.current; i && (i.focus(), i.select()); })], ['Archive session', 'Archive', () => this.setState({ pOpen: false })]);
+      acts.push(['Rename session', 'Edit', () => this.setState({ pOpen: false, dTab: 'ov', selC: selC.id, rnId: selC.id, rnVal: selC.title }, () => { const i = this.rnRef.current; i && (i.focus(), i.select()); })], this.isArc(selC) ? ['Restore from archive', 'Archive', () => this.setArc(selC, false)] : ['Archive session', 'Archive', () => this.setArc(selC, true)]);
       add('Actions on \u201c' + selC.title + '\u201d', acts.filter(a => !q || a[0].toLowerCase().includes(ql)).map(a => it({ kind: 'cmd', icon: a[1], iconColor: 'var(--text-secondary)', title: a[0], sub: '', subFont: sans, key: '', right: '', fn: a[2] })));
     }
     const idx = Math.min(S.pIdx || 0, Math.max(0, flat.length - 1)), cur = flat[idx];
@@ -720,6 +771,8 @@ class Component extends DCLogic {
   repo(s) { return this.D.repos.find(r => r.id === s.repo); }
   wt(s) { return s.wt ? this.D.worktrees.find(w => w.id === s.wt) : null; }
   path(s) { const w = this.wt(s); return w ? w.path : (s.cwd || this.repo(s.repo).path); }
+  isArc(s) { const o = (this.state.arch || {})[s.id]; if (o != null) return o; if (!this._arc0) this._arc0 = this.D.sessions.filter(x => x.status === 'completed').sort((x, y) => this.dt(x) - this.dt(y)).slice(0, 2).map(x => x.id); return s.status === 'archived' || this._arc0.includes(s.id); }
+  setArc(s, v) { this.setState(st => ({ arch: Object.assign({}, st.arch, { [s.id]: v }), lastArc: { id: s.id, v }, rmOpen: false, pOpen: false, toast: (v ? 'Archived ' : 'Restored ') + '\u201c' + s.title + '\u201d' })); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 2400); }
   isRepo(s) { return !['code', 'home'].includes(s.repo); }
   cmd(s) { return 'claude --resume ' + (!s.auto ? s.title : s.sid); }
   tk(s) { const v = (s.tokens && s.tokens.in) || '0'; const n = parseFloat(v); return /M$/.test(v) ? n * 1e6 : /k$/.test(v) ? n * 1e3 : n; }
@@ -744,8 +797,8 @@ class Component extends DCLogic {
   where(s) { const w = this.wt(s); const r = this.isRepo(s) ? s.repo : null; const p = this.path(s); return [r, w ? w.name + ' worktree' : null, p].filter(Boolean).join(' · '); }
 
   renderVals() {
-    if (!this.state.ready) return { a: { groups: [], scopes: [] }, b: { rows: [], hasSel: false, sel: { facts: [], next: [], files: [] } }, c: { allNode: {}, repos: [], folders: [], groups: [], modes: [], cal: { cells: [], dows: [] }, dt: { tabs: [], showPanes: true, isOv: true }, rm: { items: [] }, rn: { off: true }, tx: { turns: [], filters: [] }, hasSel: false, sel: { facts: [], next: [], files: [], usage: { rows: [] } } }, p: { open: false, groups: [], pv: {} } };
-    const S = this.state, NM = S.names || {}, all = this.D.sessions.filter(s => s.status !== 'archived').map(s => NM[s.id] ? Object.assign({}, s, { title: NM[s.id], auto: false }) : s).sort((x, y) => this.dt(y) - this.dt(x));
+    if (!this.state.ready) return { a: { groups: [], scopes: [] }, b: { rows: [], hasSel: false, sel: { facts: [], next: [], files: [] } }, c: { allNode: {}, archNode: {}, needsNode: {}, projects: [], repoProjects: [], folderProjects: [], facets: [], repos: [], folders: [], groups: [], modes: [], cal: { cells: [], dows: [] }, dt: { tabs: [], showPanes: true, isOv: true }, rm: { items: [] }, rn: { off: true }, tx: { turns: [], filters: [] }, hasSel: false, sel: { facts: [], next: [], files: [], usage: { rows: [] } } }, p: { open: false, groups: [], pv: {} } };
+    const S = this.state, NM = S.names || {}, base = this.D.sessions.map(s => NM[s.id] ? Object.assign({}, s, { title: NM[s.id], auto: false }) : s).sort((x, y) => this.dt(y) - this.dt(x)), all = base.filter(s => !this.isArc(s)), arc = base.filter(s => this.isArc(s));
 
     // 1a
     const scopes = [['all', 'All'], ['meetnotes', 'meetnotes'], ['team8', 'team8'], ['other', 'Other']];
@@ -799,7 +852,7 @@ class Component extends DCLogic {
         };
       })() : { facts: [], next: [], files: [] }
     };
-    return { c: this.cVals(all), p: this.pVals(all), palRef: this.palRef, rz: this.rzVals(), ap: this.apVals() };
+    return { c: this.cVals(all, arc), p: this.pVals(all, arc), palRef: this.palRef, rz: this.rzVals(), ap: this.apVals() };
   }
   selVm(sel) {
     const S = this.state, w = this.wt(sel), mono = 'ui-monospace, SFMono-Regular, Menlo, monospace', sans = 'var(--font-sans)';
@@ -838,6 +891,11 @@ class Component extends DCLogic {
       onResume: () => this.copy(sel), onCopy: () => this.copy(sel), onFolder: () => {}
     };
   }
+  brVm(s) {
+    const ok = this.isRepo(s) && s.branch && s.branch !== 'HEAD';
+    return { hasBr: !!ok, br: ok ? s.branch : '', brTip: ok ? 'Last branch in this session. Click to show every session that ended on ' + s.branch + '.' : '',
+      onBr: ok ? (e) => { e.stopPropagation(); this.setState(st => ({ cScope: { type: 'branch', id: s.branch, repo: s.repo }, cExp: Object.assign({ meetnotes: true, team8: true }, st.cExp, { [s.repo]: true }) })); } : undefined };
+  }
   viewVm(all, list0, sc, selId0) {
     const S = this.state, mode = sc.type === 'all' ? (S.cMode || 'list') : 'list', MON = ['January','February','March','April','May','June','July','August','September','October','November','December'], DW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     const ymd = (d) => d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
@@ -855,7 +913,7 @@ class Component extends DCLogic {
     }
     const selId = list.some(s => s.id === selId0) ? selId0 : selId0;
     const timeCol = mode === 'timeline';
-    const row = (s) => { const d = this.dot(s); return { title: s.title, agoShort: this.agoShort(s), hasAgo: !timeCol, time: this.hm(this.dt(s)).replace(' ', '\u00a0'), hasTime: timeCol, cols: timeCol ? '58px minmax(0,1fr)' : 'minmax(0,1fr)', repoLine: (mode === 'repo' ? '' : (this.isRepo(s) ? s.repo + ' · ' : '')) + this.path(s) + (s.forks ? ' · ' + s.forks + (s.forks === 1 ? ' fork' : ' forks') : ''), hasDot: !!d, dot: d ? d[0] : '', dotTitle: d ? d[1] : '', bg: s.id === selId ? 'var(--bg-selected)' : 'transparent', onClick: () => this.setState({ selC: s.id }) }; };
+    const row = (s) => { const d = this.dot(s); return { title: s.title, agoShort: this.agoShort(s), hasAgo: !timeCol, time: this.hm(this.dt(s)).replace(' ', '\u00a0'), hasTime: timeCol, cols: timeCol ? '58px minmax(0,1fr)' : 'minmax(0,1fr)', repoLine: (mode === 'repo' ? '' : (this.isRepo(s) ? s.repo + ' · ' : '')) + this.path(s) + (s.forks ? ' · ' + s.forks + (s.forks === 1 ? ' fork' : ' forks') : ''), ...this.brVm(s), hasDot: !!d, dot: d ? d[0] : '', dotTitle: d ? d[1] : '', bg: s.id === selId ? 'var(--bg-selected)' : 'transparent', onClick: () => this.setState({ selC: s.id }), showArc: this.state.hovRow === s.id, agoVis: this.state.hovRow === s.id ? 'hidden' : 'visible', arcTip: this.isArc(s) ? 'Restore from archive' : 'Archive', onArc: (e) => { e.stopPropagation(); this.setState({ hovRow: null }); this.setArc(s, !this.isArc(s)); }, onEnter: () => this.setState({ hovRow: s.id }), onLeave: () => this.setState(st => st.hovRow === s.id ? { hovRow: null } : null) }; };
     const G = [], m = {};
     const push = (k, label, note) => { if (!m[k]) { m[k] = { label, note: note || '', rows: [] }; G.push(m[k]); } return m[k]; };
     list.forEach(s => {
@@ -890,15 +948,18 @@ class Component extends DCLogic {
     const it = (icon, label, sub, cmd, fn, key) => ({ isItem: true, isSep: false, icon, label, sub: sub || '', hasSub: !!sub, cmd: cmd || '', key: key || '', hasKey: !!key, onClick: run(fn) });
     const sep = { isItem: false, isSep: true };
     const items = [
-      it('ArrowRight', 'Resume', 'Opens in your terminal, in the session\u2019s original folder.', h, () => this.copy(sel), '\u21b5'),
-      it('Layout', 'Resume in a new terminal window', '', h, () => this.copy(sel)),
+      it('ArrowRight', 'Resume', 'Opens in a new ' + (this.apGet().open === 'window' ? 'window' : 'tab') + ' in ' + this.termName() + '.', h, () => this.copy(sel), '\u21b5'),
+      it('Layout', 'Resume in a new ' + (this.apGet().open === 'window' ? 'tab' : 'window'), '', h, () => this.copy(sel)),
       sep,
       it('Branch', 'Branch conversation', 'Starts a new session from this point. The original stays as it is.', h + ' --fork-session', () => this.copy(sel, 'fork'), 'B'),
       it('Edit', 'Rename\u2026', sel.auto ? 'Give it a name so you can resume by name.' : '', '', () => this.rnVm(sel).start(), 'R'),
       sep,
       it('Clipboard', 'Copy resume command', '', h, () => this.copy(sel)),
-      it('Storage', 'Open folder', this.path(sel), '', () => {})
+      it('Storage', 'Open folder', this.path(sel), '', () => {}),
+      sep,
+      this.isArc(sel) ? it('Archive', 'Restore from archive', 'Moves it back to All sessions.', '', () => this.setArc(sel, false), 'E') : it('Archive', 'Archive', 'Hides it from All sessions. Nothing is deleted.', '', () => this.setArc(sel, true), 'E')
     ];
+    this._rmE = () => this.setArc(sel, !this.isArc(sel));
     return { open, items, label: S.copied === sel.id + ':fork' ? 'Copied' : 'Resume', chevBg: open ? 'rgba(255,255,255,.12)' : 'transparent', toggle: () => this.setState({ rmOpen: !open }), close };
   }
   dtVm(sel) {
@@ -985,27 +1046,42 @@ class Component extends DCLogic {
       endLabel: sel.status === 'active' ? 'Waiting for your next message' : 'Session ended ' + this.ago(sel)
     };
   }
-  cVals(all) {
+  cVals(all, arc) {
+    arc = arc || [];
     const S = this.state, sc = S.cScope || { type: 'all' }, exp = S.cExp || { meetnotes: true, team8: true };
     const eq = (x) => x.type === sc.type && x.id === sc.id && (x.repo || null) === (sc.repo || null);
-    const fits = (s, x) => x.type === 'all' ? true : x.type === 'repo' ? s.repo === x.id : x.type === 'branch' ? s.repo === x.repo && s.branch === x.id && !s.wt : x.type === 'wt' ? s.wt === x.id : x.type === 'folder' ? (!this.isRepo(s) && this.path(s) === x.id) : true;
+    const fits = (s, x) => x.type === 'all' ? true : x.type === 'needs' ? ['waiting', 'interrupted', 'failed'].includes(s.status) : x.type === 'repo' ? s.repo === x.id : x.type === 'branch' ? s.repo === x.repo && s.branch === x.id : x.type === 'wt' ? s.wt === x.id : x.type === 'folder' ? (!this.isRepo(s) && this.path(s) === x.id) : true;
     const n = (x) => all.filter(s => fits(s, x)).length;
     const node = (x) => ({ bg: eq(x) ? 'var(--bg-selected)' : 'transparent', color: eq(x) ? 'var(--text-primary)' : 'var(--text-secondary)', count: n(x), onClick: () => this.setState({ cScope: x }) });
-    const repos = this.D.repos.filter(r => !['code', 'home'].includes(r.id) && all.some(s => s.repo === r.id)).map(r => {
-      const open = !!exp[r.id], x = { type: 'repo', id: r.id };
-      const branches = [...new Set(all.filter(s => s.repo === r.id && !s.wt && s.branch !== 'HEAD').map(s => s.branch))];
-      const kids = branches.map(b => Object.assign(node({ type: 'branch', id: b, repo: r.id }), { label: b, icon: 'Branch', deco: 'none', title: 'Branch ' + b }))
-        .concat(this.D.worktrees.filter(w => w.repo === r.id).map(w => Object.assign(node({ type: 'wt', id: w.id }), { label: w.name, icon: 'Layers', deco: w.stale ? 'line-through' : 'none', title: w.path + (w.stale ? ' (removed)' : '') })));
-      return Object.assign(node(x), { label: r.id, open: open && kids.length > 0, kids, chevStyle: { transform: open ? 'none' : 'rotate(-90deg)', opacity: kids.length ? 1 : 0.3 },
-        onToggle: (e) => { e.stopPropagation(); this.setState({ cExp: Object.assign({}, exp, { [r.id]: !open }) }); } });
-    });
-    const folders = [...new Set(all.filter(s => !this.isRepo(s)).map(s => this.path(s)))].map(p => Object.assign(node({ type: 'folder', id: p }), { label: p }));
-    const list = all.filter(s => fits(s, sc));
+    const NEED = ['waiting', 'interrupted', 'failed'];
+    const proj = sc.type === 'repo' ? sc.id : (sc.type === 'branch' ? sc.repo : sc.type === 'wt' ? ((this.D.worktrees.find(w => w.id === sc.id) || {}).repo) : null);
+    const last = (ss) => Math.max.apply(null, ss.map(s => this.dt(s).getTime()));
+    const P = [];
+    this.D.repos.filter(r => this.isRepo({ repo: r.id })).forEach(r => { const ss = all.filter(s => s.repo === r.id); if (ss.length) P.push({ x: { type: 'repo', id: r.id }, label: r.id, icon: 'Box', mono: false, tip: r.path || r.id, t: last(ss), on: proj === r.id }); });
+    [...new Set(all.filter(s => !this.isRepo(s)).map(s => this.path(s)))].forEach(p => { const ss = all.filter(s => !this.isRepo(s) && this.path(s) === p); P.push({ x: { type: 'folder', id: p }, label: p, icon: 'Storage', mono: true, tip: p + ' (not a git repository)', t: last(ss), on: sc.type === 'folder' && sc.id === p }); });
+    P.sort((u, v) => v.t - u.t);
+    const projects = P.map(p => ({ isFolder: p.mono, label: p.label, icon: p.icon, tip: p.tip, ff: p.mono ? 'ui-monospace, SFMono-Regular, Menlo, monospace' : 'inherit', fs: p.mono ? '12px' : '13px', count: n(p.x), bg: p.on ? 'var(--bg-selected)' : 'transparent', color: p.on ? 'var(--text-primary)' : 'var(--text-secondary)', onClick: () => this.setState({ cScope: p.x }) }));
+    const needsX = { type: 'needs' }, needsN = all.filter(s => NEED.includes(s.status)).length;
+    let facets = [];
+    if (proj) {
+      const inP = all.filter(s => s.repo === proj), bc = {};
+      inP.filter(s => s.branch && s.branch !== 'HEAD').forEach(s => bc[s.branch] = (bc[s.branch] || 0) + 1);
+      const chip = (x, label, count, icon, tip, deco) => { const on = eq(x); return { label, count: String(count), icon: icon || '', hasIcon: !!icon, tip: tip || '', deco: deco || 'none', bg: on ? 'var(--bg-selected)' : 'var(--bg-surface)', ring: on ? 'inset 0 0 0 1px var(--border-strong)' : 'inset 0 0 0 1px var(--border-default)', color: on ? 'var(--text-primary)' : 'var(--text-secondary)', onClick: () => this.setState({ cScope: on && x.type !== 'repo' ? { type: 'repo', id: proj } : x }) }; };
+      const brs = Object.keys(bc).filter(k => bc[k] >= 2 || (sc.type === 'branch' && sc.id === k)).sort((u, v) => bc[v] - bc[u]);
+      const wts = this.D.worktrees.filter(w => w.repo === proj && inP.some(s => s.wt === w.id));
+      if (brs.length || wts.length) {
+        const rest = Object.keys(bc).length - brs.length;
+        facets = [chip({ type: 'repo', id: proj }, 'All', inP.length, '', rest > 0 ? 'Includes ' + rest + (rest === 1 ? ' branch' : ' branches') + ' with one session' : '')]
+          .concat(brs.map(k => chip({ type: 'branch', id: k, repo: proj }, k, bc[k], 'Branch', 'Sessions that ended on ' + k)))
+          .concat(wts.map(w => chip({ type: 'wt', id: w.id }, w.name, inP.filter(s => s.wt === w.id).length, 'Layers', w.path + (w.stale ? ' (removed)' : ''), w.stale ? 'line-through' : 'none')));
+      }
+    }
+    const isA = sc.type === 'archived', list = isA ? arc : all.filter(s => fits(s, sc));
     const selId = list.some(s => s.id === S.selC) ? S.selC : (list[0] && list[0].id);
-    const sel = all.find(s => s.id === selId);
-    const label = sc.type === 'all' ? 'All sessions' : sc.type === 'branch' ? sc.repo + ' / ' + sc.id : sc.type === 'wt' ? (this.D.worktrees.find(w => w.id === sc.id) || {}).name + ' worktree' : sc.id;
+    const sel = list.find(s => s.id === selId);
+    const label = sc.type === 'all' ? 'All sessions' : sc.type === 'archived' ? 'Archived' : sc.type === 'needs' ? 'Needs you' : proj || sc.id;
     return {
-      allNode: node({ type: 'all' }), repos, folders, scopeLabel: label, count: list.length + (list.length === 1 ? ' session' : ' sessions'),
+      toast: S.toast || '', hasToast: !!S.toast, hasUndo: !!S.lastArc && !!S.toast, onUndo: () => { const l = S.lastArc; if (l) { this.setState(st => ({ arch: Object.assign({}, st.arch, { [l.id]: !l.v }), toast: '', lastArc: null, selC: l.id })); } }, allNode: node({ type: 'all' }), archNode: Object.assign(node({ type: 'archived' }), { count: arc.length }), isArchScope: isA, needsNode: node(needsX), hasNeeds: needsN > 0 || sc.type === 'needs', projects, repoProjects: projects.filter(p => !p.isFolder), folderProjects: projects.filter(p => p.isFolder), hasRepoProjects: projects.some(p => !p.isFolder), hasFolderProjects: projects.some(p => p.isFolder), facets, hasFacets: facets.length > 0, scopeLabel: label, count: list.length + (list.length === 1 ? ' session' : ' sessions'),
       q: S.qc || '', onQ: (e) => this.setState({ qc: e.target.value }), onFocus: () => this.setState({ fc: true }), onBlur: () => this.setState({ fc: false }), searchRing: this.ring(S.fc),
       ...this.viewVm(all, list, sc, selId),
       empty: list.length === 0 || (sc.type === 'all' && (S.cMode === 'calendar') && this.viewVm(all, list, sc, selId).dayEmpty), hasSel: !!sel, rm: this.rmVm(sel), rn: this.rnVm(sel), dt: this.dtVm(sel), tx: sel ? this.txVm(sel) : { turns: [], filters: [] }, sel: sel ? this.selVm(sel) : { facts: [], next: [], files: [], usage: { rows: [] } }

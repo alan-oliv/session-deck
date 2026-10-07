@@ -1,0 +1,3 @@
+/* The kit uses Inter Regular (400) and Medium (500) only. No font binaries ship in the .fig; Inter is pulled from Google Fonts as the exact-name match. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap');
+:root{--font-sans:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
