@@ -41,6 +41,59 @@
   white-space: nowrap;
 }
 
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.chip {
+  flex: 0 0 auto;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  box-shadow: inset 0 0 0 1px var(--app-border);
+  color: var(--app-text-2);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.chip:hover {
+  color: var(--app-text);
+}
+
+.chip.is-selected {
+  background: var(--app-selected);
+  box-shadow: inset 0 0 0 1px var(--app-border-strong);
+  color: var(--app-text);
+}
+
+.chip-icon {
+  flex: none;
+  color: var(--app-text-3);
+}
+
+.chip-label {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chip-label.is-removed {
+  text-decoration: line-through;
+}
+
+.chip-count {
+  font-weight: 400;
+  color: var(--app-text-3);
+}
+
 .modes {
   display: flex;
   gap: 2px;
@@ -114,6 +167,7 @@
 }
 
 .row {
+  position: relative;
   display: grid;
   column-gap: 10px;
   align-items: start;
@@ -127,6 +181,38 @@
 
 .row.is-selected {
   background: var(--app-selected);
+}
+
+.row-archive {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 1;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--app-radius);
+  background: var(--app-elevated);
+  box-shadow: inset 0 0 0 1px var(--app-border-strong);
+  color: var(--app-text-2);
+}
+
+.row:hover .row-archive {
+  display: flex;
+}
+
+.row-archive:hover {
+  background: var(--app-hover);
+  color: var(--app-text);
+}
+
+/* Keeps its space so the title doesn't reflow under the button. */
+.row:hover .row-ago {
+  visibility: hidden;
 }
 
 .row-time {
@@ -168,9 +254,46 @@
 }
 
 .row-where {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
   font-size: 12px;
   line-height: 16px;
   color: var(--app-text-3);
+}
+
+.row-loc {
+  flex: 0 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Gives up space twice as fast as the location, so the path stays readable. */
+.row-branch {
+  flex: 0 2 auto;
+  min-width: 24px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px;
+  margin: 0 -4px;
+  border-radius: var(--app-radius-meter);
+}
+
+.row-branch:hover {
+  color: var(--app-text);
+  background: var(--app-wash);
+}
+
+.row-branch > svg {
+  flex: none;
+}
+
+.row-branch-name {
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

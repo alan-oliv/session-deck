@@ -20,8 +20,8 @@
   --app-link-hover: #7477f0;
   --app-on-primary: #ffffff;
   --app-brand: #575bc7;
-  --app-brand-hover: #666be2;
-  --app-focus: #5e6ad2;
+  --app-brand-hover: color-mix(in srgb, var(--app-brand) 86%, white);
+  --app-focus: var(--app-brand);
   --app-green: #4cb782;
   --app-yellow: #f2c94c;
   --app-orange: #f2994a;
@@ -37,7 +37,7 @@
   --app-radius-panel: 8px;
   --app-radius-meter: 3px;
   --app-shadow-panel: 0 16px 70px rgba(0, 0, 0, 0.5);
-  --app-shadow-primary: inset 0 0 0 1px #575bc7, 0 1px 2px rgba(0, 0, 0, 0.09);
+  --app-shadow-primary: inset 0 0 0 1px var(--app-brand), 0 1px 2px rgba(0, 0, 0, 0.09);
   --app-shadow-secondary: inset 0 0 0 1px #393a4b, 0 1px 1px rgba(0, 0, 0, 0.15);
   --app-shadow-secondary-hover: inset 0 0 0 1px #444556, 0 1px 1px rgba(0, 0, 0, 0.15);
   color-scheme: dark;

@@ -4,7 +4,7 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
-import type { Session, Settings, Status } from '../shared/api'
+import { SETTINGS_DEFAULTS, type Session, type Settings, type Status } from '../shared/api'
 import { resolveGit, type GitInfo } from './git'
 import { tailLines } from './lines'
 import { readLive, readTee, type LiveInfo, type TeeInfo } from './live'
@@ -71,7 +71,9 @@ export function readCleanupDays(path: string): number {
 }
 
 function statusOf(f: Facts, live: LiveInfo | undefined): Status {
-  if (live) return live.status === 'busy' ? 'running' : 'waiting'
+  // Claude Code reports busy, waiting (blocked on a prompt or permission) or idle; idle is just an open terminal.
+  if (live?.status === 'busy') return 'running'
+  if (live?.status === 'waiting') return 'waiting'
   if (f.lastEvent === 'interrupt') return 'interrupted'
   if (f.lastEvent === 'apiError') return 'failed'
   return 'completed'
@@ -355,7 +357,9 @@ if (import.meta.vitest) {
 
   it('derives the session status from live state first, then from the last turn', () => {
     expect(toSession(facts(), ctx({ live: { status: 'busy' } })).status).toBe('running')
-    expect(toSession(facts(), ctx({ live: { status: 'idle' } })).status).toBe('waiting')
+    expect(toSession(facts(), ctx({ live: { status: 'waiting' } })).status).toBe('waiting')
+    expect(toSession(facts(), ctx({ live: { status: 'idle' } })).status).toBe('completed')
+    expect(toSession(facts({ lastEvent: 'interrupt' }), ctx({ live: { status: 'idle' } })).status).toBe('interrupted')
     expect(toSession(facts({ lastEvent: 'interrupt' }), ctx()).status).toBe('interrupted')
     expect(toSession(facts({ lastEvent: 'apiError' }), ctx()).status).toBe('failed')
     expect(toSession(facts(), ctx()).status).toBe('completed')
@@ -409,7 +413,7 @@ if (import.meta.vitest) {
       line({ type: 'user', sessionId: child, timestamp: '2026-10-06T11:00:00.000Z', message: { content: 'forked' } }))
     const opts = {
       projectsDir: projects, sessionsDir: join(dir, 'sessions'), teeDir: join(dir, 'tee'), cachePath: join(dir, 'index.json'),
-      claudeSettingsPath: join(dir, 'settings.json'), getSettings: () => ({ terminal: null, archived: [child], statusTee: false }),
+      claudeSettingsPath: join(dir, 'settings.json'), getSettings: () => ({ ...SETTINGS_DEFAULTS, archived: [child] }),
       onChange: () => {},
     }
     return { file, opts }
@@ -465,7 +469,7 @@ if (import.meta.vitest) {
     const dir = mkdtempSync(join(tmpdir(), 'deck-smoke-'))
     const opts = {
       projectsDir: PATHS.projects, sessionsDir: PATHS.sessions, teeDir: join(dir, 'tee'), cachePath: join(dir, 'index.json'),
-      claudeSettingsPath: PATHS.claudeSettings, getSettings: () => ({ terminal: null, archived: [], statusTee: false }), onChange: () => {},
+      claudeSettingsPath: PATHS.claudeSettings, getSettings: () => SETTINGS_DEFAULTS, onChange: () => {},
     }
     let t = Date.now()
     const first = createIndexer(opts)
