@@ -1,4 +1,4 @@
-import { prCommand, resumeCommand, type Artifact, type IconName, type Session, type Settings, type Terminal } from './api'
+import { prCommand, resumeCommand, SETTINGS_DEFAULTS, TERMINALS, type Artifact, type IconName, type Session, type Settings, type Terminal } from './api'
 import { makeSession } from './fixtures'
 import { agoShort, attention, daysAgo, fileSize, plural, tildify } from './format'
 import { visible } from './tree'
@@ -37,12 +37,6 @@ const INTERNAL_KINDS: Kind[] = [
   { id: 'rename', prefix: '', label: 'Rename', icon: 'Edit', desc: 'Type a new title and press Enter. Named sessions resume by name from any folder.', examples: [] },
 ]
 export const kindById = (id: KindId): Kind => [...KINDS, ...INTERNAL_KINDS].find((k) => k.id === id) ?? KINDS[0]
-
-export const TERMINALS: { id: Terminal; label: string }[] = [
-  { id: 'iterm', label: 'iTerm' },
-  { id: 'warp', label: 'Warp' },
-  { id: 'terminal', label: 'Terminal' },
-]
 
 const SECONDARY = 'var(--app-text-2)'
 const TERTIARY = 'var(--app-text-3)'
@@ -153,9 +147,9 @@ function actionsFor(s: Session, settings: Settings): Result[] {
   list.push(
     a('rename', 'Rename session', 'Edit', 'Appends a custom-title record to the transcript, as /rename does.'),
     s.archived
-      ? a('unarchive', 'Unarchive session', 'Archive', 'Shows it in the tree and list again.')
-      : a('archive', 'Archive session', 'Archive', 'Hides it from the tree and list. is:archived still finds it.'),
-    a('changeTerminal', 'Change terminal', 'Code', `Current: ${TERMINALS.find((t) => t.id === settings.terminal)?.label ?? 'not chosen'}`),
+      ? a('unarchive', 'Restore from archive', 'Archive', 'Moves it back to All sessions.')
+      : a('archive', 'Archive session', 'Archive', 'Hides it from All sessions. Nothing is deleted.'),
+    a('changeTerminal', 'Change terminal', 'Code', `Current: ${TERMINALS.find((t) => t.id === settings.terminal)?.label ?? 'default'}`),
     settings.statusTee
       ? a('teeOff', 'Hide plan usage', 'Loader', 'Restores your original status line in ~/.claude/settings.json.')
       : a('teeOn', 'Show plan usage', 'Loader', 'Wraps your status line so Session Deck can read plan usage. Your status line keeps rendering.'),
@@ -302,7 +296,7 @@ export function search(all: Session[], kind: KindId, query: string, ctx: SearchC
 if (import.meta.vitest) {
   const { it, expect } = import.meta.vitest
   const now = new Date(2026, 9, 6, 11, 0)
-  const settings: Settings = { terminal: 'iterm', archived: [], statusTee: false }
+  const settings: Settings = { ...SETTINGS_DEFAULTS, terminal: 'iterm' }
   const at = (d: number) => new Date(2026, 9, d, 9).toISOString()
   const live = makeSession({
     title: 'live-meeting', end: at(6), status: 'running', branch: 'live-meeting',
@@ -410,8 +404,8 @@ if (import.meta.vitest) {
     expect(titles(search(all, 'actions', 'open', { ...ctx, selected: folder }))).toEqual(['Open folder'])
     expect(search(all, 'actions', '', { ...ctx, selected: null })).toEqual([])
   })
-  it('offers the three terminals and marks the current one', () => {
+  it('offers every terminal and marks the current one', () => {
     const rows = search(all, 'terminal', '', ctx)[0].results
-    expect(rows.map((r) => [r.title, r.sub])).toEqual([['iTerm', 'Current'], ['Warp', ''], ['Terminal', '']])
+    expect(rows.map((r) => [r.title, r.sub])).toEqual([['Terminal', ''], ['iTerm2', 'Current'], ['Ghostty', ''], ['Warp', ''], ['WezTerm', ''], ['VS Code', '']])
   })
 }

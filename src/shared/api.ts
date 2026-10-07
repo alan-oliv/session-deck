@@ -1,12 +1,39 @@
 export type Status = 'running' | 'waiting' | 'interrupted' | 'failed' | 'completed'
-export type Terminal = 'iterm' | 'warp' | 'terminal'
+export type Terminal = 'terminal' | 'iterm' | 'ghostty' | 'warp' | 'wezterm' | 'vscode'
+export type OpenIn = 'tab' | 'window'
+export type Accent = 'brand' | 'blue' | 'violet' | 'teal' | 'green' | 'orange' | 'red'
 
 export interface Settings {
-  terminal: Terminal | null
+  terminal: Terminal | null // null: the first installed of Ghostty, iTerm2, Terminal
+  open: OpenIn
+  accent: Accent
+  opacity: number // 50–100
+  blur: number // 0–40 px
   archived: string[]
   statusTee: boolean
 }
-export type SettingsPatch = { terminal?: Terminal | null }
+export type SettingsPatch = Partial<Pick<Settings, 'terminal' | 'open' | 'accent' | 'opacity' | 'blur'>>
+export const SETTINGS_DEFAULTS: Settings = { terminal: null, open: 'tab', accent: 'brand', opacity: 88, blur: 24, archived: [], statusTee: false }
+
+export const TERMINALS: { id: Terminal; label: string; app: string }[] = [
+  { id: 'terminal', label: 'Terminal', app: 'Terminal.app' },
+  { id: 'iterm', label: 'iTerm2', app: 'iTerm.app' },
+  { id: 'ghostty', label: 'Ghostty', app: 'Ghostty.app' },
+  { id: 'warp', label: 'Warp', app: 'Warp.app' },
+  { id: 'wezterm', label: 'WezTerm', app: 'WezTerm.app' },
+  { id: 'vscode', label: 'VS Code', app: 'Visual Studio Code.app' },
+]
+export const terminalLabel = (id: Terminal): string => TERMINALS.find((t) => t.id === id)?.label ?? id
+
+export const ACCENTS: { id: Accent; name: string; fill: string }[] = [
+  { id: 'brand', name: 'Linear purple', fill: '#575bc7' },
+  { id: 'blue', name: 'Blue', fill: '#4ea7fc' },
+  { id: 'violet', name: 'Violet', fill: '#bb87fc' },
+  { id: 'teal', name: 'Teal', fill: '#26b5ce' },
+  { id: 'green', name: 'Green', fill: '#4cb782' },
+  { id: 'orange', name: 'Orange', fill: '#f2994a' },
+  { id: 'red', name: 'Red', fill: '#eb5757' },
+]
 
 export interface FileChange { path: string; added: number; removed: number }
 export interface Commit { sha: string; msg: string; at: string }
@@ -87,16 +114,15 @@ export interface Transcript { cli: string; turns: Turn[] }
 const TOOL_LABELS: Record<string, string> = { Edit: 'Update', MultiEdit: 'Update', Grep: 'Search', Glob: 'Search' }
 export const toolLabel = (tool: string): string => TOOL_LABELS[tool] ?? tool
 
-export type ResumeResult =
-  | { ok: true }
-  | { ok: false; needsTerminal: true }
-  | { ok: false; copied: true; error: string }
+// Not ok: the command is on the clipboard and `message` says why.
+export type ResumeResult = { ok: true } | { ok: false; message: string }
 
 export interface Api {
   listSessions(): Promise<Session[]>
   getSettings(): Promise<Settings>
   saveSettings(patch: SettingsPatch): Promise<Settings>
-  resumeSession(id: string, opts: { fork: boolean }): Promise<ResumeResult>
+  listTerminals(): Promise<Terminal[]>
+  resumeSession(id: string, opts: { fork: boolean; open?: OpenIn }): Promise<ResumeResult>
   openFolder(id: string): Promise<void>
   openPr(id: string): Promise<void>
   renameSession(id: string, title: string): Promise<void>
@@ -116,6 +142,7 @@ export const API_METHODS = [
   'listSessions',
   'getSettings',
   'saveSettings',
+  'listTerminals',
   'resumeSession',
   'openFolder',
   'openPr',
@@ -142,7 +169,7 @@ export const prCommand = (n: number): string => `claude --from-pr ${n}`
 export const ICON_NAMES = [
   'AllItems', 'Box', 'Branch', 'Layers', 'Storage', 'ChevronDown2', 'Search1', 'Bolt', 'Document', 'Attachment2',
   'Loader', 'ClockOutline', 'Code', 'Code2', 'ViewList', 'Timeline', 'CalendarEmpty', 'ArrowRight', 'Clipboard',
-  'Link', 'Edit', 'Archive', 'Check', 'Edit2', 'Expand',
+  'Link', 'Edit', 'Archive', 'Check', 'Edit2', 'Expand', 'Settings', 'Close', 'Layout',
 ] as const
 export type IconName = (typeof ICON_NAMES)[number]
 

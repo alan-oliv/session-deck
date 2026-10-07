@@ -1,18 +1,18 @@
-import { Fragment, useEffect, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import type { Session, Transcript as TranscriptData } from '../../shared/api'
+import type { OpenIn, Session, Transcript as TranscriptData } from '../../shared/api'
 import { makeSession } from '../../shared/fixtures'
 import { agoLong, fileSize, modelLabel, monthDay, plural, tildify } from '../../shared/format'
-import { Button } from './Button'
 import { errorText } from './hooks'
 import { Icon } from './icons'
+import { ResumeMenu } from './ResumeMenu'
 import { Transcript } from './Transcript'
 import { Usage, tiles } from './Usage'
 import './Detail.css'
 
 export interface CopiedKey {
   id: string
-  what: 'resume' | 'fork' | 'pr'
+  what: 'resume' | 'fork' | 'pr' | 'resumed' | 'forked'
 }
 
 export type DetailTab = 'overview' | 'transcript'
@@ -22,16 +22,53 @@ export interface DetailProps {
   now: Date
   copied: CopiedKey | null
   teeOn: boolean
+  open: OpenIn
+  terminalName: string
   tab: DetailTab
   focus: boolean
   onTab(tab: DetailTab): void
   onFocus(): void
-  onResume(): void
+  onResume(open?: OpenIn): void
   onCopy(): void
   onFork(): void
+  onRename(title: string): void
   onOpenFolder(): void
   onCopyPr(): void
   onEnableTee(): void
+  onArchive(): void
+}
+
+const RENAME_HINT = 'Enter to save · Esc to cancel. A name lets you resume from any folder with claude --resume <name>.'
+
+function RenameField({ title, onDone }: { title: string; onDone(title: string | null): void }) {
+  const [value, setValue] = useState(title)
+  const input = useRef<HTMLInputElement>(null)
+  useEffect(() => input.current?.select(), [])
+  const commit = () => onDone(value.trim() && value.trim() !== title ? value.trim() : null)
+  return (
+    <div className="rename">
+      <input
+        ref={input}
+        className="rename-input"
+        value={value}
+        placeholder="Session name"
+        autoFocus
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            commit()
+          } else if (e.key === 'Escape') {
+            e.preventDefault()
+            e.stopPropagation()
+            onDone(null)
+          }
+        }}
+      />
+      <span className="rename-hint">{RENAME_HINT}</span>
+    </div>
+  )
 }
 
 const DAY_MS = 86_400_000
@@ -99,6 +136,8 @@ export function Detail(p: DetailProps) {
   const { transcript, error } = useTranscript(s.id, s.live)
   const count = transcript ? transcript.turns.reduce((n, t) => n + t.items.length, 0) : null
   const tabClass = (t: DetailTab) => (p.tab === t ? 'tab is-active' : 'tab')
+  const [renaming, setRenaming] = useState(false)
+  const label = copied('resumed') || copied('forked') ? 'Opened' : copied('fork') ? 'Copied' : 'Resume'
   return (
     <main className="detail">
       <div className={p.focus ? 'detail-tabs is-focus' : 'detail-tabs'}>
@@ -116,16 +155,33 @@ export function Detail(p: DetailProps) {
         <div className="detail-body">
           <div className="detail-inner">
             <div className="detail-head">
-              <h2 className="detail-title">{s.title}</h2>
+              {renaming ? (
+                <RenameField
+                  key={s.id}
+                  title={s.title}
+                  onDone={(t) => {
+                    setRenaming(false)
+                    if (t) p.onRename(t)
+                  }}
+                />
+              ) : (
+                <h2 className="detail-title" title="Double-click to rename" onDoubleClick={() => setRenaming(true)}>{s.title}</h2>
+              )}
               <span className="detail-when">{`${agoLong(s.end, p.now)} · ${modelLabel(s.model)} · ${fileSize(s.sizeBytes)}`}</span>
             </div>
             <div className="detail-actions">
-              <Button kind="primary" onClick={p.onResume} title="Opens claude --resume in your terminal">Resume</Button>
-              <Button kind="secondary" onClick={p.onCopy}>{copied('resume') ? 'Copied' : 'Copy command'}</Button>
-              <Button kind="secondary" onClick={p.onFork} title="Opens claude --resume … --fork-session in your terminal">
-                {copied('fork') ? 'Copied' : 'Fork'}
-              </Button>
-              {s.cwdExists && <Button kind="secondary" onClick={p.onOpenFolder}>Open folder</Button>}
+              <ResumeMenu
+                session={s}
+                label={label}
+                open={p.open}
+                terminalName={p.terminalName}
+                onResume={p.onResume}
+                onFork={p.onFork}
+                onRename={() => setRenaming(true)}
+                onCopy={p.onCopy}
+                onOpenFolder={p.onOpenFolder}
+                onArchive={p.onArchive}
+              />
               {s.pr && (
                 <span className="detail-pr" title="Copies claude --from-pr" onClick={p.onCopyPr}>
                   {copied('pr') ? 'Copied' : `All sessions for #${s.pr.number}`}
@@ -172,7 +228,7 @@ export function Detail(p: DetailProps) {
           transcript={transcript}
           error={error}
           now={p.now}
-          onResume={p.onResume}
+          onResume={() => p.onResume()}
           loadOutput={(turn, item) => window.api.getToolOutput(s.id, turn, item)}
         />
       )}
@@ -185,7 +241,7 @@ if (import.meta.vitest) {
   const now = new Date(2026, 9, 6, 11, 0)
   const pr = { repo: 'alan-oliv/meetnotes', number: 27, url: 'https://github.com/alan-oliv/meetnotes/pull/27' }
   const noop = () => {}
-  const handlers = { tab: 'overview' as DetailTab, focus: false, onTab: noop, onFocus: noop, onResume: noop, onCopy: noop, onFork: noop, onOpenFolder: noop, onCopyPr: noop, onEnableTee: noop }
+  const handlers = { tab: 'overview' as DetailTab, focus: false, open: 'tab' as OpenIn, terminalName: 'Ghostty', onTab: noop, onFocus: noop, onResume: noop, onCopy: noop, onFork: noop, onRename: noop, onOpenFolder: noop, onCopyPr: noop, onEnableTee: noop, onArchive: noop }
 
   it('shows the tab bar with Focus, and swaps the overview for the transcript tab', () => {
     const s = makeSession({ title: 'live-meeting' })
@@ -233,18 +289,22 @@ if (import.meta.vitest) {
     const styled = makeSession({ usage: { ...makeSession().usage, outputStyle: 'architecture' } })
     expect(tiles(styled)[3][2]).toEqual({ k: 'Output style', v: 'architecture', sub: '3 agents' })
   })
-  it('renders the title, the sub-line, the actions and the PR link', () => {
+  it('renders the renamable title, the sub-line, the Resume split button and the PR link', () => {
     const html = renderToStaticMarkup(<Detail session={makeSession({ title: 'live-meeting', pr })} now={now} copied={null} teeOn={false} {...handlers} />)
-    expect(html).toContain('>live-meeting</h2>')
+    expect(html).toContain('title="Double-click to rename">live-meeting</h2>')
     expect(html).toContain('Today, 9:12 AM · Opus 5.5 · 6.1MB')
-    for (const label of ['Resume', 'Copy command', 'Fork', 'Open folder', 'All sessions for #27']) expect(html).toContain(`>${label}<`)
+    expect(html).toContain('rm-main" title="claude --resume ')
+    expect(html).toContain('>Resume</button>')
+    expect(html).toContain('>All sessions for #27<')
+    expect(html).not.toContain('Copy command')
   })
-  it('swaps a label to Copied for the copy that just happened', () => {
+  it('swaps labels after a copy or a launch', () => {
     const s = makeSession({ pr })
-    const html = renderToStaticMarkup(<Detail session={s} now={now} copied={{ id: s.id, what: 'pr' }} teeOn={false} {...handlers} />)
-    expect(html).toContain('>Copied<')
-    expect(html).toContain('>Copy command<')
-    expect(html).not.toContain('All sessions for #27')
+    const render = (what: CopiedKey['what']) => renderToStaticMarkup(<Detail session={s} now={now} copied={{ id: s.id, what }} teeOn={false} {...handlers} />)
+    expect(render('pr')).toContain('>Copied<')
+    expect(render('pr')).not.toContain('All sessions for #27')
+    expect(render('forked')).toContain('>Opened</button>')
+    expect(render('fork')).toContain('>Copied</button>')
   })
   it('shows where it stopped, what is next and the changed files', () => {
     const s = makeSession({

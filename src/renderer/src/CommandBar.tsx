@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import type { IconName, Session, Settings, Terminal } from '../../shared/api'
+import { SETTINGS_DEFAULTS, type IconName, type Session, type Settings, type Terminal } from '../../shared/api'
 import { makeSession } from '../../shared/fixtures'
 import { agoLong, fileSize, tildify } from '../../shared/format'
 import { PANES } from '../../shared/panes'
@@ -322,7 +322,7 @@ export function CommandBar(p: CommandBarProps) {
 if (import.meta.vitest) {
   const { it, expect } = import.meta.vitest
   const now = new Date(2026, 9, 6, 11, 0)
-  const settings: Settings = { terminal: 'iterm', archived: [], statusTee: false }
+  const settings: Settings = { ...SETTINGS_DEFAULTS, terminal: 'iterm' }
   const s = makeSession({
     title: 'live-meeting',
     artifacts: [{ name: 'veracity-report.md', kind: 'markdown', path: '/Users/me/code/app/r.md', bytes: 9000, preview: '# Veracity report' }],
@@ -376,7 +376,7 @@ if (import.meta.vitest) {
     const recent = search([s], 'sessions', '', { now, selected: s, settings })
     expect(activate(recent[0].results[0])).toEqual({ type: 'kind', kind: 'ask', query: '' })
     expect(activate(recent[1].results[0])).toEqual({ type: 'emit', action: { type: 'resume', id: s.id, fork: false } })
-    const term = search([s], 'terminal', '', { now, selected: s, settings })[0].results[1]
+    const term = search([s], 'terminal', '', { now, selected: s, settings })[0].results[3]
     expect(activate(term)).toEqual({ type: 'emit', action: { type: 'terminal', terminal: 'warp' } })
   })
 }
