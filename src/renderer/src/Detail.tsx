@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import type { OpenIn, Session, Transcript as TranscriptData } from '../../shared/api'
+import type { OpenIn, Session, Status, Transcript as TranscriptData } from '../../shared/api'
 import { makeSession } from '../../shared/fixtures'
 import { agoLong, fileSize, modelLabel, monthDay, plural, tildify } from '../../shared/format'
 import { errorText } from './hooks'
@@ -73,8 +73,18 @@ function RenameField({ title, onDone }: { title: string; onDone(title: string | 
 
 const DAY_MS = 86_400_000
 
+// Why the row has a dot, and why Needs you lists it: waiting and failed need a hand, running and interrupted just explain the dot.
+const STATUS_NOTE: Partial<Record<Status, string>> = {
+  running: 'Running in an open terminal right now.',
+  waiting: 'Waiting for you: Claude is blocked on a question or a permission prompt in an open terminal.',
+  interrupted: 'You stopped the last reply with Esc. Resume to pick it up.',
+  failed: 'The last reply ended in an API error, so Claude never finished. Resume to retry it.',
+}
+
 export function facts(s: Session): { k: string; v: string; mono: boolean }[] {
   const out = [{ k: 'Folder', v: `${tildify(s.cwd)}${!s.cwdExists && !s.worktree ? ' (removed)' : ''}`, mono: true }]
+  const note = STATUS_NOTE[s.status]
+  if (note) out.unshift({ k: 'Status', v: note, mono: false })
   if (s.repo) out.push({ k: 'Repository', v: `${s.repo.name}${s.branch && s.branch !== 'HEAD' ? ` · ${s.branch}` : ''}`, mono: false })
   if (s.worktree) {
     const gone = s.worktree.removedSeen ? ` (removed ${monthDay(new Date(s.worktree.removedSeen))})` : ''
@@ -278,6 +288,13 @@ if (import.meta.vitest) {
     ])
     const plain = facts(makeSession({ repo: null, branch: null, usage: { ...makeSession().usage, contextUsed: 5000 } })).map((f) => f.k)
     expect(plain).toEqual(['Folder', 'Title', 'Kept until', 'Session ID'])
+  })
+  it('leads with a Status row that explains the dot, for every status but completed', () => {
+    expect(facts(makeSession({ status: 'failed' }))[0]).toEqual({ k: 'Status', v: 'The last reply ended in an API error, so Claude never finished. Resume to retry it.', mono: false })
+    expect(facts(makeSession({ status: 'waiting' }))[0].v).toContain('blocked on a question or a permission prompt')
+    expect(facts(makeSession({ status: 'interrupted' }))[0].v).toContain('Esc')
+    expect(facts(makeSession({ status: 'running' }))[0].k).toBe('Status')
+    expect(facts(makeSession({ status: 'completed' }))[0].k).toBe('Folder')
   })
   it('fills the four tile rows the way the prototype does', () => {
     expect(tiles(makeSession()).map((r) => r.map((t) => `${t.k}=${t.v}${t.sub ? ` ${t.sub}` : ''}`))).toEqual([
