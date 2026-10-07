@@ -1,18 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { prCommand, resumeCommand, type Session, type Settings } from '../../shared/api'
+import { prCommand, resumeCommand, SETTINGS_DEFAULTS, terminalLabel, type OpenIn, type Session, type Settings, type SettingsPatch, type Terminal } from '../../shared/api'
+import { appearanceVars } from '../../shared/appearance'
 import { makeSession } from '../../shared/fixtures'
 import { clampPane, PANES_KEY, paneMax, readPaneWidths, type PaneKey, type PaneWidths } from '../../shared/panes'
-import { buildTree, defaultExpanded, inScope, scopeTitle, visible, type Scope } from '../../shared/tree'
+import { archivedOf, buildChips, buildTree, inScope, scopeTitle, visible, type Scope } from '../../shared/tree'
 import { byRecent, dayKey, latestDay, listForView, type ViewMode, type YearMonth } from '../../shared/views'
 import { CommandBar, type BarAction, type BarOpen } from './CommandBar'
 import { Detail, type CopiedKey, type DetailTab } from './Detail'
 import { errorText, useNow, useSessions, useSettings } from './hooks'
 import { SessionList } from './SessionList'
+import { SettingsModal } from './Settings'
 import { Sidebar } from './Sidebar'
 import './App.css'
 
 const COPIED_MS = 1600
+const TOAST_MS = 2400
 // Static renders in tests have no window; the default window width stands in.
 const windowWidth = () => (typeof window === 'undefined' ? 1360 : window.innerWidth)
 
@@ -25,19 +28,28 @@ function savedPanes(): PaneWidths {
 }
 
 type Pending = { id: string; fork: boolean }
+type Toast = { id: string; title: string; archived: boolean }
 
 export function App() {
   const sessions = useSessions()
   const settings = useSettings()
   const now = useNow()
-  return sessions && settings ? <Deck all={sessions} settings={settings} now={now} /> : <div className="app-loading" />
+  const [installed, setInstalled] = useState<Terminal[] | null>(null)
+  useEffect(() => {
+    window.api.listTerminals().then(setInstalled, (e) => console.error(e))
+  }, [])
+  useEffect(() => {
+    if (!settings) return
+    for (const [k, v] of Object.entries(appearanceVars(settings))) document.documentElement.style.setProperty(k, v)
+  }, [settings?.accent, settings?.opacity])
+  return sessions && settings && installed ? <Deck all={sessions} settings={settings} installed={installed} now={now} /> : <div className="app-loading" />
 }
 
-export function Deck({ all, settings, now }: { all: Session[]; settings: Settings; now: Date }) {
+export function Deck({ all, settings, installed, now }: { all: Session[]; settings: Settings; installed: Terminal[]; now: Date }) {
   const shown = useMemo(() => byRecent(visible(all)), [all])
-  const tree = useMemo(() => buildTree(shown), [shown])
+  const archived = useMemo(() => byRecent(archivedOf(all)), [all])
+  const tree = useMemo(() => buildTree(shown, archived.length), [shown, archived])
   const [scope, setScope] = useState<Scope>({ type: 'all' })
-  const [expanded, setExpanded] = useState<Record<string, boolean> | null>(null)
   const [mode, setMode] = useState<ViewMode>('list')
   const [month, setMonth] = useState<YearMonth | null>(null)
   const [day, setDay] = useState<string | null>(null)
@@ -49,12 +61,14 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
   const [winWidth, setWinWidth] = useState(windowWidth)
   const [detailTab, setDetailTab] = useState<DetailTab>('overview')
   const [focus, setFocus] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [toast, setToast] = useState<Toast | null>(null)
   const barSeq = useRef(0)
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
-  const open = expanded ?? defaultExpanded(tree)
   const viewMode: ViewMode = scope.type === 'all' ? mode : 'list'
-  const scoped = shown.filter((s) => inScope(s, scope))
+  const scoped = scope.type === 'archived' ? archived : shown.filter((s) => inScope(s, scope))
   const latest = latestDay(scoped)
   const calMonth = month ?? (latest ? { year: latest.getFullYear(), month: latest.getMonth() } : { year: now.getFullYear(), month: now.getMonth() })
   const calDay = day ?? (latest ? dayKey(latest) : null)
@@ -104,18 +118,31 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
     setNote(errorText(e))
   }
 
+  const toggleSettings = () => {
+    setBar(null)
+    setSettingsOpen((o) => !o)
+  }
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'p') {
+      if ((e.metaKey || e.ctrlKey) && e.key === ',') {
+        e.preventDefault()
+        toggleSettings()
+      } else if (e.key === 'Escape' && settingsOpen) {
+        // Capture phase, so the command bar's own Esc never runs under the modal.
+        e.preventDefault()
+        e.stopPropagation()
+        setSettingsOpen(false)
+      } else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'p' && !settingsOpen) {
         e.preventDefault()
         const seq = ++barSeq.current
         setNote(null)
         setBar((b) => (b ? null : { open: { kind: 'sessions', query: '' }, seq }))
       }
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [])
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [settingsOpen])
 
   const flash = (key: CopiedKey) => {
     setCopied(key)
@@ -125,17 +152,37 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
   const copy = (id: string, what: CopiedKey['what'], text: string) => {
     void navigator.clipboard.writeText(text).then(() => flash({ id, what }), fail)
   }
-  const resume = async (id: string, fork: boolean) => {
+  const resume = async (id: string, fork: boolean, open?: OpenIn) => {
     try {
-      const r = await window.api.resumeSession(id, { fork })
-      if (r.ok) return
-      if ('needsTerminal' in r) return openBar({ kind: 'terminal', query: '' }, { id, fork })
+      const r = await window.api.resumeSession(id, { fork, open })
+      if (r.ok) return flash({ id, what: fork ? 'forked' : 'resumed' })
       flash({ id, what: fork ? 'fork' : 'resume' })
-      fail(new Error(`Couldn't open the terminal, so the command was copied. ${r.error}`))
+      fail(new Error(r.message))
     } catch (e) {
       fail(e)
     }
   }
+  const archive = (s: Session, archived: boolean) =>
+    void call(
+      () => window.api.setArchived(s.id, archived),
+      () => {
+        setToast({ id: s.id, title: s.title, archived })
+        clearTimeout(toastTimer.current)
+        toastTimer.current = setTimeout(() => setToast(null), TOAST_MS)
+      },
+    )
+  const undoArchive = (t: Toast) =>
+    void call(
+      () => window.api.setArchived(t.id, !t.archived),
+      () => {
+        clearTimeout(toastTimer.current)
+        setToast(null)
+        setSelectedId(t.id)
+      },
+    )
+  const saveSettings = (patch: SettingsPatch) => void call(() => window.api.saveSettings(patch))
+  const terminal = settings.terminal && installed.includes(settings.terminal) ? settings.terminal : null
+  const terminalName = terminal ? terminalLabel(terminal) : 'your terminal'
   const call = async (fn: () => Promise<unknown>, after?: () => void) => {
     try {
       await fn()
@@ -163,14 +210,14 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
         return call(() => window.api.openPr(a.id), closeBar)
       case 'showRepo': {
         const s = all.find((x) => x.id === a.id)
-        if (s?.repo) {
-          setScope({ type: 'repo', repo: s.repo.root })
-          setExpanded({ ...open, [s.repo.root]: true })
-        }
+        if (s?.repo) setScope({ type: 'repo', repo: s.repo.root })
         return closeBar()
       }
-      case 'archive':
-        return call(() => window.api.setArchived(a.id, a.archived), closeBar)
+      case 'archive': {
+        const s = all.find((x) => x.id === a.id)
+        closeBar()
+        return s && archive(s, a.archived)
+      }
       case 'rename':
         return call(() => window.api.renameSession(a.id, a.title), closeBar)
       case 'tee':
@@ -195,12 +242,12 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
         <Sidebar
           tree={tree}
           scope={scope}
-          expanded={open}
           width={panes.side}
           maxWidth={paneMax('side', panes.list, winWidth)}
           onWidth={setPane('side')}
           onScope={setScope}
-          onToggle={(root) => setExpanded({ ...open, [root]: !open[root] })}
+          settingsOpen={settingsOpen}
+          onSettings={toggleSettings}
         />
       )}
       {!focus && (
@@ -210,11 +257,15 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
           maxWidth={paneMax('list', panes.side, winWidth)}
           onWidth={setPane('list')}
           sessions={scoped}
+          chips={buildChips(shown, scope)}
+          scope={scope}
+          onScope={setScope}
           showModes={scope.type === 'all'}
           mode={viewMode}
           onMode={setMode}
           selectedId={selected?.id ?? null}
           onSelect={setSelectedId}
+          onArchive={(s) => archive(s, !s.archived)}
           onOpenBar={() => openBar({ kind: 'sessions', query: '' })}
           now={now}
           month={calMonth}
@@ -229,16 +280,20 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
           now={now}
           copied={copied}
           teeOn={settings.statusTee}
+          open={settings.open}
+          terminalName={terminalName}
           tab={detailTab}
           focus={focus}
           onTab={setDetailTab}
           onFocus={() => setFocus(!focus)}
-          onResume={() => void resume(selected.id, false)}
+          onResume={(open) => void resume(selected.id, false, open)}
           onCopy={() => copy(selected.id, 'resume', resumeCommand(selected.id, false))}
           onFork={() => void resume(selected.id, true)}
+          onRename={(title) => void call(() => window.api.renameSession(selected.id, title))}
           onOpenFolder={() => void call(() => window.api.openFolder(selected.id))}
           onCopyPr={() => selected.pr && copy(selected.id, 'pr', prCommand(selected.pr.number))}
           onEnableTee={() => void call(() => window.api.setStatusTee(true))}
+          onArchive={() => archive(selected, !selected.archived)}
         />
       ) : (
         <main className="detail" />
@@ -258,6 +313,13 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
           onAction={(a) => void onAction(a)}
         />
       )}
+      {toast && (
+        <div className="toast">
+          <span>{toast.archived ? 'Archived' : 'Restored'} “{toast.title}”</span>
+          <button type="button" className="toast-undo" onClick={() => undoArchive(toast)}>Undo</button>
+        </div>
+      )}
+      {settingsOpen && <SettingsModal settings={settings} installed={installed} onChange={saveSettings} onClose={() => setSettingsOpen(false)} />}
     </div>
   )
 }
@@ -265,27 +327,36 @@ export function Deck({ all, settings, now }: { all: Session[]; settings: Setting
 if (import.meta.vitest) {
   const { it, expect } = import.meta.vitest
   const now = new Date(2026, 9, 6, 11, 0)
-  const settings: Settings = { terminal: null, archived: [], statusTee: false }
-  it('shows the tree, the list with its view switcher and the newest session in the detail pane', () => {
+  const settings: Settings = SETTINGS_DEFAULTS
+  const installed: Terminal[] = ['terminal']
+  it('shows the sidebar, the list with its view switcher and the newest session in the detail pane', () => {
     const newest = makeSession({ title: 'live-meeting', end: new Date(2026, 9, 6, 9, 12).toISOString() })
     const older = makeSession({ title: 'perf pass', end: new Date(2026, 9, 5).toISOString() })
-    const html = renderToStaticMarkup(<Deck all={[older, newest, makeSession({ title: 'sdk run', hidden: true })]} settings={settings} now={now} />)
+    const html = renderToStaticMarkup(<Deck all={[older, newest, makeSession({ title: 'sdk run', hidden: true })]} settings={settings} installed={installed} now={now} />)
     expect(html).toContain('All sessions')
     expect(html).toContain('class="modes"')
     expect(html).toContain('>live-meeting</h2>')
     expect(html).toContain('>2 sessions<')
     expect(html).not.toContain('sdk run')
   })
-  it('shows the empty list, no detail, and the tree and list at their default widths with the drag strip after them', () => {
-    const html = renderToStaticMarkup(<Deck all={[]} settings={settings} now={now} />)
+  it('shows the empty list, no detail, and the sidebar and list at their default widths with the drag strip after them', () => {
+    const html = renderToStaticMarkup(<Deck all={[]} settings={settings} installed={installed} now={now} />)
     expect(html).toContain('No sessions here.')
     expect(html).not.toContain('<h2')
     expect(html).toContain('class="app-drag" style="left:600px"')
     expect(html).toContain('class="sidebar" style="width:220px"')
     expect(html).toContain('class="list" style="width:380px"')
   })
+  it('lists archived sessions only under the Archived scope and keeps the count in the sidebar', () => {
+    const kept = makeSession({ title: 'kept' })
+    const gone = makeSession({ title: 'put away', archived: true })
+    const html = renderToStaticMarkup(<Deck all={[kept, gone]} settings={settings} installed={installed} now={now} />)
+    expect(html).toContain('>Archived</span><span class="side-count">1<')
+    expect(html).toContain('>1 session<')
+    expect(html).not.toContain('put away')
+  })
   it('renders the detail tab bar on Overview for the selected session', () => {
-    const html = renderToStaticMarkup(<Deck all={[makeSession({ title: 'live-meeting' })]} settings={settings} now={now} />)
+    const html = renderToStaticMarkup(<Deck all={[makeSession({ title: 'live-meeting' })]} settings={settings} installed={installed} now={now} />)
     expect(html).toContain('tab is-active">Overview<')
     expect(html).toContain('>Focus<')
     expect(html).not.toContain('app-drag')

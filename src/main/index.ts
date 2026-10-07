@@ -1,17 +1,22 @@
 import { app, BrowserWindow, clipboard, shell } from 'electron'
 import { appendFileSync, closeSync, openSync, readSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { isSessionId, type ResumeResult, type Session, type SettingsPatch } from '../shared/api'
+import { isSessionId, terminalLabel, type ResumeResult, type Session, type Settings, type SettingsPatch } from '../shared/api'
+import { blurRadius } from '../shared/appearance'
+import { initBlur, setWindowBlur } from './blur'
 import { createIndexer } from './indexer'
 import { broadcast, registerIpc } from './ipc'
 import { PATHS } from './paths'
-import { createSettingsStore, isTerminal } from './settings'
+import { createSettingsStore, isTerminal, normalizeSettings } from './settings'
 import { installTee, removeTee } from './statusline'
-import { folderToOpen, launch, terminalCommand } from './terminal'
+import { CannotRunError, defaultTerminal, folderToOpen, installedTerminals, launch, terminalCommand } from './terminal'
 import { cleanTitle, customTitleLine } from './transcript'
 import { createTranscriptStore } from './transcripts'
 
-function createMainWindow(): BrowserWindow {
+// The renderer tints its own background by the opacity setting; the window server blurs the desktop under it.
+const applyBlur = (win: BrowserWindow, s: Settings) => setWindowBlur(win, blurRadius(s))
+
+function createMainWindow(settings: Settings): BrowserWindow {
   const win = new BrowserWindow({
     width: 1360,
     height: 820,
@@ -19,13 +24,15 @@ function createMainWindow(): BrowserWindow {
     minHeight: 600,
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 14, y: 13 },
-    backgroundColor: '#181921',
+    transparent: true,
+    backgroundColor: '#00000000',
     show: false,
     webPreferences: { preload: join(__dirname, '../preload/index.js'), sandbox: true, contextIsolation: true },
   })
   const show = () => {
     if (!win.isDestroyed() && !win.isVisible()) win.show()
   }
+  win.webContents.on('did-finish-load', () => applyBlur(win, settings))
   win.once('ready-to-show', show)
   // A wedged renderer must not leave the window hidden forever.
   setTimeout(show, 3000)
@@ -57,6 +64,7 @@ function appendLine(path: string, line: string): void {
 app.whenReady().then(() => {
   const userData = app.getPath('userData')
   const settings = createSettingsStore(join(userData, 'settings.json'))
+  initBlur((err) => console.error('blur', err))
   const indexer = createIndexer({
     projectsDir: PATHS.projects,
     sessionsDir: PATHS.sessions,
@@ -80,25 +88,31 @@ app.whenReady().then(() => {
     getSettings: async () => settings.get(),
     saveSettings: async (patch: SettingsPatch) => {
       const p = (patch && typeof patch === 'object' ? patch : {}) as Record<string, unknown>
-      if (!('terminal' in p)) return settings.get()
-      const terminal = p.terminal === null ? null : isTerminal(p.terminal) ? p.terminal : undefined
-      if (terminal === undefined) throw new Error('Unknown terminal')
-      const next = settings.save({ terminal })
+      if ('terminal' in p && p.terminal !== null && !isTerminal(p.terminal)) throw new Error('Unknown terminal')
+      const keys = ['terminal', 'open', 'accent', 'opacity', 'blur'] as const
+      const clean = normalizeSettings({ ...settings.get(), ...Object.fromEntries(keys.filter((k) => k in p).map((k) => [k, p[k]])) })
+      const next = settings.save(clean)
+      for (const win of BrowserWindow.getAllWindows()) applyBlur(win, next)
       broadcast('settingsChanged')
       return next
     },
+    listTerminals: async () => installedTerminals(),
     resumeSession: async (id, opts): Promise<ResumeResult> => {
       if (!opts || typeof opts !== 'object' || typeof opts.fork !== 'boolean') throw new Error('Invalid options')
+      if (opts.open !== undefined && opts.open !== 'tab' && opts.open !== 'window') throw new Error('Invalid options')
       const s = sessionFor(id)
       const fork = opts.fork
-      const terminal = settings.get().terminal
-      if (!terminal) return { ok: false, needsTerminal: true }
+      const { terminal: chosen } = settings.get()
+      const open = opts.open ?? settings.get().open
+      const installed = installedTerminals()
+      const terminal = chosen && installed.includes(chosen) ? chosen : defaultTerminal(installed)
       try {
-        await launch(terminal, s, fork)
+        await launch(terminal, open, s, fork)
         return { ok: true }
       } catch (e) {
         clipboard.writeText(terminalCommand(s, fork))
-        return { ok: false, copied: true, error: e instanceof Error ? e.message : String(e) }
+        if (e instanceof CannotRunError) return { ok: false, message: e.message }
+        return { ok: false, message: `Couldn't open ${terminalLabel(terminal)}, so the command was copied. ${e instanceof Error ? e.message : String(e)}` }
       }
     },
     openFolder: async (id) => {
@@ -148,9 +162,9 @@ app.whenReady().then(() => {
     },
   })
 
-  createMainWindow()
+  createMainWindow(settings.get())
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createMainWindow()
+    if (BrowserWindow.getAllWindows().length === 0) createMainWindow(settings.get())
   })
   app.on('before-quit', () => indexer.stop())
   void indexer.start()
