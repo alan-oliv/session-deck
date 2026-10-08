@@ -14,5 +14,5 @@ export const PATHS = {
   tee: join(deck, 'status'),
   teeScript: join(deck, 'statusline-tee.sh'),
   teeOriginal: join(deck, 'statusline-original.json'),
-  warpConfig: join(home, '.warp', 'launch_configurations', 'session-deck-resume.yaml'),
+  warpConfig: join(home, '.warp', 'tab_configs', 'session_deck_resume.toml'),
 } as const
