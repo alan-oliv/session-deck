@@ -72,23 +72,24 @@ export const terminalAppTabScript = (cmd: string): string =>
     'end tell',
   ].join('\n')
 
-// A JSON string is a valid YAML scalar, so JSON.stringify quotes every value safely.
+// A JSON string is a valid TOML basic string, so JSON.stringify quotes every value safely.
 export const warpConfig = (title: string, cwd: string, cmd: string): string =>
   [
-    '---',
-    'name: session-deck-resume',
-    'windows:',
-    '  - tabs:',
-    `      - title: ${JSON.stringify(title)}`,
-    '        layout:',
-    `          cwd: ${JSON.stringify(cwd)}`,
-    '          commands:',
-    `            - exec: ${JSON.stringify(cmd)}`,
+    'name = "Session Deck resume"',
+    `title = ${JSON.stringify(title)}`,
+    '',
+    '[[panes]]',
+    'id = "main"',
+    'type = "terminal"',
+    `directory = ${JSON.stringify(cwd)}`,
+    `commands = [${JSON.stringify(cmd)}]`,
     '',
   ].join('\n')
 
-// Warp resolves the name inside ~/.warp/launch_configurations/. Warp has no run-command API besides launch configs.
-export const WARP_URI = `warp://launch/${encodeURIComponent(basename(PATHS.warpConfig))}`
+// Warp matches the name against file stems in ~/.warp/tab_configs/. A tab config opens as a tab in the active window
+// unless asked for a new one; the legacy launch configs this replaced could only open windows.
+export const warpUri = (open: OpenIn): string =>
+  `warp://tab_config/${encodeURIComponent(basename(PATHS.warpConfig, '.toml'))}${open === 'window' ? '?new_window=true' : ''}`
 
 const WEZTERM = '/Applications/WezTerm.app/Contents/MacOS/wezterm'
 
@@ -105,10 +106,9 @@ export async function launch(terminal: Terminal, open: OpenIn, s: Session, fork:
   const claude = resumeCommand(s.id, fork).split(' ')
   switch (terminal) {
     case 'warp':
-      // ponytail: a launch config always opens a window; Warp's new_tab URI can't run a command.
       mkdirSync(dirname(PATHS.warpConfig), { recursive: true })
       writeFileSync(PATHS.warpConfig, warpConfig(s.title, dir, resumeCommand(s.id, fork)))
-      await run('open', [WARP_URI])
+      await run('open', [warpUri(open)])
       return
     case 'iterm':
       // execFile, never a shell: the script is a single argv entry.
@@ -187,11 +187,13 @@ if (import.meta.vitest) {
     expect(defaultTerminal([])).toBe('terminal')
     expect(installedTerminals()).toContain('terminal')
   })
-  it('writes a Warp launch config with every value JSON-quoted', () => {
-    const yaml = warpConfig('fix: "quotes"', '/Users/me/app', `claude --resume ${id}`)
-    expect(yaml).toContain('      - title: "fix: \\"quotes\\""')
-    expect(yaml).toContain('          cwd: "/Users/me/app"')
-    expect(yaml).toContain(`            - exec: "claude --resume ${id}"`)
+  it('writes a Warp tab config with every value JSON-quoted and opens it as a tab or a window', () => {
+    const toml = warpConfig('fix: "quotes"', '/Users/me/app', `claude --resume ${id}`)
+    expect(toml).toContain('title = "fix: \\"quotes\\""')
+    expect(toml).toContain('directory = "/Users/me/app"')
+    expect(toml).toContain(`commands = ["claude --resume ${id}"]`)
+    expect(warpUri('tab')).toBe('warp://tab_config/session_deck_resume')
+    expect(warpUri('window')).toBe('warp://tab_config/session_deck_resume?new_window=true')
   })
   it.skipIf(!process.env.SESSION_DECK_LAUNCH)('opens a harmless echo in iTerm, Terminal and Warp', async () => {
     const echo = 'echo session-deck-check'
@@ -199,6 +201,6 @@ if (import.meta.vitest) {
     await run('osascript', ['-e', terminalAppScript(echo)])
     mkdirSync(dirname(PATHS.warpConfig), { recursive: true })
     writeFileSync(PATHS.warpConfig, warpConfig('session-deck-check', PATHS.home, echo))
-    await run('open', [WARP_URI])
+    await run('open', [warpUri('tab')])
   }, 120_000)
 }
