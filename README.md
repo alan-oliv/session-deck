@@ -10,10 +10,10 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/screenshot.png" alt="Session Deck with the session list on the left and a live session's overview and usage on the right">
+  <a href="docs/assets/session-full-deck.mp4"><img src="docs/assets/demo.webp" alt="Session Deck demo: finding a session and resuming it in the terminal"></a>
 </p>
 
-<p align="center"><sub>Screenshots use sample data.</sub></p>
+<p align="center"><sub>Sample data. Click the preview for the full video.</sub></p>
 
 ## Why
 
@@ -23,7 +23,11 @@ Session Deck indexes all of them and lets you look them up by what actually happ
 
 ## Search
 
-Press <kbd>⌘</kbd><kbd>⇧</kbd><kbd>P</kbd> anywhere in the app. Plain words search everything. A prefix like `file:` or `pr:` switches to a narrower kind of search and shows up as a chip in the input. Type <kbd>/</kbd> to list every kind with examples.
+Press <kbd>⌘</kbd><kbd>⇧</kbd><kbd>P</kbd> anywhere in the app.
+
+The fastest way in is to paste something the session left behind. A PR link like `https://github.com/owner/repo/pull/27` brings up the session that opened it, and the path of a file it wrote or changed, absolute or relative to the repo, brings up the session that touched it. No prefix needed.
+
+Plain words search everything. A prefix like `file:` or `pr:` switches to a narrower kind of search and shows up as a chip in the input. Type <kbd>/</kbd> to list every kind with examples.
 
 <p align="center">
   <img src="docs/assets/command-bar.png" alt="The command bar listing its search kinds, with Ask selected and example queries in the preview pane">
@@ -53,7 +57,7 @@ With nothing typed, the bar lists the search kinds and your three most recent se
 - the paths of the files it changed and the names of the documents it wrote
 - its PRs (`owner/repo#27`, `#27` or the full URL) and its commits (hash and message)
 
-So `meetnotes#27 4e9c1b7` finds the session that opened that PR and made that commit, and pasting a GitHub PR link works without any prefix.
+So `meetnotes#27 4e9c1b7` finds the session that opened that PR and made that commit, a pasted PR link finds the session that opened it, and a pasted path like `docs/plans/sync.md` finds the sessions that wrote or edited that file.
 
 ### `?` Ask
 
