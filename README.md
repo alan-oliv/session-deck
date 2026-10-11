@@ -11,8 +11,6 @@
 
 https://github.com/user-attachments/assets/656fefc1-8bf6-4081-a277-5a589b767a9c
 
-<p align="center"><sub>Sample data.</sub></p>
-
 ## Why
 
 Claude Code keeps every session on disk, but after a few weeks there are hundreds of them spread across repos, branches and worktrees, most named after their first prompt. Finding "the one where I fixed the transcript upload" means remembering which folder it ran in and scrolling a picker.
@@ -23,7 +21,7 @@ Session Deck indexes all of them and lets you look them up by what actually happ
 
 Press <kbd>⌘</kbd><kbd>⇧</kbd><kbd>P</kbd> anywhere in the app.
 
-The fastest way in is to paste something the session left behind. A PR link like `https://github.com/owner/repo/pull/27` brings up the session that opened it, and the path of a file it wrote or changed, absolute or relative to the repo, brings up the session that touched it. No prefix needed.
+The fastest way in is to paste something the session left behind. A PR link like `https://github.com/owner/repo/pull/27` brings up the session that opened it, and the path of a file it wrote or changed, absolute or relative to the repo, brings up the session that touched it. That includes an artifact link, like a plan or report you found and forgot which session generated it. No prefix needed.
 
 Plain words search everything. A prefix like `file:` or `pr:` switches to a narrower kind of search and shows up as a chip in the input. Type <kbd>/</kbd> to list every kind with examples.
 
