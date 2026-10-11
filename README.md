@@ -122,7 +122,7 @@ Runs an action on the session selected in the list, without touching the mouse. 
 | Rename session | Type a new title and press <kbd>↵</kbd> |
 | Archive session, Restore from archive | Moves it into or out of Archived |
 | Change terminal | Picks the terminal that resumes and forks sessions |
-| Show plan usage, Hide plan usage | Turns the [status line tee](#plan-usage-optional) on or off |
+| Show plan usage, Hide plan usage | Wraps your status line so Session Deck can read plan usage, or puts the original back |
 
 The PR actions only show up for sessions that opened one, and Open folder only when the folder still exists.
 
@@ -162,25 +162,6 @@ The Transcript tab replays the conversation the way the terminal printed it, wit
 - Sessions that opened a PR can open it in the browser or copy `claude --from-pr <number>`.
 
 If a terminal can't run the command (VS Code opens the folder only) or fails to open, the resume command is copied to your clipboard instead.
-
-### Plan usage (optional)
-
-Claude Code only shares plan usage and live context with your status line. Show plan usage wraps your status line command with a small script that saves its input to `~/.claude/session-deck/status/<session>.json` and then runs your original command, so your status line looks the same. It backs up `~/.claude/settings.json` before the change, and Hide plan usage puts your original status line back.
-
-### Look
-
-Pick one of seven accent colors and set the window opacity and the blur behind the window in Settings (<kbd>⌘</kbd><kbd>,</kbd>). The blur comes from a small native addon.
-
-## Privacy
-
-Everything stays on your Mac. Session Deck reads `~/.claude/projects` and `~/.claude/sessions` and makes no network requests.
-
-It writes to `~/.claude` only when you ask it to:
-
-- Rename appends one line to that session's transcript.
-- Show plan usage changes `statusLine` in `~/.claude/settings.json`, after a backup.
-
-Its own settings, archive list and index cache live in `~/Library/Application Support/Session Deck`.
 
 ## Getting started
 
