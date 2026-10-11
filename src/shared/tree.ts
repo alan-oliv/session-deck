@@ -127,7 +127,7 @@ if (import.meta.vitest) {
   const head = makeSession({ branch: 'HEAD', end: at(4) })
   const wt = makeSession({ branch: 'main', worktree: { name: 'transcriptions', path: `${root}/.worktrees/transcriptions`, removedSeen: null }, end: at(3) })
   const gone = makeSession({ branch: 'old', worktree: { name: 'old', path: `${root}/.worktrees/old`, removedSeen: at(2) }, cwdExists: false, end: at(2), status: 'failed' })
-  const other = makeSession({ repo: { name: 'team8', root: '/Users/me/code/team8' }, end: at(1) })
+  const other = makeSession({ repo: { name: 'team8', root: '/Users/me/code/team8', remote: 'alan-oliv/team8' }, end: at(1) })
   const folder = makeSession({ repo: null, branch: null, cwd: '/Users/me/code', end: at(6) })
   const all = [main, main2, feat, head, wt, gone, other, folder]
   const tree = buildTree(all)
