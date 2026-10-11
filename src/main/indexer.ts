@@ -13,7 +13,7 @@ import { writeJsonAtomic } from './settings'
 import { emptyAgg, finalize, reduceLine, type Agg, type Facts } from './transcript'
 
 // Bump whenever transcript.ts changes what it extracts, so every file is reparsed.
-export const CACHE_VERSION = 3
+export const CACHE_VERSION = 4
 const DAY_MS = 86_400_000
 const DEBOUNCE_MS = 300
 // The cache can be tens of MB; write it at most this often, and on stop().

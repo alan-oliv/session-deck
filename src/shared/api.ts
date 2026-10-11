@@ -38,6 +38,8 @@ export const ACCENTS: { id: Accent; name: string; fill: string }[] = [
 export interface FileChange { path: string; added: number; removed: number }
 export interface Commit { sha: string; msg: string; at: string }
 export interface Artifact { name: string; kind: string; path: string; bytes: number; preview: string }
+// A page the session published to claude.ai: its path is the link, with no size or preview.
+export const PUBLISHED_KIND = 'claude.ai'
 export interface PullRequest { repo: string; number: number; url: string }
 
 export interface Usage {

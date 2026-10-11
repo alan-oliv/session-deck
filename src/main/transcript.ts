@@ -1,5 +1,5 @@
 import { basename, extname } from 'node:path'
-import type { Artifact, Commit, PullRequest } from '../shared/api'
+import { PUBLISHED_KIND, type Artifact, type Commit, type PullRequest } from '../shared/api'
 
 export interface Tokens { input: number; output: number; cacheRead: number; cacheWrite: number }
 export type LastEvent = 'interrupt' | 'apiError' | 'normal'
@@ -76,6 +76,7 @@ const ARTIFACT_KINDS: Record<string, string> = {
 // These records start with their type and carry nothing we read, so skip them before JSON.parse.
 const SKIP_HEAD = /"type":"(?:file-history-snapshot|file-history-delta|queue-operation|atis-latch)"/
 const COMMIT_RE = /^\[([^\]\s]+)(?: \(root-commit\))? ([0-9a-f]{7,40})\] (.+)$/gm
+const PUBLISHED_URL_RE = /^https:\/\/claude\.ai\/(?:code\/)?artifact\/[\w-]+$/
 
 export type Rec = Record<string, any>
 
@@ -191,6 +192,15 @@ function reduceUser(agg: Agg, r: Rec): void {
       toolResult(agg, block, str(r.timestamp) ?? '')
     }
   }
+  published(agg, r.toolUseResult)
+}
+
+// An Artifact publish leaves { url, artifact_id, title } here; reads and lists leave other shapes.
+function published(agg: Agg, res: unknown): void {
+  if (!res || typeof res !== 'object') return
+  const { url, artifact_id, title } = res as Rec
+  if (typeof url !== 'string' || !PUBLISHED_URL_RE.test(url) || !str(artifact_id)) return
+  agg.artifacts[url] = { name: str(title) ?? url, kind: PUBLISHED_KIND, path: url, bytes: 0, preview: '' }
 }
 
 function userText(agg: Agg, text: string): void {
@@ -436,6 +446,21 @@ if (import.meta.vitest) {
     expect(f?.artifacts).toEqual([
       { name: 'plan.md', kind: 'markdown', path: '/Users/me/code/app/docs/plan.md', bytes: 16, preview: '# Plan\n\nStep one' },
     ])
+  })
+
+  it('records the claude.ai artifacts a session published, once per link, and not the ones it read or listed', () => {
+    const url = 'https://claude.ai/artifact/Zq7Fake9ArtifactId00'
+    const publish = (title: string, version: number) =>
+      user([{ type: 'tool_result', content: `Published /tmp/arch.html at ${url} (Version ${version})` }],
+        { toolUseResult: { url, path: '/tmp/arch.html', artifact_id: 'f00d', title, version } })
+    const f = run(
+      user('draw the architecture'),
+      publish('Architecture', 1),
+      publish('Meetnotes architecture', 2),
+      user([{ type: 'tool_result', content: 'read' }], { toolUseResult: { read: { url: 'https://claude.ai/artifact/Other1' }, artifactRead: {} } }),
+      user([{ type: 'tool_result', content: 'types' }], { toolUseResult: { artifact_types: [{ url: 'https://claude.ai/artifact/Type1' }] } }),
+    )
+    expect(f?.artifacts).toEqual([{ name: 'Meetnotes architecture', kind: 'claude.ai', path: url, bytes: 0, preview: '' }])
   })
 
   it('reads commits from git commit output in tool results, once per sha', () => {
