@@ -12,8 +12,8 @@ pr: <url, at close>
 
 ## Plan
 - plan: none · tasks from the chat design via team8:tasks
-- tasks: <n> · tracks: <n> · waves: <n> · peak: <n> at once · mode: <mode> — <reason>
-- estimate: ≈$<total>
+- tasks: 2 · tracks: 1 · waves: 2 · peak: 1 at once · mode: subagents — one track, task 2 reads the repo.remote field task 1 adds
+- estimate: ≈$2.30 (2 × standard · sonnet · medium)
 
 ## Run
 - executors: <name> · <model> · <effort> · track <X> · wave <n>, one line each · peak <n> at once
