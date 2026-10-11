@@ -372,6 +372,13 @@ if (import.meta.vitest) {
     expect(render({ kind: 'rename', query: 'x' }, { selected: { ...s, live: true } })).toContain("Can&#x27;t rename a running session")
     expect(render({ kind: 'sessions', query: '' }, { note: 'Unknown session' })).toContain('Unknown session')
   })
+  it('switches to the Repository chip and resolves the place when a GitHub repo link is pasted', () => {
+    const repoSession = { ...s, repo: { name: 'team8', root: '/Users/me/code/team8', remote: 'alan-oliv/team8' } }
+    const html = render({ kind: 'in', query: 'https://github.com/alan-oliv/team8 ' }, { sessions: [repoSession], selected: repoSession })
+    expect(html).toContain('bar-chip')
+    expect(html).toContain('>Repository<')
+    expect(html).toContain('>In team8<')
+  })
   it('maps each highlighted result to a kind switch or an app action', () => {
     const groups = search([s], 'actions', '', { now, selected: s, settings })
     const byAction = (id: string) => groups[0].results.find((r) => r.type === 'action' && r.action === id)!
