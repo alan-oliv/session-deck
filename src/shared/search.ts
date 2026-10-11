@@ -1,4 +1,4 @@
-import { prCommand, resumeCommand, SETTINGS_DEFAULTS, TERMINALS, type Artifact, type IconName, type Session, type Settings, type Terminal } from './api'
+import { PUBLISHED_KIND, prCommand, resumeCommand, SETTINGS_DEFAULTS, TERMINALS, type Artifact, type IconName, type Session, type Settings, type Terminal } from './api'
 import { makeSession } from './fixtures'
 import { agoShort, attention, daysAgo, fileSize, plural, tildify } from './format'
 import { visible } from './tree'
@@ -25,7 +25,7 @@ export const KINDS: Kind[] = [
   { id: 'sessions', prefix: '', label: 'Sessions', icon: 'Search1', desc: 'Match words in titles, prompts, summaries and paths. This is what you get when you just type.', examples: ['transcript', 'board performance', 'marketplaces'] },
   { id: 'ask', prefix: '?', label: 'Ask', icon: 'Bolt', desc: 'Describe the session in your own words. Results are ranked by meaning and say why they matched.', examples: ['? where did I fix the failed transcript', '? the one that made team8 faster', '? telling speakers apart'] },
   { id: 'files', prefix: 'file:', label: 'Files', icon: 'Document', desc: 'Find sessions by a file they changed. Partial names and paths work.', examples: ['file:diarize', 'file:useVirtualRows', 'file:.claude/commands'] },
-  { id: 'artifacts', prefix: 'art:', label: 'Artifacts', icon: 'Attachment2', desc: 'Find what a session produced: plans, reports, docs, commands and screenshots, even when the session name says nothing about them.', examples: ['art:report', 'art:.md', 'art:profile'] },
+  { id: 'artifacts', prefix: 'art:', label: 'Artifacts', icon: 'Attachment2', desc: 'Find what a session produced: plans, reports and docs it wrote, and the Claude artifacts it published, even when the session name says nothing about them.', examples: ['art:report', 'art:.md', 'art:profile'] },
   { id: 'prs', prefix: 'pr:', label: 'PRs and commits', icon: 'Branch', desc: 'Look up a PR number or repository, a commit hash or a commit message.', examples: ['pr:27', 'pr:audio-sync', 'pr:virtualize'] },
   { id: 'in', prefix: 'in:', label: 'Repository', icon: 'Box', desc: 'Limit to one repository or folder, then keep typing to search inside it.', examples: ['in:team8', 'in:meetnotes live', 'in:~/code'] },
   { id: 'is', prefix: 'is:', label: 'Status', icon: 'Loader', desc: 'Running, waiting, interrupted, failed or completed sessions, plus hidden and archived ones.', examples: ['is:running', 'is:interrupted', 'is:hidden'] },
@@ -42,19 +42,30 @@ const SECONDARY = 'var(--app-text-2)'
 const TERTIARY = 'var(--app-text-3)'
 
 export function detectKind(input: string): { kind: KindId; rest: string } | null {
+  // A pasted file:// link is a path to search for, not the file: prefix.
+  if (/^\s*file:\/\//i.test(input)) return { kind: 'sessions', rest: fileUrlPath(input.trim()) }
   const lower = input.toLowerCase()
   const k = KINDS.filter((x) => x.prefix && lower.startsWith(x.prefix)).sort((a, b) => b.prefix.length - a.prefix.length)[0]
   return k ? { kind: k.id, rest: input.slice(k.prefix.length).replace(/^\s+/, '') } : null
+}
+
+function fileUrlPath(url: string): string {
+  const path = new URL(url).pathname
+  try {
+    return decodeURIComponent(path)
+  } catch {
+    return path
+  }
 }
 
 function haystack(s: Session): string {
   return [
     s.title, s.repo?.name ?? '', s.cwd, tildify(s.cwd), s.branch ?? '', s.prompts.join(' '),
     s.summary ? `${s.summary.did} ${s.summary.next.join(' ')}` : '',
-    s.files.map((f) => f.path).join(' '),
+    s.files.map((f) => `${f.path} ${tildify(f.path)}`).join(' '),
     s.prs.map((p) => `${p.repo}#${p.number} #${p.number} ${p.url}`).join(' '),
     s.commits.map((c) => `${c.sha} ${c.msg}`).join(' '),
-    s.artifacts.map((a) => a.name).join(' '),
+    s.artifacts.map((a) => `${a.name} ${a.path} ${tildify(a.path)}`).join(' '),
   ].join(' ').toLowerCase()
 }
 
@@ -217,10 +228,12 @@ export function search(all: Session[], kind: KindId, query: string, ctx: SearchC
       const rows: Result[] = []
       for (const s of shown) {
         for (const a of s.artifacts) {
-          if (q && !`${a.name} ${a.kind} ${a.path} ${a.preview}`.toLowerCase().includes(ql)) continue
+          if (q && !`${a.name} ${a.kind} ${a.path} ${tildify(a.path)} ${a.preview}`.toLowerCase().includes(ql)) continue
+          const published = a.kind === PUBLISHED_KIND
           rows.push(row(s, {
             key: `${s.id}:a:${a.path}`, icon: 'Attachment2', iconColor: SECONDARY, title: a.name,
-            sub: `${a.kind} · ${fileSize(a.bytes)} · ${s.title}`, right: agoShort(s.end, ctx.now), reason: `Created ${tildify(a.path)}`, artifact: a,
+            sub: published ? `${a.kind} · ${s.title}` : `${a.kind} · ${fileSize(a.bytes)} · ${s.title}`,
+            right: agoShort(s.end, ctx.now), reason: `${published ? 'Published' : 'Created'} ${tildify(a.path)}`, artifact: a,
           }))
         }
       }
@@ -371,6 +384,22 @@ if (import.meta.vitest) {
     expect(titles(search(all, 'sessions', 'https://github.com/alan-oliv/meetnotes/pull/26', ctx))).toEqual(['live-meeting'])
     expect(parsePrUrl('see https://github.com/a/b/pull/31')).toBeNull()
     expect(parsePrUrl('  https://github.com/a/b/pull/31#discussion  ')).toEqual({ repo: 'a/b', number: 31 })
+  })
+  it('finds the session behind a pasted claude.ai artifact link, in plain search and art:', () => {
+    const url = 'https://claude.ai/artifact/Zq7Fake9ArtifactId00'
+    const pub = makeSession({ title: 'architecture diagram', end: at(4), artifacts: [{ name: 'Meetnotes architecture', kind: 'claude.ai', path: url, bytes: 0, preview: '' }] })
+    const xs = [...all, pub]
+    expect(titles(search(xs, 'sessions', url, ctx))).toEqual(['architecture diagram'])
+    expect(search(xs, 'artifacts', url, ctx)[0].results[0]).toMatchObject({
+      title: 'Meetnotes architecture', sub: 'claude.ai · architecture diagram', reason: `Published ${url}`,
+    })
+  })
+  it('finds the session behind a pasted ~/ path or file:// link to a file it wrote', () => {
+    const tilde = '~/code/app/.claude/veracity-report.md'
+    expect(titles(search(all, 'sessions', tilde, ctx))).toEqual(['live-meeting'])
+    expect(titles(search(all, 'artifacts', tilde, ctx))).toEqual(['veracity-report.md'])
+    expect(detectKind('file:///Users/me/code/app/.claude/veracity%20report.md')).toEqual({ kind: 'sessions', rest: '/Users/me/code/app/.claude/veracity report.md' })
+    expect(detectKind('file:diarize')).toEqual({ kind: 'files', rest: 'diarize' })
   })
   it('suggests places until the first word names one, then searches inside it', () => {
     expect(titles(search(all, 'in', '', ctx))).toEqual(['app', 'team8', '~/code'])

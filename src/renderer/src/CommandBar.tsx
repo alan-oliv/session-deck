@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { SETTINGS_DEFAULTS, type IconName, type Session, type Settings, type Terminal } from '../../shared/api'
+import { PUBLISHED_KIND, SETTINGS_DEFAULTS, type IconName, type Session, type Settings, type Terminal } from '../../shared/api'
 import { makeSession } from '../../shared/fixtures'
 import { agoLong, fileSize, tildify } from '../../shared/format'
 import { PANES } from '../../shared/panes'
@@ -100,7 +100,7 @@ function Preview({ cur, kind, now, onExample }: { cur: Result | undefined; kind:
       <div className="pv">
         <div className="pv-head">
           <span className="pv-title">{a.name}</span>
-          <span className="pv-when">{`${a.kind} · ${fileSize(a.bytes)} · from “${cur.session.title}”`}</span>
+          <span className="pv-when">{`${a.kind} · ${a.kind === PUBLISHED_KIND ? '' : `${fileSize(a.bytes)} · `}from “${cur.session.title}”`}</span>
         </div>
         <span className="pv-path">{tildify(a.path)}</span>
         {a.preview && <pre className="bar-pre">{a.preview}</pre>}
@@ -356,6 +356,14 @@ if (import.meta.vitest) {
     const html = render({ kind: 'artifacts', query: 'veracity' })
     expect(html).toContain('~/code/app/r.md')
     expect(html).toContain('<pre class="bar-pre"># Veracity report</pre>')
+  })
+  it('previews a published claude.ai artifact with its link and no size', () => {
+    const url = 'https://claude.ai/artifact/Zq7Fake9ArtifactId00'
+    const pub = { ...s, artifacts: [{ name: 'Architecture', kind: 'claude.ai', path: url, bytes: 0, preview: '' }] }
+    const html = render({ kind: 'artifacts', query: url }, { sessions: [pub], selected: pub })
+    expect(html).toContain('claude.ai · from “live-meeting”')
+    expect(html).toContain(`<span class="pv-path">${url}</span>`)
+    expect(html).not.toContain('<pre')
   })
   it('says nothing is close when Ask finds no match', () => {
     expect(render({ kind: 'ask', query: 'kubernetes billing' })).toContain('Nothing close. Try different words or a file name.')
