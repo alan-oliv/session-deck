@@ -84,7 +84,7 @@ if (import.meta.vitest) {
   const sessions = [
     makeSession({ branch: 'main' }),
     makeSession({ worktree: { name: 'old', path: `${root}/.worktrees/old`, removedSeen: '2026-10-02T00:00:00.000Z' } }),
-    makeSession({ repo: { name: 'team8', root: '/Users/me/code/team8' } }),
+    makeSession({ repo: { name: 'team8', root: '/Users/me/code/team8', remote: 'alan-oliv/team8' } }),
     makeSession({ repo: null, cwd: '/Users/me/code' }),
   ]
   const render = (scope: Scope, all = sessions, width = PANES.side.default) =>

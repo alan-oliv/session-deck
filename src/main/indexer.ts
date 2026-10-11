@@ -13,7 +13,7 @@ import { writeJsonAtomic } from './settings'
 import { emptyAgg, finalize, reduceLine, type Agg, type Facts } from './transcript'
 
 // Bump whenever transcript.ts changes what it extracts, so every file is reparsed.
-export const CACHE_VERSION = 4
+export const CACHE_VERSION = 5
 const DAY_MS = 86_400_000
 const DEBOUNCE_MS = 300
 // The cache can be tens of MB; write it at most this often, and on stop().
@@ -97,7 +97,7 @@ export function toSession(f: Facts, x: SessionContext): Session {
     cwdExists: !x.git?.removedSeen,
     hidden: f.hidden,
     archived: x.archived,
-    repo: root ? { name: basename(root), root } : null,
+    repo: root ? { name: basename(root), root, remote: x.git?.remote ?? null } : null,
     branch: f.branch,
     worktree: x.git?.worktree ? { ...x.git.worktree, removedSeen: x.git.removedSeen } : null,
     start: f.start,
@@ -351,7 +351,7 @@ if (import.meta.vitest) {
     cost: 1.5, durationMs: 60_000, linesAdded: 3, linesRemoved: 0, ...over,
   })
   const ctx = (over: Partial<SessionContext> = {}): SessionContext => ({
-    git: { repoRoot: '/r/app', worktree: null, removedSeen: null }, live: undefined, tee: undefined,
+    git: { repoRoot: '/r/app', worktree: null, remote: null, removedSeen: null }, live: undefined, tee: undefined,
     archived: false, forks: 0, sizeBytes: 6_100_000, agents: 3, cleanupDays: 30, ...over,
   })
 
@@ -366,11 +366,11 @@ if (import.meta.vitest) {
   })
   it('names the repo after its root and shows changed files relative to it', () => {
     const s = toSession(facts(), ctx())
-    expect(s.repo).toEqual({ name: 'app', root: '/r/app' })
+    expect(s.repo).toEqual({ name: 'app', root: '/r/app', remote: null })
     expect(s.files.map((f) => f.path)).toEqual(['src/a.ts', '/tmp/x.md'])
   })
   it('marks a removed cwd and carries the removal stamp onto the worktree', () => {
-    const s = toSession(facts(), ctx({ git: { repoRoot: '/r/app', worktree: { name: 'feat', path: '/r/app/.worktrees/feat' }, removedSeen: '2026-10-02T00:00:00.000Z' } }))
+    const s = toSession(facts(), ctx({ git: { repoRoot: '/r/app', worktree: { name: 'feat', path: '/r/app/.worktrees/feat' }, remote: null, removedSeen: '2026-10-02T00:00:00.000Z' } }))
     expect(s.cwdExists).toBe(false)
     expect(s.worktree).toEqual({ name: 'feat', path: '/r/app/.worktrees/feat', removedSeen: '2026-10-02T00:00:00.000Z' })
   })
