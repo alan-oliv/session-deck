@@ -69,7 +69,7 @@ export interface Session {
   cwdExists: boolean
   hidden: boolean
   archived: boolean
-  repo: { name: string; root: string } | null
+  repo: { name: string; root: string; remote: string | null } | null
   branch: string | null
   worktree: { name: string; path: string; removedSeen: string | null } | null
   start: string

@@ -44,6 +44,10 @@ const TERTIARY = 'var(--app-text-3)'
 export function detectKind(input: string): { kind: KindId; rest: string } | null {
   // A pasted file:// link is a path to search for, not the file: prefix.
   if (/^\s*file:\/\//i.test(input)) return { kind: 'sessions', rest: fileUrlPath(input.trim()) }
+  const trimmed = input.trim()
+  if (parsePrUrl(trimmed)) return { kind: 'prs', rest: trimmed }
+  if (ARTIFACT_URL.test(trimmed)) return { kind: 'artifacts', rest: trimmed }
+  if (parseRepoUrl(trimmed)) return { kind: 'in', rest: `${trimmed} ` }
   const lower = input.toLowerCase()
   const k = KINDS.filter((x) => x.prefix && lower.startsWith(x.prefix)).sort((a, b) => b.prefix.length - a.prefix.length)[0]
   return k ? { kind: k.id, rest: input.slice(k.prefix.length).replace(/^\s+/, '') } : null
@@ -60,7 +64,7 @@ function fileUrlPath(url: string): string {
 
 function haystack(s: Session): string {
   return [
-    s.title, s.repo?.name ?? '', s.cwd, tildify(s.cwd), s.branch ?? '', s.prompts.join(' '),
+    s.title, s.repo?.name ?? '', s.repo?.remote ?? '', s.cwd, tildify(s.cwd), s.branch ?? '', s.prompts.join(' '),
     s.summary ? `${s.summary.did} ${s.summary.next.join(' ')}` : '',
     s.files.map((f) => `${f.path} ${tildify(f.path)}`).join(' '),
     s.prs.map((p) => `${p.repo}#${p.number} #${p.number} ${p.url}`).join(' '),
@@ -76,6 +80,16 @@ export function parsePrUrl(q: string): { repo: string; number: number } | null {
   const m = PR_URL.exec(q.trim())
   return m ? { repo: m[1], number: Number(m[2]) } : null
 }
+
+const REPO_URL = /^(?:https?:\/\/)?(?:www\.)?github\.com\/([^/\s]+)\/([^/\s]+?)(?:\.git)?\/?$/i
+
+// A pasted repo link: the whole query must be the URL, same rule as parsePrUrl.
+export function parseRepoUrl(q: string): string | null {
+  const m = REPO_URL.exec(q.trim())
+  return m ? `${m[1]}/${m[2]}` : null
+}
+
+export const ARTIFACT_URL = /^(?:https?:\/\/)?claude\.ai\/(?:code\/)?artifact\/[A-Za-z0-9_-]+(?:[/?#]\S*)?$/i
 
 export function matches(s: Session, q: string): boolean {
   const words = q.toLowerCase().split(/\s+/).filter(Boolean)
@@ -168,12 +182,12 @@ function actionsFor(s: Session, settings: Settings): Result[] {
   return list
 }
 
-function places(shown: Session[]): { id: string; count: number; test: (s: Session) => boolean }[] {
-  const out = new Map<string, { id: string; count: number; test: (s: Session) => boolean }>()
+function places(shown: Session[]): { id: string; count: number; remote: string | null; test: (s: Session) => boolean }[] {
+  const out = new Map<string, { id: string; count: number; remote: string | null; test: (s: Session) => boolean }>()
   for (const s of shown) {
     const id = s.repo ? s.repo.name : tildify(s.cwd)
     const p = out.get(id) ?? {
-      id, count: 0,
+      id, count: 0, remote: s.repo?.remote ?? null,
       test: s.repo ? (x: Session) => x.repo?.name === id : (x: Session) => !x.repo && tildify(x.cwd) === id,
     }
     p.count++
@@ -266,7 +280,9 @@ export function search(all: Session[], kind: KindId, query: string, ctx: SearchC
     case 'in': {
       const ps = places(shown)
       const [first = '', ...rest] = q.split(/\s+/)
+      const repo = parseRepoUrl(first)
       const place = ps.find((p) => p.id.toLowerCase() === first.toLowerCase())
+        ?? (repo ? ps.find((p) => p.remote?.toLowerCase() === repo.toLowerCase()) ?? ps.find((p) => p.id.toLowerCase() === repo.split('/')[1].toLowerCase()) : undefined)
       if (place) add(`In ${place.id}`, shown.filter((s) => place.test(s) && matches(s, rest.join(' '))).map((s) => row(s)))
       else add('Repositories and folders', ps.filter((p) => !q || p.id.toLowerCase().includes(ql)).map((p) => optionRow(p.id, plural(p.count, 'session'), 'Box', { kind: 'in', query: `${p.id} ` })))
       break
@@ -324,7 +340,7 @@ if (import.meta.vitest) {
     ],
     artifacts: [{ name: 'veracity-report.md', kind: 'markdown', path: '/Users/me/code/app/.claude/veracity-report.md', bytes: 9000, preview: '# Veracity report' }],
   })
-  const team8 = makeSession({ title: 'perf pass', end: at(5), repo: { name: 'team8', root: '/Users/me/code/team8' }, cwd: '/Users/me/code/team8' })
+  const team8 = makeSession({ title: 'perf pass', end: at(5), repo: { name: 'team8', root: '/Users/me/code/team8', remote: 'alan-oliv/team8' }, cwd: '/Users/me/code/team8' })
   const folder = makeSession({ title: 'disk cleanup', end: at(1), repo: null, cwd: '/Users/me/code', status: 'interrupted' })
   const hidden = makeSession({ title: 'sdk run', hidden: true, end: at(6) })
   const archived = makeSession({ title: 'old thing', archived: true, end: at(6) })
@@ -407,6 +423,33 @@ if (import.meta.vitest) {
     expect(inside[0].label).toBe('In team8')
     expect(titles(inside)).toEqual(['perf pass'])
     expect(search(all, 'in', 'te', ctx)[0].results[0]).toMatchObject({ type: 'option', fill: { kind: 'in', query: 'team8 ' } })
+  })
+  it('parses a GitHub repository URL, not a PR, tree or prose link', () => {
+    expect(parseRepoUrl('https://github.com/alan-oliv/team8')).toBe('alan-oliv/team8')
+    expect(parseRepoUrl('github.com/alan-oliv/team8/')).toBe('alan-oliv/team8')
+    expect(parseRepoUrl('https://www.github.com/alan-oliv/team8.git')).toBe('alan-oliv/team8')
+    expect(parseRepoUrl('https://github.com/alan-oliv/team8/pull/3')).toBeNull()
+    expect(parseRepoUrl('https://github.com/alan-oliv/team8/tree/main')).toBeNull()
+    expect(parseRepoUrl('see https://github.com/a/b')).toBeNull()
+  })
+  it('switches to the matching search kind when a repo, PR or artifact link is pasted whole', () => {
+    expect(detectKind('https://github.com/alan-oliv/team8/pull/3')).toEqual({ kind: 'prs', rest: 'https://github.com/alan-oliv/team8/pull/3' })
+    expect(detectKind('https://claude.ai/artifact/Zq7Fake9ArtifactId00')).toEqual({ kind: 'artifacts', rest: 'https://claude.ai/artifact/Zq7Fake9ArtifactId00' })
+    expect(detectKind('https://github.com/alan-oliv/team8')).toEqual({ kind: 'in', rest: 'https://github.com/alan-oliv/team8 ' })
+    expect(detectKind('https://github.com/a/b/pull/3 and more')).toBeNull()
+  })
+  it('resolves a pasted repo URL to its place by remote, or by folder name when the repo has no remote', () => {
+    const result = search(all, 'in', 'https://github.com/alan-oliv/team8 ', ctx)
+    expect(result[0].label).toBe('In team8')
+    expect(titles(result)).toEqual(['perf pass'])
+    const noRemote = makeSession({ title: 'no remote repo', end: at(3), repo: { name: 'b', root: '/Users/me/code/b', remote: null }, cwd: '/Users/me/code/b' })
+    const withNoRemote = [...all, noRemote]
+    const byName = search(withNoRemote, 'in', 'https://github.com/x/b ', ctx)
+    expect(byName[0].label).toBe('In b')
+    expect(titles(byName)).toEqual(['no remote repo'])
+  })
+  it('finds a session by its repo remote in plain search', () => {
+    expect(titles(search(all, 'sessions', 'alan-oliv/team8', ctx))).toEqual(['perf pass'])
   })
   it('offers statuses with counts and reaches hidden and archived sessions only through is:', () => {
     const opts = search(all, 'is', '', ctx)[0].results
