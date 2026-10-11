@@ -21,7 +21,9 @@ Session Deck indexes all of them and lets you look them up by what actually happ
 
 Press <kbd>⌘</kbd><kbd>⇧</kbd><kbd>P</kbd> anywhere in the app.
 
-The fastest way in is to paste something the session left behind. A PR link like `https://github.com/owner/repo/pull/27` brings up the session that opened it, and the path of a file it wrote or changed, absolute or relative to the repo, brings up the session that touched it. That includes an artifact link like `/Users/you/code/meetnotes/docs/veracity-report.md`, a plan or report you found and forgot which session generated it. No prefix needed.
+The fastest way in is to paste something the session left behind. A PR link like `https://github.com/owner/repo/pull/27` brings up the session that opened it, and the path of a file it wrote or changed brings up the session that touched it. The path can be absolute, relative to the repo, start with `~/` or be a `file://` link.
+
+That includes artifacts, for when you found a plan, report or page and forgot which session generated it. Paste a local one like `/Users/you/code/meetnotes/docs/veracity-report.md` or a published one like `https://claude.ai/artifact/aBcD1234eFgH5678iJkL90`. No prefix needed.
 
 Plain words search everything. A prefix like `file:` or `pr:` switches to a narrower kind of search and shows up as a chip in the input. Type <kbd>/</kbd> to list every kind with examples.
 
@@ -34,7 +36,7 @@ Plain words search everything. A prefix like `file:` or `pr:` switches to a narr
 | none | Every word across titles, prompts, recaps, paths, PRs and commits | `speaker diarize` |
 | `?` | Your own description of what the session did | `? where did I fix the failed transcript` |
 | `file:` | Files the session changed | `file:useVirtualRows` |
-| `art:` | Documents the session wrote, by name or content | `art:report` |
+| `art:` | Documents the session wrote and Claude artifacts it published, by name, link or content | `art:report` |
 | `pr:` | Pull requests and commits | `pr:27` |
 | `in:` | One repository or folder | `in:meetnotes live` |
 | `is:` | Status, plus hidden and archived sessions | `is:waiting` |
@@ -50,7 +52,7 @@ With nothing typed, the bar lists the search kinds and your three most recent se
 - the title, repository name, branch and folder path (full or with `~`)
 - every prompt you sent
 - Claude's recap of where it stopped and what's next
-- the paths of the files it changed and the names of the documents it wrote
+- the paths of the files it changed, the names of the documents it wrote and the links of the Claude artifacts it published
 - its PRs (`owner/repo#27`, `#27` or the full URL) and its commits (hash and message)
 
 So `meetnotes#27 4e9c1b7` finds the session that opened that PR and made that commit, a pasted PR link finds the session that opened it, and a pasted path like `docs/plans/sync.md` finds the sessions that wrote or edited that file.
@@ -71,9 +73,9 @@ A change counts when Claude made it with the Edit, MultiEdit or Write tool. File
 
 ### `art:` Artifacts
 
-Artifacts are the documents Claude wrote with the Write tool: Markdown, JSON, HTML, CSV, YAML, text and SVG files. Plans, reports, specs, slash commands and configs all end up here, even when the session's name says nothing about them.
+Artifacts are the documents Claude wrote with the Write tool (Markdown, JSON, HTML, CSV, YAML, text and SVG files) and the pages it published to claude.ai with the Artifact tool. Plans, reports, specs, slash commands, configs and published pages all end up here, even when the session's name says nothing about them.
 
-`art:` matches the file name, its type, its path and its first 40 lines. `art:veracity` finds a report by a word inside it, and `art:.md` lists every Markdown file. The preview pane shows the start of the highlighted file.
+`art:` matches the file name, its type, its path and its first 40 lines, and for a published page its title and link. `art:veracity` finds a report by a word inside it, `art:.md` lists every Markdown file, and `art:claude.ai` lists every published page. The preview pane shows the start of the highlighted file, or the link of a published page.
 
 ### `pr:` PRs and commits
 
