@@ -3,7 +3,7 @@
 spec: none (bounded: design agreed in chat)
 plan: none (bounded: tasks via team8:tasks)
 branch: paste-to-find
-pr: <url, at close>
+pr: https://github.com/alan-oliv/session-deck/pull/6
 
 ## Brainstorm
 - path: bounded
@@ -16,8 +16,10 @@ pr: <url, at close>
 - estimate: ≈$2.30 (2 × standard · sonnet · medium)
 
 ## Run
-- executors: <name> · <model> · <effort> · track <X> · wave <n>, one line each · peak <n> at once
-- track reviews: <X> <n>/3 rounds, one entry each · residuals: <n>
-- actual: ≈$<total> · per agent: <name> ≈$<n>, one entry each
-- estimate vs actual: <one line>
-- went wrong / change next time: <one line each, or "nothing">
+- executors: exec-a1 · sonnet · medium · track A · wave 1; exec-a2 · sonnet · medium · track A · wave 2 · peak 1 at once
+- track reviews: A task 1 1/3 rounds, no findings; A task 2 1/3 rounds, no findings · residuals: 0
+- actual: ≈$2.23 for the agents · per agent: exec-a1 ≈$0.99, review-a1 ≈$0.33, exec-a2 ≈$0.66, review-a2 ≈$0.25 · lead ≈$21.99 for the whole session transcript, including the Warp investigation and the brainstorm
+- message lag: median 0.0 min, max 0.0 · review tails: none · idle with work waiting: none
+- estimate vs actual: ≈$2.30 estimated, ≈$2.23 for the agents, on the mark
+- went wrong: most of the brainstormed scope had already landed on main from another session before the run; the lead found out only when cutting the branch. Check `git log` against the design before writing tasks
+- change next time: the working tree held someone else's uncommitted edits in four files; both executors had to commit by staged hunk. Stash or finish WIP before a batch
