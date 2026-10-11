@@ -13,7 +13,7 @@ export function makeSession(over: Partial<Session> = {}): Session {
     cwdExists: true,
     hidden: false,
     archived: false,
-    repo: { name: 'app', root: '/Users/me/code/app' },
+    repo: { name: 'app', root: '/Users/me/code/app', remote: 'alan-oliv/app' },
     branch: 'main',
     worktree: null,
     start: new Date(2026, 9, 6, 8, 32).toISOString(),
