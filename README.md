@@ -21,7 +21,7 @@ Session Deck indexes all of them and lets you look them up by what actually happ
 
 Press <kbd>⌘</kbd><kbd>⇧</kbd><kbd>P</kbd> anywhere in the app.
 
-The fastest way in is to paste something the session left behind. A PR link like `https://github.com/owner/repo/pull/27` brings up the session that opened it, and the path of a file it wrote or changed, absolute or relative to the repo, brings up the session that touched it. That includes an artifact link, like a plan or report you found and forgot which session generated it. No prefix needed.
+The fastest way in is to paste something the session left behind. A PR link like `https://github.com/owner/repo/pull/27` brings up the session that opened it, and the path of a file it wrote or changed, absolute or relative to the repo, brings up the session that touched it. That includes an artifact link like `/Users/you/code/meetnotes/docs/veracity-report.md`, a plan or report you found and forgot which session generated it. No prefix needed.
 
 Plain words search everything. A prefix like `file:` or `pr:` switches to a narrower kind of search and shows up as a chip in the input. Type <kbd>/</kbd> to list every kind with examples.
 
