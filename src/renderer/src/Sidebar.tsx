@@ -172,13 +172,6 @@ export function Sidebar({
             <span className="side-label">Archived</span>
             <span className="side-count">{tree.archived}</span>
           </div>
-          {(tree.needs > 0 || scope.type === 'needs') && (
-            <div className={cls(scope.type === 'needs', 'side-item')} onClick={() => onScope({ type: 'needs' })} title="Waiting for you or failed">
-              <span className="side-icon side-needs"><span className="dot" /></span>
-              <span className="side-label">Needs you</span>
-              <span className="side-count">{tree.needs}</span>
-            </div>
-          )}
         </div>
         {SECTIONS.map(([kind, header]) => {
           const items = tree.projects.filter((p) => p.kind === kind)
@@ -206,6 +199,15 @@ export function Sidebar({
             <button type="button" className="side-add" title="New label" onClick={() => setCreating(true)}>
               <Icon name="Plus" size={12} />
             </button>
+          </div>
+          <div
+            className={`side-item side-label-row side-label-builtin${scope.type === 'needs' ? ' is-selected' : ''}`}
+            onClick={() => onScope({ type: 'needs' })}
+            title="Waiting for you or failed"
+          >
+            <span className="label-slot"><span className="label-dot" style={{ background: 'var(--app-yellow)' }} /></span>
+            <span className="side-label">Needs you</span>
+            <span className="side-count">{tree.needs}</span>
           </div>
           {tree.labels.map((l) => (
             <LabelRow
@@ -292,11 +294,34 @@ if (import.meta.vitest) {
     expect(html).toMatch(/>All sessions<.*?side-item" title="Sessions you archived\. Their files are kept\."[^>]*>.*?>Archived<\/span><span class="side-count">2</)
     expect(render({ type: 'archived' })).toContain('side-item is-selected" title="Sessions you archived')
   })
-  it('shows Needs you only while something needs attention or it is the scope', () => {
-    expect(render({ type: 'all' })).not.toContain('Needs you')
-    expect(render({ type: 'needs' })).toContain('side-item is-selected" title="Waiting for you or failed"')
-    const html = render({ type: 'all' }, [...sessions, makeSession({ status: 'waiting' })])
-    expect(html).toContain('>Needs you</span><span class="side-count">1<')
+  it('always shows Needs you as the first row of the Labels section, even with nothing waiting and no labels', () => {
+    for (const store of [lstore, { list: [], map: {} }]) {
+      const html = render({ type: 'all' }, sessions, PANES.side.default, null, store)
+      expect(html).toMatch(/>Labels<[\s\S]*>Needs you<\/span><span class="side-count">0</)
+      expect(html.indexOf('>Labels<')).toBeLessThan(html.indexOf('>Needs you<'))
+      if (store.list.length) expect(html.indexOf('>Needs you<')).toBeLessThan(html.indexOf('>Bug<'))
+    }
+    const html = render({ type: 'all' })
+    expect(html.indexOf('>Folders<')).toBeLessThan(html.indexOf('Needs you'))
+  })
+  it('shows the Needs you count when sessions are waiting or failed', () => {
+    const html = render({ type: 'all' }, [...sessions, makeSession({ status: 'waiting' }), makeSession({ status: 'failed' })])
+    expect(html).toContain('>Needs you</span><span class="side-count">2<')
+  })
+  it('selects Needs you alone under the needs scope', () => {
+    const html = render({ type: 'needs' })
+    expect(html).toContain('side-item side-label-row side-label-builtin is-selected" title="Waiting for you or failed"')
+    expect(html.match(/is-selected/g)).toHaveLength(1)
+  })
+  it('keeps Needs you read-only: no trash, drag or colour button, unlike the other label rows', () => {
+    const html = render({ type: 'all' })
+    const row = html.match(/<div[^>]*side-label-builtin[\s\S]*?<\/div>/)![0]
+    expect(row).not.toContain('side-trash')
+    expect(row).not.toContain('draggable')
+    expect(row).not.toContain('Change colour')
+    expect(html.match(/title="Delete label"/g)).toHaveLength(2)
+    expect(html.match(/title="Change colour"/g)).toHaveLength(2)
+    expect(html.match(/draggable="true"/g)).toHaveLength(2)
   })
   it('pins the Settings entry with its shortcut under the sections', () => {
     expect(render({ type: 'all' })).toMatch(/sidebar-foot">.*>Settings<.*keycap">⌘,</)
@@ -326,7 +351,7 @@ if (import.meta.vitest) {
     const html = render({ type: 'all' }, sessions, PANES.side.default, null, { list: [], map: {} })
     expect(html).toContain('>Labels<')
     expect(html).toContain('title="New label"')
-    expect(html).not.toContain('side-label-row')
+    expect(html.match(/side-label-row/g)).toHaveLength(1)
   })
   it('marks only the filtered label as selected', () => {
     const html = render({ type: 'label', id: 'ui' })
