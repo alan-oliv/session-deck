@@ -305,3 +305,15 @@
   font-size: 13px;
   color: var(--app-text-3);
 }
+
+.row-labels {
+  flex: none;
+  display: flex;
+  gap: 3px;
+}
+
+.row-label-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
