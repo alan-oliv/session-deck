@@ -304,7 +304,6 @@ export function Deck({ all, settings, installed, now }: { all: Session[]; settin
           key={bar.seq}
           open={bar.open}
           sessions={all}
-          selected={selected}
           settings={settings}
           now={now}
           note={note}
