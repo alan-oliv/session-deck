@@ -9,6 +9,7 @@ extraResources:
     to: blur.node
 mac:
   target: dir
+  icon: build/icon.icns
   identity: 'YOUR_SIGNING_IDENTITY'
   hardenedRuntime: true
   entitlements: build/entitlements.mac.plist
