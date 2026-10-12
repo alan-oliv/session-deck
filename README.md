@@ -133,7 +133,7 @@ The PR actions only show up for sessions that opened one, and Open folder only w
 | Key | In the command bar |
 |---|---|
 | <kbd>↑</kbd> <kbd>↓</kbd> | Move through the results |
-| <kbd>↵</kbd> | Resume the highlighted session, run the highlighted action, or pick the highlighted kind or suggestion |
+| <kbd>↵</kbd> | Open the highlighted session in the detail pane, run the highlighted action, or pick the highlighted kind or suggestion |
 | Click | Select the session and show it in the detail pane |
 | <kbd>esc</kbd> | Leave the current kind, then close the bar |
 | <kbd>⌫</kbd> | In an empty input, leave the current kind |

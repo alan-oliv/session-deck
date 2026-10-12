@@ -48,7 +48,7 @@ export function activate(r: Result): Step {
     case 'option':
       return { type: 'kind', kind: r.fill.kind, query: r.fill.query }
     case 'session':
-      return { type: 'emit', action: { type: 'resume', id: r.session.id, fork: false } }
+      return { type: 'emit', action: { type: 'select', id: r.session.id } }
     case 'terminal':
       return { type: 'emit', action: { type: 'terminal', terminal: r.terminal } }
     case 'action': {
@@ -87,8 +87,7 @@ export function activate(r: Result): Step {
 
 const primaryVerb = (kind: KindId, cur: Result | undefined): string => {
   if (kind === 'rename') return 'Rename'
-  if (!cur) return 'Resume'
-  if (cur.type === 'session') return 'Resume'
+  if (!cur || cur.type === 'session') return 'Open'
   if (cur.type === 'action') return 'Run'
   return 'Choose'
 }
@@ -285,7 +284,7 @@ export function CommandBar(p: CommandBarProps) {
                         onMouseMove={() => {
                           if (i !== idx) setIdx(i)
                         }}
-                        onClick={() => (r.type === 'session' ? p.onAction({ type: 'select', id: r.session.id }) : run(r))}
+                        onClick={() => run(r)}
                       >
                         <span style={{ display: 'flex', color: r.iconColor }}><Icon name={r.icon} size={14} /></span>
                         <div className="bar-row-text">
@@ -390,7 +389,7 @@ if (import.meta.vitest) {
     expect(activate(byAction('teeOn'))).toEqual({ type: 'emit', action: { type: 'tee', enabled: true } })
     const recent = search([s], 'sessions', '', { now, selected: s, settings })
     expect(activate(recent[0].results[0])).toEqual({ type: 'kind', kind: 'ask', query: '' })
-    expect(activate(recent[1].results[0])).toEqual({ type: 'emit', action: { type: 'resume', id: s.id, fork: false } })
+    expect(activate(recent[1].results[0])).toEqual({ type: 'emit', action: { type: 'select', id: s.id } })
     const term = search([s], 'terminal', '', { now, selected: s, settings })[0].results[3]
     expect(activate(term)).toEqual({ type: 'emit', action: { type: 'terminal', terminal: 'warp' } })
   })
