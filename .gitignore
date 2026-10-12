@@ -3,3 +3,13 @@ out/
 dist/
 .DS_Store
 native/blur/build/
+.env*
+!.env*.example
+*.p12
+*.p8
+*.cer
+*.mobileprovision
+docs/design/
+docs/team8/
+docs/electron-architecture.md
+docs/assets/session-full-deck.mp4
