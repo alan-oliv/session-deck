@@ -1,7 +1,10 @@
+import { useRef, useState } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
+import type { LabelStore } from '../../shared/api'
 import { makeSession } from '../../shared/fixtures'
+import { nextColor } from '../../shared/labels'
 import { PANES } from '../../shared/panes'
-import { buildTree, sameScope, scopeRepo, sessionProject, type Scope, type Tree } from '../../shared/tree'
+import { buildTree, sameScope, scopeRepo, sessionProject, type Scope, type Tree, type TreeLabel } from '../../shared/tree'
 import { Icon } from './icons'
 import { ResizeHandle } from './Resize'
 import './Sidebar.css'
@@ -16,11 +19,70 @@ export interface SidebarProps {
   onScope(scope: Scope): void
   settingsOpen: boolean
   onSettings(): void
+  onLabelCreate(name: string): void
+  onLabelDelete(id: string): void
 }
 
 const SECTIONS = [['repo', 'Repositories'], ['folder', 'Folders']] as const
 
-export function Sidebar({ tree, scope, current, width, maxWidth, onWidth, onScope, settingsOpen, onSettings }: SidebarProps) {
+function NameInput({ color, initial = '', onDone }: { color: string; initial?: string; onDone(name: string | null): void }) {
+  const [value, setValue] = useState(initial)
+  // Enter fires onDone, and the unmount that follows blurs the input: only the first one counts.
+  const finished = useRef(false)
+  const finish = (name: string | null) => {
+    if (finished.current) return
+    finished.current = true
+    onDone(name)
+  }
+  return (
+    <div className="side-item side-newlabel">
+      <span className="label-slot"><span className="label-dot" style={{ background: color }} /></span>
+      <input
+        className="side-input"
+        autoFocus
+        value={value}
+        placeholder="Label name"
+        onChange={(e) => setValue(e.target.value)}
+        onFocus={(e) => e.target.select()}
+        onBlur={() => finish(value.trim() || null)}
+        onKeyDown={(e) => {
+          e.stopPropagation()
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            finish(value.trim() || null)
+          } else if (e.key === 'Escape') {
+            e.preventDefault()
+            finish(null)
+          }
+        }}
+      />
+    </div>
+  )
+}
+
+function LabelRow({ label, selected, onSelect, onDelete }: { label: TreeLabel; selected: boolean; onSelect(): void; onDelete(): void }) {
+  return (
+    <div className={selected ? 'side-item side-label-row is-selected' : 'side-item side-label-row'} onClick={onSelect}>
+      <span className="label-slot"><span className="label-dot" style={{ background: label.color }} /></span>
+      <span className="side-label">{label.name}</span>
+      <span className="side-count">{label.count}</span>
+      <button
+        type="button"
+        className="side-trash"
+        title="Delete label"
+        onClick={(e) => {
+          e.stopPropagation()
+          onDelete()
+        }}
+      >
+        <Icon name="Trash" size={12} />
+      </button>
+    </div>
+  )
+}
+
+export function Sidebar({ tree, scope, current, width, maxWidth, onWidth, onScope, settingsOpen, onSettings, onLabelCreate, onLabelDelete }: SidebarProps) {
+  const [creating, setCreating] = useState(false)
   const cls = (on: boolean, base: string) => (on ? `${base} is-selected` : base)
   const repo = scopeRepo(scope)
   return (
@@ -67,6 +129,26 @@ export function Sidebar({ tree, scope, current, width, maxWidth, onWidth, onScop
             </div>
           )
         })}
+        <div className="side-section">
+          <div className="side-header side-header-row">
+            <span>Labels</span>
+            <button type="button" className="side-add" title="New label" onClick={() => setCreating(true)}>
+              <Icon name="Plus" size={12} />
+            </button>
+          </div>
+          {tree.labels.map((l) => (
+            <LabelRow key={l.id} label={l} selected={scope.type === 'label' && scope.id === l.id} onSelect={() => onScope({ type: 'label', id: l.id })} onDelete={() => onLabelDelete(l.id)} />
+          ))}
+          {creating && (
+            <NameInput
+              color={nextColor(tree.labels)}
+              onDone={(name) => {
+                setCreating(false)
+                if (name) onLabelCreate(name)
+              }}
+            />
+          )}
+        </div>
       </div>
       <div className="sidebar-foot">
         <div className={cls(settingsOpen, 'side-item')} onClick={onSettings}>
@@ -88,9 +170,16 @@ if (import.meta.vitest) {
     makeSession({ repo: { name: 'team8', root: '/Users/me/code/team8', remote: 'alan-oliv/team8' } }),
     makeSession({ repo: null, cwd: '/Users/me/code' }),
   ]
-  const render = (scope: Scope, all = sessions, width = PANES.side.default, current: string | null = null) =>
+  const lstore: LabelStore = {
+    list: [{ id: 'bug', name: 'Bug', color: '#eb5757' }, { id: 'ui', name: 'Interface polish', color: '#bb87fc' }],
+    map: { [sessions[0].id]: ['bug'], [sessions[1].id]: ['bug', 'ui'] },
+  }
+  const render = (scope: Scope, all = sessions, width = PANES.side.default, current: string | null = null, store: LabelStore = lstore) =>
     renderToStaticMarkup(
-      <Sidebar tree={buildTree(all, 2)} scope={scope} current={current} width={width} maxWidth={360} onWidth={() => {}} onScope={() => {}} settingsOpen={false} onSettings={() => {}} />,
+      <Sidebar
+        tree={buildTree(all, 2, store)} scope={scope} current={current} width={width} maxWidth={360} onWidth={() => {}} onScope={() => {}}
+        settingsOpen={false} onSettings={() => {}} onLabelCreate={() => {}} onLabelDelete={() => {}}
+      />,
     )
 
   it('renders at the given width with a focusable resize separator on its edge', () => {
@@ -137,5 +226,25 @@ if (import.meta.vitest) {
     expect(html).toMatch(/side-folder is-current[^>]*>[\s\S]*?>~\/code</)
     expect(html.match(/is-selected/g)).toHaveLength(1)
     expect(render({ type: 'folder', path: '/Users/me/code' }, sessions, PANES.side.default, '/Users/me/code')).toMatch(/side-folder is-current is-selected[^>]*>/)
+  })
+  it('puts the Labels section after Folders with a colour dot, name and count per label', () => {
+    const html = render({ type: 'all' })
+    expect(html).toMatch(/>Folders<[\s\S]*>Labels<[\s\S]*side-label-row/)
+    expect(html).toContain('label-dot" style="background:#eb5757"')
+    expect(html).toMatch(/side-label">Bug<\/span><span class="side-count">2</)
+    expect(html).toMatch(/side-label">Interface polish<\/span><span class="side-count">1</)
+    expect(html).toContain('title="New label"')
+    expect(html).toContain('title="Delete label"')
+  })
+  it('still shows the Labels header and its add button with no labels', () => {
+    const html = render({ type: 'all' }, sessions, PANES.side.default, null, { list: [], map: {} })
+    expect(html).toContain('>Labels<')
+    expect(html).toContain('title="New label"')
+    expect(html).not.toContain('side-label-row')
+  })
+  it('marks only the filtered label as selected', () => {
+    const html = render({ type: 'label', id: 'ui' })
+    expect(html).toMatch(/side-item side-label-row is-selected[^>]*>[\s\S]*?>Interface polish</)
+    expect(html.match(/is-selected/g)).toHaveLength(1)
   })
 }

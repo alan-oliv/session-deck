@@ -96,3 +96,79 @@
   font-size: 12px;
   color: var(--app-text-3);
 }
+
+.side-header.side-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 4px 8px;
+}
+
+.side-add,
+.side-trash {
+  display: flex;
+  flex: none;
+  padding: 3px;
+  border: 0;
+  border-radius: var(--app-radius);
+  background: none;
+  color: var(--app-text-3);
+}
+
+.side-add:hover {
+  background: var(--app-wash);
+  color: var(--app-text);
+}
+
+.side-trash {
+  display: none;
+  margin-right: -4px;
+}
+
+.side-trash:hover {
+  background: var(--app-wash);
+  color: var(--app-red);
+}
+
+.side-label-row:hover .side-count {
+  display: none;
+}
+
+.side-label-row:hover .side-trash {
+  display: flex;
+}
+
+.label-slot {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+}
+
+.label-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.side-newlabel,
+.side-newlabel:hover {
+  background: var(--app-surface);
+  box-shadow: inset 0 0 0 1px var(--app-focus);
+}
+
+.side-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: 13px var(--app-font);
+  color: var(--app-text);
+}
+
+.side-input::placeholder {
+  color: var(--app-text-3);
+}
