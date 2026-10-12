@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { LabelStore } from '../../shared/api'
 import { makeSession } from '../../shared/fixtures'
-import { nextColor } from '../../shared/labels'
+import { dropTarget, LABEL_COLORS, nextColor } from '../../shared/labels'
 import { PANES } from '../../shared/panes'
 import { buildTree, sameScope, scopeRepo, sessionProject, type Scope, type Tree, type TreeLabel } from '../../shared/tree'
 import { Icon } from './icons'
@@ -21,6 +21,9 @@ export interface SidebarProps {
   onSettings(): void
   onLabelCreate(name: string): void
   onLabelDelete(id: string): void
+  onLabelRename(id: string, name: string): void
+  onLabelColor(id: string, color: string): void
+  onLabelMove(id: string, beforeId: string | null): void
 }
 
 const SECTIONS = [['repo', 'Repositories'], ['folder', 'Folders']] as const
@@ -60,29 +63,97 @@ function NameInput({ color, initial = '', onDone }: { color: string; initial?: s
   )
 }
 
-function LabelRow({ label, selected, onSelect, onDelete }: { label: TreeLabel; selected: boolean; onSelect(): void; onDelete(): void }) {
+export function ColorPopover({ current, onPick, onClose }: { current: string; onPick(color: string): void; onClose(): void }) {
   return (
-    <div className={selected ? 'side-item side-label-row is-selected' : 'side-item side-label-row'} onClick={onSelect}>
-      <span className="label-slot"><span className="label-dot" style={{ background: label.color }} /></span>
-      <span className="side-label">{label.name}</span>
-      <span className="side-count">{label.count}</span>
-      <button
-        type="button"
-        className="side-trash"
-        title="Delete label"
+    <>
+      <div className="label-dismiss" onClick={(e) => { e.stopPropagation(); onClose() }} />
+      <div className="label-colors" onClick={(e) => e.stopPropagation()}>
+        {LABEL_COLORS.map((c) => (
+          <button key={c} type="button" className={c === current ? 'label-swatch is-current' : 'label-swatch'} style={{ background: c }} title={c} onClick={() => onPick(c)} />
+        ))}
+      </div>
+    </>
+  )
+}
+
+type Drag = { id: string; over: string | null; after: boolean }
+
+interface LabelRowProps {
+  label: TreeLabel
+  selected: boolean
+  drag: Drag | null
+  onSelect(): void
+  onDelete(): void
+  onRename(name: string): void
+  onColor(color: string): void
+  onDrag(d: Drag | null): void
+  onDrop(): void
+}
+
+function LabelRow({ label, selected, drag, onSelect, onDelete, onRename, onColor, onDrag, onDrop }: LabelRowProps) {
+  const [renaming, setRenaming] = useState(false)
+  const [picking, setPicking] = useState(false)
+  if (renaming) {
+    return (
+      <NameInput
+        color={label.color}
+        initial={label.name}
+        onDone={(name) => {
+          setRenaming(false)
+          if (name && name !== label.name) onRename(name)
+        }}
+      />
+    )
+  }
+  const dropping = drag && drag.over === label.id && drag.id !== label.id ? (drag.after ? ' is-drop-after' : ' is-drop-before') : ''
+  return (
+    <div
+      className={`side-item side-label-row${selected ? ' is-selected' : ''}${dropping}`}
+      draggable
+      onClick={onSelect}
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = 'move'
+        e.dataTransfer.setData('text/plain', label.id)
+        onDrag({ id: label.id, over: null, after: false })
+      }}
+      onDragOver={(e) => {
+        if (!drag) return
+        e.preventDefault()
+        const r = e.currentTarget.getBoundingClientRect()
+        const after = e.clientY > r.top + r.height / 2
+        if (drag.over !== label.id || drag.after !== after) onDrag({ ...drag, over: label.id, after })
+      }}
+      onDrop={(e) => {
+        e.preventDefault()
+        onDrop()
+      }}
+      onDragEnd={() => onDrag(null)}
+    >
+      <span
+        className="label-slot label-slot-btn"
+        title="Change colour"
         onClick={(e) => {
           e.stopPropagation()
-          onDelete()
+          setPicking(!picking)
         }}
       >
+        <span className="label-dot" style={{ background: label.color }} />
+      </span>
+      <span className="side-label" onDoubleClick={() => setRenaming(true)}>{label.name}</span>
+      <span className="side-count">{label.count}</span>
+      <button type="button" className="side-trash" title="Delete label" onClick={(e) => { e.stopPropagation(); onDelete() }}>
         <Icon name="Trash" size={12} />
       </button>
+      {picking && <ColorPopover current={label.color} onPick={(c) => { setPicking(false); if (c !== label.color) onColor(c) }} onClose={() => setPicking(false)} />}
     </div>
   )
 }
 
-export function Sidebar({ tree, scope, current, width, maxWidth, onWidth, onScope, settingsOpen, onSettings, onLabelCreate, onLabelDelete }: SidebarProps) {
+export function Sidebar({
+  tree, scope, current, width, maxWidth, onWidth, onScope, settingsOpen, onSettings, onLabelCreate, onLabelDelete, onLabelRename, onLabelColor, onLabelMove,
+}: SidebarProps) {
   const [creating, setCreating] = useState(false)
+  const [drag, setDrag] = useState<Drag | null>(null)
   const cls = (on: boolean, base: string) => (on ? `${base} is-selected` : base)
   const repo = scopeRepo(scope)
   return (
@@ -137,7 +208,21 @@ export function Sidebar({ tree, scope, current, width, maxWidth, onWidth, onScop
             </button>
           </div>
           {tree.labels.map((l) => (
-            <LabelRow key={l.id} label={l} selected={scope.type === 'label' && scope.id === l.id} onSelect={() => onScope({ type: 'label', id: l.id })} onDelete={() => onLabelDelete(l.id)} />
+            <LabelRow
+              key={l.id}
+              label={l}
+              selected={scope.type === 'label' && scope.id === l.id}
+              drag={drag}
+              onSelect={() => onScope({ type: 'label', id: l.id })}
+              onDelete={() => onLabelDelete(l.id)}
+              onRename={(name) => onLabelRename(l.id, name)}
+              onColor={(color) => onLabelColor(l.id, color)}
+              onDrag={setDrag}
+              onDrop={() => {
+                if (drag?.over) onLabelMove(drag.id, dropTarget(tree.labels.map((x) => x.id), drag.over, drag.after))
+                setDrag(null)
+              }}
+            />
           ))}
           {creating && (
             <NameInput
@@ -179,6 +264,7 @@ if (import.meta.vitest) {
       <Sidebar
         tree={buildTree(all, 2, store)} scope={scope} current={current} width={width} maxWidth={360} onWidth={() => {}} onScope={() => {}}
         settingsOpen={false} onSettings={() => {}} onLabelCreate={() => {}} onLabelDelete={() => {}}
+        onLabelRename={() => {}} onLabelColor={() => {}} onLabelMove={() => {}}
       />,
     )
 
@@ -246,5 +332,16 @@ if (import.meta.vitest) {
     const html = render({ type: 'label', id: 'ui' })
     expect(html).toMatch(/side-item side-label-row is-selected[^>]*>[\s\S]*?>Interface polish</)
     expect(html.match(/is-selected/g)).toHaveLength(1)
+  })
+  it('makes label rows draggable and shows the colour swatch button on the dot', () => {
+    const html = render({ type: 'all' })
+    expect(html.match(/side-label-row[^>]*draggable="true"/g)).toHaveLength(2)
+    expect(html).toContain('label-slot label-slot-btn" title="Change colour"')
+    expect(html).not.toContain('label-colors')
+  })
+  it('offers the eight palette colours in the picker popover', () => {
+    const html = renderToStaticMarkup(<ColorPopover current="#bb87fc" onPick={() => {}} onClose={() => {}} />)
+    expect(html.match(/label-swatch/g)).toHaveLength(8)
+    expect(html).toContain('label-swatch is-current" style="background:#bb87fc"')
   })
 }

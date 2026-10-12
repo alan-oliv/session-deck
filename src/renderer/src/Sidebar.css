@@ -172,3 +172,52 @@
 .side-input::placeholder {
   color: var(--app-text-3);
 }
+
+.side-label-row {
+  position: relative;
+}
+
+.label-slot-btn {
+  align-self: stretch;
+  cursor: pointer;
+}
+
+.label-dismiss {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+}
+
+.label-colors {
+  position: absolute;
+  top: 30px;
+  left: 0;
+  z-index: 21;
+  display: grid;
+  grid-template-columns: repeat(4, 24px);
+  gap: 4px;
+  padding: 6px;
+  border-radius: var(--app-radius-panel);
+  background: var(--app-modal);
+  box-shadow: inset 0 0 0 1px var(--app-border-strong), 0 7px 24px rgba(0, 0, 0, 0.35);
+}
+
+.label-swatch {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+}
+
+.label-swatch.is-current {
+  box-shadow: 0 0 0 2px var(--app-modal), 0 0 0 4px var(--app-text-2);
+}
+
+.side-label-row.is-drop-before {
+  box-shadow: inset 0 2px 0 var(--app-focus);
+}
+
+.side-label-row.is-drop-after {
+  box-shadow: inset 0 -2px 0 var(--app-focus);
+}
