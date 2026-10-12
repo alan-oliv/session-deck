@@ -41,7 +41,6 @@ Plain words search everything. A prefix like `file:` or `pr:` switches to a narr
 | `in:` | One repository or folder | `in:meetnotes live` |
 | `is:` | Status, plus hidden and archived sessions | `is:waiting` |
 | `when:` | When the session was last active | `when:yesterday` |
-| `>` | Actions on the selected session | `> fork` |
 
 Hidden and archived sessions are left out of every search except `is:hidden` and `is:archived`.
 
@@ -110,7 +109,7 @@ Typing `is:` alone lists every status with its count.
 
 ### `>` Actions
 
-Runs an action on the session selected in the list, without touching the mouse. Keep typing to filter: `> fork`, `> open pr`.
+Highlight a session in the results and press <kbd>></kbd> to run an action on it without touching the mouse. Keep typing to filter: `fork`, `open pr`.
 
 | Action | What it does |
 |---|---|
@@ -134,6 +133,7 @@ The PR actions only show up for sessions that opened one, and Open folder only w
 |---|---|
 | <kbd>↑</kbd> <kbd>↓</kbd> | Move through the results |
 | <kbd>↵</kbd> | Open the highlighted session in the detail pane, run the highlighted action, or pick the highlighted kind or suggestion |
+| <kbd>></kbd> | Show the actions for the highlighted session |
 | Click | Select the session and show it in the detail pane |
 | <kbd>esc</kbd> | Leave the current kind, then close the bar |
 | <kbd>⌫</kbd> | In an empty input, leave the current kind |

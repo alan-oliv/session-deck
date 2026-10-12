@@ -30,9 +30,10 @@ export const KINDS: Kind[] = [
   { id: 'in', prefix: 'in:', label: 'Repository', icon: 'Box', desc: 'Limit to one repository or folder, then keep typing to search inside it.', examples: ['in:team8', 'in:meetnotes live', 'in:~/code'] },
   { id: 'is', prefix: 'is:', label: 'Status', icon: 'Loader', desc: 'Running, waiting, interrupted, failed or completed sessions, plus hidden and archived ones.', examples: ['is:running', 'is:interrupted', 'is:hidden'] },
   { id: 'when', prefix: 'when:', label: 'Time', icon: 'ClockOutline', desc: 'Today, yesterday or this week.', examples: ['when:today', 'when:yesterday', 'when:week'] },
-  { id: 'actions', prefix: '>', label: 'Actions', icon: 'Code', desc: 'Run an action on the selected session without leaving the keyboard.', examples: ['> resume', '> copy', '> open pr'] },
 ]
+// Reached from inside the bar, never typed: Actions needs a highlighted session to act on.
 const INTERNAL_KINDS: Kind[] = [
+  { id: 'actions', prefix: '', label: 'Actions', icon: 'Code', desc: 'Run an action on the highlighted session. Keep typing to filter.', examples: [] },
   { id: 'terminal', prefix: '', label: 'Resume in', icon: 'Code', desc: 'Pick the terminal that resumes and forks sessions. Change it later with > Change terminal.', examples: [] },
   { id: 'rename', prefix: '', label: 'Rename', icon: 'Edit', desc: 'Type a new title and press Enter. Named sessions resume by name from any folder.', examples: [] },
 ]
@@ -352,13 +353,13 @@ if (import.meta.vitest) {
     expect(detectKind('file:diarize')).toEqual({ kind: 'files', rest: 'diarize' })
     expect(detectKind('? where did I fix it')).toEqual({ kind: 'ask', rest: 'where did I fix it' })
     expect(detectKind('IS:running')).toEqual({ kind: 'is', rest: 'running' })
-    expect(detectKind('>resume')).toEqual({ kind: 'actions', rest: 'resume' })
+    expect(detectKind('>resume')).toBeNull()
     expect(detectKind('transcript')).toBeNull()
   })
   it('shows the search kinds and the three newest sessions on empty input, and only kinds after a slash', () => {
     const empty = search(all, 'sessions', '', ctx)
     expect(empty.map((g) => g.label)).toEqual(['Search kinds', 'Recent'])
-    expect(empty[0].results.map((r) => r.keycap)).toEqual(['?', 'file:', 'art:', 'pr:', 'in:', 'is:', 'when:', '>'])
+    expect(empty[0].results.map((r) => r.keycap)).toEqual(['?', 'file:', 'art:', 'pr:', 'in:', 'is:', 'when:'])
     expect(empty[1].results.map((r) => r.title)).toEqual(['live-meeting', 'perf pass', 'disk cleanup'])
     expect(search(all, 'sessions', '/', ctx).map((g) => g.label)).toEqual(['Search kinds'])
   })
