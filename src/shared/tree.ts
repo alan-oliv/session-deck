@@ -47,6 +47,9 @@ export const sameScope = (a: Scope, b: Scope): boolean => JSON.stringify(a) === 
 // The repository a scope narrows; a repo row stays selected while one of its branches or worktrees is the filter.
 export const scopeRepo = (scope: Scope): string | null => ('repo' in scope ? scope.repo : null)
 
+// The sidebar row a session lives under: its repository, or its folder when it has none.
+export const sessionProject = (s: Session): string => s.repo?.root ?? s.cwd
+
 const latest = (xs: Session[]): string => xs.reduce((m, s) => (s.end > m ? s.end : m), '')
 
 function groupBy(xs: Session[], key: (s: Session) => string | null): Map<string, Session[]> {
