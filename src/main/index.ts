@@ -173,7 +173,7 @@ app.whenReady().then(() => {
     },
     getLabels: async () => labels.get(),
     saveLabels: async (store) => {
-      if (!store || typeof store !== 'object') throw new Error('Invalid labels')
+      if (!store || typeof store !== 'object' || !Array.isArray((store as { list?: unknown }).list)) throw new Error('Invalid labels')
       const next = labels.save(store)
       broadcast('labelsChanged')
       return next

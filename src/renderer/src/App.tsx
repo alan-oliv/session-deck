@@ -69,6 +69,13 @@ export function Deck({ all, settings, installed, now, labels }: { all: Session[]
   const barSeq = useRef(0)
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  // Label edits build on the last store sent, not the prop: the prop only catches up after save, broadcast and
+  // getLabels, so two quick edits would both start from the same old store and the second would drop the first.
+  const latestLabels = useRef(labels)
+  const savingLabels = useRef(0)
+  useEffect(() => {
+    if (!savingLabels.current) latestLabels.current = labels
+  }, [labels])
 
   const viewMode: ViewMode = scope.type === 'all' ? mode : 'list'
   const scoped = scope.type === 'archived' ? archived : shown.filter((s) => inScope(s, scope, labels))
@@ -202,16 +209,28 @@ export function Deck({ all, settings, installed, now, labels }: { all: Session[]
       fail(e)
     }
   }
-  const saveLabels = (next: LabelStore | null, after?: () => void) => {
-    if (next) void call(() => window.api.saveLabels(next), after)
+  const saveLabels = (edit: (store: LabelStore) => LabelStore | null, after?: () => void) => {
+    const next = edit(latestLabels.current)
+    if (!next) return
+    latestLabels.current = next
+    savingLabels.current++
+    void call(async () => {
+      try {
+        const saved = await window.api.saveLabels(next)
+        if (latestLabels.current === next) latestLabels.current = saved
+      } finally {
+        savingLabels.current--
+      }
+    }, after)
   }
   const deleteLabelWithUndo = (id: string) => {
-    const gone = labels.list.find((l) => l.id === id)
+    const prev = latestLabels.current
+    const gone = prev.list.find((l) => l.id === id)
     if (!gone) return
-    const r = deleteLabel(labels, id)
-    saveLabels(r.store, () => {
+    const r = deleteLabel(prev, id)
+    saveLabels(() => r.store, () => {
       if (scope.type === 'label' && scope.id === id) setScope({ type: 'all' })
-      showToast({ text: deleteToastText(gone.name, r.sessions), undo: () => saveLabels(labels, () => setToast(null)) }, LABEL_TOAST_MS)
+      showToast({ text: deleteToastText(gone.name, r.sessions), undo: () => saveLabels(() => prev, () => setToast(null)) }, LABEL_TOAST_MS)
     })
   }
 
@@ -246,7 +265,7 @@ export function Deck({ all, settings, installed, now, labels }: { all: Session[]
       case 'tee':
         return call(() => window.api.setStatusTee(a.enabled), closeBar)
       case 'label':
-        return saveLabels(toggleLabel(labels, a.id, a.labelId), closeBar)
+        return saveLabels((l) => toggleLabel(l, a.id, a.labelId), closeBar)
       case 'terminal': {
         const p = bar?.pending
         return call(
@@ -274,11 +293,11 @@ export function Deck({ all, settings, installed, now, labels }: { all: Session[]
           onScope={setScope}
           settingsOpen={settingsOpen}
           onSettings={toggleSettings}
-          onLabelCreate={(name) => saveLabels(createLabel(labels, name)?.store ?? null)}
+          onLabelCreate={(name) => saveLabels((l) => createLabel(l, name)?.store ?? null)}
           onLabelDelete={deleteLabelWithUndo}
-          onLabelRename={(id, name) => saveLabels(renameLabel(labels, id, name))}
-          onLabelColor={(id, color) => saveLabels(recolorLabel(labels, id, color))}
-          onLabelMove={(id, before) => saveLabels(moveLabel(labels, id, before))}
+          onLabelRename={(id, name) => saveLabels((l) => renameLabel(l, id, name))}
+          onLabelColor={(id, color) => saveLabels((l) => recolorLabel(l, id, color))}
+          onLabelMove={(id, before) => saveLabels((l) => moveLabel(l, id, before))}
         />
       )}
       {!focus && (
@@ -328,8 +347,8 @@ export function Deck({ all, settings, installed, now, labels }: { all: Session[]
           onArchive={() => archive(selected, !selected.archived)}
           labels={labels}
           labelCounts={labelCounts}
-          onToggleLabel={(labelId) => saveLabels(toggleLabel(labels, selected.id, labelId))}
-          onCreateLabel={(name) => saveLabels(applyNewLabel(labels, selected.id, name))}
+          onToggleLabel={(labelId) => saveLabels((l) => toggleLabel(l, selected.id, labelId))}
+          onCreateLabel={(name) => saveLabels((l) => applyNewLabel(l, selected.id, name))}
         />
       ) : (
         <main className="detail" />
