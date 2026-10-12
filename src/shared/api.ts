@@ -2,6 +2,7 @@ export type Status = 'running' | 'waiting' | 'interrupted' | 'failed' | 'complet
 export type Terminal = 'terminal' | 'iterm' | 'ghostty' | 'warp' | 'wezterm' | 'vscode'
 export type OpenIn = 'tab' | 'window'
 export type Accent = 'brand' | 'blue' | 'violet' | 'teal' | 'green' | 'orange' | 'red'
+export type AppIcon = 'dark' | 'purple'
 
 export interface Settings {
   terminal: Terminal | null // null: the first installed of Ghostty, iTerm2, Terminal
@@ -9,11 +10,12 @@ export interface Settings {
   accent: Accent
   opacity: number // 50–100
   blur: number // 0–40 px
+  appIcon: AppIcon
   archived: string[]
   statusTee: boolean
 }
-export type SettingsPatch = Partial<Pick<Settings, 'terminal' | 'open' | 'accent' | 'opacity' | 'blur'>>
-export const SETTINGS_DEFAULTS: Settings = { terminal: null, open: 'tab', accent: 'brand', opacity: 88, blur: 24, archived: [], statusTee: false }
+export type SettingsPatch = Partial<Pick<Settings, 'terminal' | 'open' | 'accent' | 'opacity' | 'blur' | 'appIcon'>>
+export const SETTINGS_DEFAULTS: Settings = { terminal: null, open: 'tab', accent: 'brand', opacity: 88, blur: 24, appIcon: 'dark', archived: [], statusTee: false }
 
 export const TERMINALS: { id: Terminal; label: string; app: string }[] = [
   { id: 'terminal', label: 'Terminal', app: 'Terminal.app' },
