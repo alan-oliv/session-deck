@@ -1,9 +1,16 @@
 import { useEffect, useRef } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { ACCENTS, SETTINGS_DEFAULTS, TERMINALS, type Settings, type SettingsPatch, type Terminal } from '../../shared/api'
+import darkIcon from '../../../build/icon-dark.png'
+import purpleIcon from '../../../build/icon-purple.png'
+import { ACCENTS, SETTINGS_DEFAULTS, TERMINALS, type AppIcon, type Settings, type SettingsPatch, type Terminal } from '../../shared/api'
 import { Button } from './Button'
 import { Icon } from './icons'
 import './Settings.css'
+
+const APP_ICONS: { id: AppIcon; name: string; src: string }[] = [
+  { id: 'dark', name: 'Dark', src: darkIcon },
+  { id: 'purple', name: 'Purple', src: purpleIcon },
+]
 
 export interface SettingsModalProps {
   settings: Settings
@@ -19,8 +26,8 @@ export function SettingsModal({ settings: s, installed, onChange, onClose }: Set
   const translucent = s.opacity < 100
   const terms = TERMINALS.filter((t) => installed.includes(t.id))
   const reset = () => {
-    const { terminal, open, accent, opacity, blur } = SETTINGS_DEFAULTS
-    onChange({ terminal, open, accent, opacity, blur })
+    const { terminal, open, accent, opacity, blur, appIcon } = SETTINGS_DEFAULTS
+    onChange({ terminal, open, accent, opacity, blur, appIcon })
   }
   return (
     <div className="set-scrim" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
@@ -92,6 +99,24 @@ export function SettingsModal({ settings: s, installed, onChange, onClose }: Set
           </div>
           <div className="set-row">
             <div className="set-text">
+              <span className="set-label">App icon</span>
+              <span className="set-help">Shown in the Dock while Session Deck runs. Finder and Launchpad keep Dark.</span>
+            </div>
+            <div className="set-terms" role="radiogroup" aria-label="App icon">
+              {APP_ICONS.map((i) => {
+                const cur = i.id === s.appIcon
+                return (
+                  <button type="button" role="radio" aria-checked={cur} key={i.id} className={cur ? 'set-term has-icon is-selected' : 'set-term has-icon'} onClick={() => onChange({ appIcon: i.id })}>
+                    <img className="set-term-icon" src={i.src} alt="" />
+                    <span className="set-term-name">{i.name}</span>
+                    <span className="set-term-check">{cur && <Icon name="Check" size={12} />}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          <div className="set-row">
+            <div className="set-text">
               <span className="set-label" id="set-opacity">Window opacity</span>
               <span className="set-help">Lower values let the desktop show through.</span>
             </div>
@@ -144,6 +169,12 @@ if (import.meta.vitest) {
     expect(html).toContain('>70%<')
     expect(html).toContain('>10 px<')
     expect(html).toContain('How much the desktop behind the window is blurred.')
+  })
+  it('offers the dark and purple app icons and marks the chosen one', () => {
+    const html = render({ appIcon: 'purple' })
+    expect(html).toContain('aria-label="App icon"')
+    expect(html).toMatch(/set-term has-icon is-selected"[^>]*>.*?>Purple</)
+    expect(html.match(/set-term has-icon is-selected/g)).toHaveLength(1)
   })
   it('explains that blur needs a translucent window at 100% opacity', () => {
     expect(render({ opacity: 100 })).toContain('Only visible when opacity is below 100%.')

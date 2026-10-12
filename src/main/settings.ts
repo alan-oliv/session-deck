@@ -17,6 +17,7 @@ export function normalizeSettings(raw: unknown): Settings {
     accent: isAccent(r.accent) ? r.accent : d.accent,
     opacity: clamp(r.opacity, 50, 100, d.opacity),
     blur: clamp(r.blur, 0, 40, d.blur),
+    appIcon: r.appIcon === 'purple' ? 'purple' : 'dark',
     archived: Array.isArray(r.archived) ? [...new Set(r.archived.filter(isSessionId))] : [],
     statusTee: r.statusTee === true,
   }
@@ -62,9 +63,9 @@ if (import.meta.vitest) {
     expect(normalizeSettings(null)).toEqual(SETTINGS_DEFAULTS)
   })
   it('clamps the appearance numbers and falls back on unknown choices', () => {
-    expect(normalizeSettings({ open: 'window', accent: 'teal', opacity: 12, blur: 99.6 }))
-      .toEqual({ ...SETTINGS_DEFAULTS, open: 'window', accent: 'teal', opacity: 50, blur: 40 })
-    expect(normalizeSettings({ open: 'popup', accent: 'pink', opacity: '70', blur: NaN })).toEqual(SETTINGS_DEFAULTS)
+    expect(normalizeSettings({ open: 'window', accent: 'teal', opacity: 12, blur: 99.6, appIcon: 'purple' }))
+      .toEqual({ ...SETTINGS_DEFAULTS, open: 'window', accent: 'teal', opacity: 50, blur: 40, appIcon: 'purple' })
+    expect(normalizeSettings({ open: 'popup', accent: 'pink', opacity: '70', blur: NaN, appIcon: 'gold' })).toEqual(SETTINGS_DEFAULTS)
   })
   it('persists saved settings and reads them back', () => {
     const path = join(mkdtempSync(join(tmpdir(), 'deck-settings-')), 'nested', 'settings.json')

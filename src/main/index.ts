@@ -16,6 +16,12 @@ import { createTranscriptStore } from './transcripts'
 // The renderer tints its own background by the opacity setting; the window server blurs the desktop under it.
 const applyBlur = (win: BrowserWindow, s: Settings) => setWindowBlur(win, blurRadius(s))
 
+// Only the running Dock icon changes; Finder and Launchpad keep the bundle's dark .icns.
+function applyAppIcon(s: Settings): void {
+  const file = `icon-${s.appIcon}.png`
+  app.dock?.setIcon(app.isPackaged ? join(process.resourcesPath, file) : join(app.getAppPath(), 'build', file))
+}
+
 function createMainWindow(settings: Settings): BrowserWindow {
   const win = new BrowserWindow({
     width: 1360,
@@ -65,6 +71,7 @@ app.whenReady().then(() => {
   const userData = app.getPath('userData')
   const settings = createSettingsStore(join(userData, 'settings.json'))
   initBlur((err) => console.error('blur', err))
+  applyAppIcon(settings.get())
   const indexer = createIndexer({
     projectsDir: PATHS.projects,
     sessionsDir: PATHS.sessions,
@@ -89,10 +96,12 @@ app.whenReady().then(() => {
     saveSettings: async (patch: SettingsPatch) => {
       const p = (patch && typeof patch === 'object' ? patch : {}) as Record<string, unknown>
       if ('terminal' in p && p.terminal !== null && !isTerminal(p.terminal)) throw new Error('Unknown terminal')
-      const keys = ['terminal', 'open', 'accent', 'opacity', 'blur'] as const
-      const clean = normalizeSettings({ ...settings.get(), ...Object.fromEntries(keys.filter((k) => k in p).map((k) => [k, p[k]])) })
+      const keys = ['terminal', 'open', 'accent', 'opacity', 'blur', 'appIcon'] as const
+      const prev = settings.get()
+      const clean = normalizeSettings({ ...prev, ...Object.fromEntries(keys.filter((k) => k in p).map((k) => [k, p[k]])) })
       const next = settings.save(clean)
       for (const win of BrowserWindow.getAllWindows()) applyBlur(win, next)
+      if (next.appIcon !== prev.appIcon) applyAppIcon(next)
       broadcast('settingsChanged')
       return next
     },
