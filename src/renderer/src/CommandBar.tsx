@@ -12,6 +12,7 @@ import './CommandBar.css'
 export interface BarOpen {
   kind: KindId
   query: string
+  target?: string
 }
 
 export type BarAction =
@@ -29,7 +30,6 @@ export type BarAction =
 export interface CommandBarProps {
   open: BarOpen
   sessions: Session[]
-  selected: Session | null
   settings: Settings
   now: Date
   note: string | null
@@ -176,13 +176,15 @@ export function CommandBar(p: CommandBarProps) {
   const [query, setQuery] = useState(p.open.query)
   const [idx, setIdx] = useState(0)
   const [copied, setCopied] = useState(false)
+  const [targetId, setTargetId] = useState(p.open.target ?? null)
   const listRef = useRef<HTMLDivElement>(null)
   const kind = kindById(kindId)
 
-  const groups = search(p.sessions, kindId, query, { now: p.now, selected: p.selected, settings: p.settings })
+  const target = p.sessions.find((s) => s.id === targetId) ?? null
+  const groups = search(p.sessions, kindId, query, { now: p.now, selected: target, settings: p.settings })
   const flat = groups.flatMap((g) => g.results)
   const cur = flat[Math.min(idx, Math.max(0, flat.length - 1))]
-  const renameBlocked = kindId === 'rename' && !!p.selected?.live
+  const renameBlocked = kindId === 'rename' && !!target?.live
 
   useEffect(() => {
     listRef.current?.querySelector('.bar-row.is-active')?.scrollIntoView({ block: 'nearest' })
@@ -203,7 +205,7 @@ export function CommandBar(p: CommandBarProps) {
   }
   const onEnter = () => {
     if (kindId === 'rename') {
-      if (p.selected && !renameBlocked) p.onAction({ type: 'rename', id: p.selected.id, title: query })
+      if (target && !renameBlocked) p.onAction({ type: 'rename', id: target.id, title: query })
       return
     }
     run(cur)
@@ -218,7 +220,7 @@ export function CommandBar(p: CommandBarProps) {
   const footLabel = p.note ?? (renameBlocked ? "Can't rename a running session" : copied ? 'Copied resume command' : kind.label)
   const emptyText =
     kindId === 'ask' ? 'Nothing close. Try different words or a file name.'
-    : kindId === 'rename' ? (p.selected ? `Press ↵ to rename “${p.selected.title}”.` : 'Select a session first.')
+    : kindId === 'rename' ? (target ? `Press ↵ to rename “${target.title}”.` : 'Select a session first.')
     : 'No matches.'
 
   return (
@@ -237,7 +239,7 @@ export function CommandBar(p: CommandBarProps) {
             className="bar-input"
             autoFocus
             value={query}
-            placeholder={kindId === 'sessions' ? 'Search sessions, or type / for search kinds' : `${kind.desc.split('.')[0]}…`}
+            placeholder={kindId === 'sessions' ? 'Search sessions' : `${kind.desc.split('.')[0]}…`}
             onChange={(e) => {
               const v = e.target.value
               const d = kindId === 'sessions' ? detectKind(v) : null
@@ -256,6 +258,10 @@ export function CommandBar(p: CommandBarProps) {
               } else if (e.key === 'Enter') {
                 e.preventDefault()
                 onEnter()
+              } else if (e.key === '>' && cur?.type === 'session') {
+                e.preventDefault()
+                setTargetId(cur.session.id)
+                setKind('actions')
               } else if (e.key === 'Escape') {
                 e.preventDefault()
                 if (kindId !== 'sessions') setKind('sessions')
@@ -309,9 +315,12 @@ export function CommandBar(p: CommandBarProps) {
           <span className="bar-footer-item"><Icon name={footIcon} size={12} />{footLabel}</span>
           <span className="bar-footer-spacer" />
           <span className="bar-footer-item bar-footer-primary">{primaryVerb(kindId, cur)}<span className="keycap">↵</span></span>
-          <span className="bar-footer-divider" />
-          <span className="bar-footer-item">Search kinds<span className="keycap">/</span></span>
-          <span className="bar-footer-item">Actions<span className="keycap">&gt;</span></span>
+          {cur?.type === 'session' && (
+            <>
+              <span className="bar-footer-divider" />
+              <span className="bar-footer-item">Actions<span className="keycap">&gt;</span></span>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -327,17 +336,24 @@ if (import.meta.vitest) {
     artifacts: [{ name: 'veracity-report.md', kind: 'markdown', path: '/Users/me/code/app/r.md', bytes: 9000, preview: '# Veracity report' }],
   })
   const render = (open: BarOpen, over: Partial<CommandBarProps> = {}) =>
-    renderToStaticMarkup(<CommandBar open={open} sessions={[s]} selected={s} settings={settings} now={now} note={null} resultsWidth={380} onResultsWidth={() => {}} onClose={() => {}} onAction={() => {}} {...over} />)
+    renderToStaticMarkup(<CommandBar open={open} sessions={[s]} settings={settings} now={now} note={null} resultsWidth={380} onResultsWidth={() => {}} onClose={() => {}} onAction={() => {}} {...over} />)
 
-  it('opens on the search kinds and recent sessions with the plain search placeholder', () => {
+  it('opens on the search kinds and recent sessions with no hint for kinds it already lists or actions it has no session for', () => {
     const html = render({ kind: 'sessions', query: '' })
-    expect(html).toContain('Search sessions, or type / for search kinds')
+    expect(html).toContain('placeholder="Search sessions"')
     expect(html).toContain('>Search kinds<')
     expect(html).toContain('>Recent<')
     expect(html).toContain('>Choose<')
+    expect(html).not.toContain('keycap">/<')
+    expect(html).not.toContain('keycap">&gt;<')
     expect(html).not.toContain('bar-chip')
     expect(html).toContain('class="bar-results-col" style="width:380px"')
     expect(html).toContain('aria-label="Resize results"')
+  })
+  it('offers actions with > only while a session result is highlighted', () => {
+    const html = render({ kind: 'sessions', query: 'live' })
+    expect(html).toContain('>Open<')
+    expect(html).toContain('Actions<span class="keycap">&gt;<')
   })
   it('shows the active kind as a chip with its own placeholder', () => {
     const html = render({ kind: 'files', query: '' })
@@ -345,7 +361,7 @@ if (import.meta.vitest) {
     expect(html).toContain('Find sessions by a file they changed…')
   })
   it('previews an action with the session it runs on and the exact command', () => {
-    const html = render({ kind: 'actions', query: '' })
+    const html = render({ kind: 'actions', query: '', target: s.id })
     expect(html).toContain('Actions on “live-meeting”')
     expect(html).toContain('>Runs on<')
     expect(html).toContain(`claude --resume ${s.id}`)
@@ -359,7 +375,7 @@ if (import.meta.vitest) {
   it('previews a published claude.ai artifact with its link and no size', () => {
     const url = 'https://claude.ai/artifact/Zq7Fake9ArtifactId00'
     const pub = { ...s, artifacts: [{ name: 'Architecture', kind: 'claude.ai', path: url, bytes: 0, preview: '' }] }
-    const html = render({ kind: 'artifacts', query: url }, { sessions: [pub], selected: pub })
+    const html = render({ kind: 'artifacts', query: url }, { sessions: [pub] })
     expect(html).toContain('claude.ai · from “live-meeting”')
     expect(html).toContain(`<span class="pv-path">${url}</span>`)
     expect(html).not.toContain('<pre')
@@ -368,12 +384,12 @@ if (import.meta.vitest) {
     expect(render({ kind: 'ask', query: 'kubernetes billing' })).toContain('Nothing close. Try different words or a file name.')
   })
   it('refuses to rename a running session and shows errors from the app in the footer', () => {
-    expect(render({ kind: 'rename', query: 'x' }, { selected: { ...s, live: true } })).toContain("Can&#x27;t rename a running session")
+    expect(render({ kind: 'rename', query: 'x', target: s.id }, { sessions: [{ ...s, live: true }] })).toContain("Can&#x27;t rename a running session")
     expect(render({ kind: 'sessions', query: '' }, { note: 'Unknown session' })).toContain('Unknown session')
   })
   it('switches to the Repository chip and resolves the place when a GitHub repo link is pasted', () => {
     const repoSession = { ...s, repo: { name: 'team8', root: '/Users/me/code/team8', remote: 'alan-oliv/team8' } }
-    const html = render({ kind: 'in', query: 'https://github.com/alan-oliv/team8 ' }, { sessions: [repoSession], selected: repoSession })
+    const html = render({ kind: 'in', query: 'https://github.com/alan-oliv/team8 ' }, { sessions: [repoSession] })
     expect(html).toContain('bar-chip')
     expect(html).toContain('>Repository<')
     expect(html).toContain('>In team8<')
