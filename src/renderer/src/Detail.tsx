@@ -1,10 +1,12 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import type { OpenIn, Session, Status, Transcript as TranscriptData } from '../../shared/api'
+import type { LabelStore, OpenIn, Session, Status, Transcript as TranscriptData } from '../../shared/api'
 import { makeSession } from '../../shared/fixtures'
 import { agoLong, fileSize, modelLabel, monthDay, plural, tildify } from '../../shared/format'
+import { NO_LABELS } from '../../shared/labels'
 import { errorText } from './hooks'
 import { Icon } from './icons'
+import { LabelsRow } from './LabelPicker'
 import { ResumeMenu } from './ResumeMenu'
 import { Transcript } from './Transcript'
 import { Usage, tiles } from './Usage'
@@ -36,6 +38,10 @@ export interface DetailProps {
   onCopyPr(): void
   onEnableTee(): void
   onArchive(): void
+  labels: LabelStore
+  labelCounts: Record<string, number>
+  onToggleLabel(labelId: string): void
+  onCreateLabel(name: string): void
 }
 
 const RENAME_HINT = 'Enter to save · Esc to cancel. A name lets you resume from any folder with claude --resume <name>.'
@@ -199,6 +205,7 @@ export function Detail(p: DetailProps) {
               )}
             </div>
             <div className="facts">
+              <LabelsRow key={s.id} store={p.labels} sessionId={s.id} counts={p.labelCounts} onToggle={p.onToggleLabel} onCreate={p.onCreateLabel} />
               {facts(s).map((f) => (
                 <Fragment key={f.k}>
                   <span className="fact-k">{f.k}</span>
@@ -251,7 +258,7 @@ if (import.meta.vitest) {
   const now = new Date(2026, 9, 6, 11, 0)
   const pr = { repo: 'alan-oliv/meetnotes', number: 27, url: 'https://github.com/alan-oliv/meetnotes/pull/27' }
   const noop = () => {}
-  const handlers = { tab: 'overview' as DetailTab, focus: false, open: 'tab' as OpenIn, terminalName: 'Ghostty', onTab: noop, onFocus: noop, onResume: noop, onCopy: noop, onFork: noop, onRename: noop, onOpenFolder: noop, onCopyPr: noop, onEnableTee: noop, onArchive: noop }
+  const handlers = { tab: 'overview' as DetailTab, focus: false, open: 'tab' as OpenIn, terminalName: 'Ghostty', onTab: noop, onFocus: noop, onResume: noop, onCopy: noop, onFork: noop, onRename: noop, onOpenFolder: noop, onCopyPr: noop, onEnableTee: noop, onArchive: noop, labels: NO_LABELS, labelCounts: {}, onToggleLabel: noop, onCreateLabel: noop }
 
   it('shows the tab bar with Focus, and swaps the overview for the transcript tab', () => {
     const s = makeSession({ title: 'live-meeting' })
@@ -270,6 +277,10 @@ if (import.meta.vitest) {
     expect(tx).not.toContain('class="facts"')
   })
 
+  it('puts the Labels row first in the Overview facts', () => {
+    const html = renderToStaticMarkup(<Detail session={makeSession()} now={now} copied={null} teeOn={false} {...handlers} />)
+    expect(html).toMatch(/class="facts"><span class="fact-k lbl-k">Labels<\/span>/)
+  })
   it('lists facts in the handoff order, skipping rows without data', () => {
     const s = makeSession({
       branch: 'live-meeting', pr, forks: 1, named: true,
