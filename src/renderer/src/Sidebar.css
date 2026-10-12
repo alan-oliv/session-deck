@@ -58,6 +58,10 @@
   color: var(--app-text);
 }
 
+.side-item.is-current {
+  color: var(--app-text);
+}
+
 .side-item.is-selected {
   background: var(--app-selected);
   color: var(--app-text);

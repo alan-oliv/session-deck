@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { makeSession } from '../../shared/fixtures'
 import { PANES } from '../../shared/panes'
-import { buildTree, sameScope, scopeRepo, type Scope, type Tree } from '../../shared/tree'
+import { buildTree, sameScope, scopeRepo, sessionProject, type Scope, type Tree } from '../../shared/tree'
 import { Icon } from './icons'
 import { ResizeHandle } from './Resize'
 import './Sidebar.css'
@@ -9,6 +9,7 @@ import './Sidebar.css'
 export interface SidebarProps {
   tree: Tree
   scope: Scope
+  current: string | null
   width: number
   maxWidth: number
   onWidth(width: number): void
@@ -19,7 +20,7 @@ export interface SidebarProps {
 
 const SECTIONS = [['repo', 'Repositories'], ['folder', 'Folders']] as const
 
-export function Sidebar({ tree, scope, width, maxWidth, onWidth, onScope, settingsOpen, onSettings }: SidebarProps) {
+export function Sidebar({ tree, scope, current, width, maxWidth, onWidth, onScope, settingsOpen, onSettings }: SidebarProps) {
   const cls = (on: boolean, base: string) => (on ? `${base} is-selected` : base)
   const repo = scopeRepo(scope)
   return (
@@ -54,7 +55,7 @@ export function Sidebar({ tree, scope, width, maxWidth, onWidth, onScope, settin
               {items.map((p) => (
                 <div
                   key={p.id}
-                  className={cls(kind === 'repo' ? repo === p.id : sameScope(p.scope, scope), `side-item side-${kind}`)}
+                  className={cls(kind === 'repo' ? repo === p.id : sameScope(p.scope, scope), p.id === current ? `side-item side-${kind} is-current` : `side-item side-${kind}`)}
                   onClick={() => onScope(p.scope)}
                   title={p.title}
                 >
@@ -87,9 +88,9 @@ if (import.meta.vitest) {
     makeSession({ repo: { name: 'team8', root: '/Users/me/code/team8', remote: 'alan-oliv/team8' } }),
     makeSession({ repo: null, cwd: '/Users/me/code' }),
   ]
-  const render = (scope: Scope, all = sessions, width = PANES.side.default) =>
+  const render = (scope: Scope, all = sessions, width = PANES.side.default, current: string | null = null) =>
     renderToStaticMarkup(
-      <Sidebar tree={buildTree(all, 2)} scope={scope} width={width} maxWidth={360} onWidth={() => {}} onScope={() => {}} settingsOpen={false} onSettings={() => {}} />,
+      <Sidebar tree={buildTree(all, 2)} scope={scope} current={current} width={width} maxWidth={360} onWidth={() => {}} onScope={() => {}} settingsOpen={false} onSettings={() => {}} />,
     )
 
   it('renders at the given width with a focusable resize separator on its edge', () => {
@@ -130,5 +131,11 @@ if (import.meta.vitest) {
     expect(html.match(/is-selected/g)).toHaveLength(1)
     expect(html).toMatch(/side-repo is-selected[^>]*>[\s\S]*?>app</)
     expect(render({ type: 'wt', repo: root, path: `${root}/.worktrees/old` })).toMatch(/side-repo is-selected[^>]*>[\s\S]*?>app</)
+  })
+  it('marks the row the selected session lives under without changing the scope', () => {
+    const html = render({ type: 'all' }, sessions, PANES.side.default, sessionProject(sessions[3]))
+    expect(html).toMatch(/side-folder is-current[^>]*>[\s\S]*?>~\/code</)
+    expect(html.match(/is-selected/g)).toHaveLength(1)
+    expect(render({ type: 'folder', path: '/Users/me/code' }, sessions, PANES.side.default, '/Users/me/code')).toMatch(/side-folder is-current is-selected[^>]*>/)
   })
 }

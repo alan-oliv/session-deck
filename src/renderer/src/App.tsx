@@ -4,7 +4,7 @@ import { prCommand, resumeCommand, SETTINGS_DEFAULTS, terminalLabel, type OpenIn
 import { appearanceVars } from '../../shared/appearance'
 import { makeSession } from '../../shared/fixtures'
 import { clampPane, PANES_KEY, paneMax, readPaneWidths, type PaneKey, type PaneWidths } from '../../shared/panes'
-import { archivedOf, buildChips, buildTree, inScope, scopeTitle, visible, type Scope } from '../../shared/tree'
+import { archivedOf, buildChips, buildTree, inScope, scopeTitle, sessionProject, visible, type Scope } from '../../shared/tree'
 import { byRecent, dayKey, latestDay, listForView, type ViewMode, type YearMonth } from '../../shared/views'
 import { CommandBar, type BarAction, type BarOpen } from './CommandBar'
 import { Detail, type CopiedKey, type DetailTab } from './Detail'
@@ -242,6 +242,7 @@ export function Deck({ all, settings, installed, now }: { all: Session[]; settin
         <Sidebar
           tree={tree}
           scope={scope}
+          current={selected ? sessionProject(selected) : null}
           width={panes.side}
           maxWidth={paneMax('side', panes.list, winWidth)}
           onWidth={setPane('side')}
