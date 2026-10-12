@@ -1,0 +1,5 @@
+/* Elevation from the Figma "Shadows" section, plus the inset 1px "border-as-shadow" pattern every button uses. */
+:root{--shadow-xs:0px 1px 1px 0px rgba(0,0,0,.15);--shadow-sm:0px 1px 2px 0px rgba(0,0,0,.09);--shadow-md:0px 2px 4px 0px rgba(0,0,0,.1);--shadow-lg:0px 4px 24px 0px rgba(0,0,0,.2);--shadow-xl:0px 7px 32px 0px rgba(0,0,0,.35);--shadow-2xl:0px 16px 70px 0px rgba(0,0,0,.5);--shadow-error:0px 0px 12px -1px #eb5757;
+--shadow-logo:0px 3.899px 30px 0px rgba(0,0,0,.17),0px 11.139px 71.287px 0px rgba(30,40,146,.7);
+--ring-border:inset 0 0 0 1px var(--border-strong);--ring-border-hover:inset 0 0 0 1px var(--border-hover);--ring-brand:inset 0 0 0 1px var(--brand);--ring-focus:inset 0 0 0 1px var(--brand-focus-ring);
+--button-secondary-shadow:inset 0 0 0 1px #393a4b,0px 1px 1px 0px rgba(0,0,0,.15);--button-primary-shadow:inset 0 0 0 1px #575bc7,0px 1px 2px 0px rgba(0,0,0,.09)}

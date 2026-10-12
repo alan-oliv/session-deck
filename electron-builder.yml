@@ -9,6 +9,7 @@ extraResources:
     to: blur.node
 mac:
   target: dir
+  icon: build/icon.icns
   identity: 'Apple Development: alanbruno@gmail.com (8ENKTPJ3B3)'
   hardenedRuntime: true
   entitlements: build/entitlements.mac.plist

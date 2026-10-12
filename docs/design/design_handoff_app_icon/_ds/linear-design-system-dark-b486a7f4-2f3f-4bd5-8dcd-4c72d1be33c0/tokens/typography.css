@@ -1,0 +1,16 @@
+/* Type scale from the Figma "Typography" section: Inter 400 + 500 at nine sizes, line-height 100% (buttons at 15px use 22px). */
+:root{--weight-regular:400;--weight-medium:500;
+--text-2xs:11px;--text-xs:12px;--text-sm:13px;--text-md:15px;--text-lg:18px;--text-xl:20px;--text-2xl:22px;--text-3xl:24px;--text-display:36px;
+--leading-tight:100%;--leading-button:22px;--leading-body:1.5;
+/* semantic roles */
+--type-caption:var(--weight-regular) var(--text-2xs)/var(--leading-tight) var(--font-sans);
+--type-meta:var(--weight-regular) var(--text-xs)/var(--leading-tight) var(--font-sans);
+--type-body:var(--weight-regular) var(--text-sm)/var(--leading-tight) var(--font-sans);
+--type-body-medium:var(--weight-medium) var(--text-sm)/var(--leading-tight) var(--font-sans);
+--type-label:var(--weight-medium) var(--text-xs)/var(--leading-tight) var(--font-sans);
+--type-subtitle:var(--weight-regular) var(--text-md)/var(--leading-tight) var(--font-sans);
+--type-title:var(--weight-medium) var(--text-lg)/var(--leading-tight) var(--font-sans);
+--type-heading:var(--weight-medium) var(--text-3xl)/var(--leading-tight) var(--font-sans);
+--type-display:var(--weight-regular) var(--text-display)/var(--leading-tight) var(--font-sans)}
+body{font-family:var(--font-sans)}
+a{color:var(--text-link,#6c79ff);text-decoration:none}a:hover{color:#7477f0;text-decoration:underline}

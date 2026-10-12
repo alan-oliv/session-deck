@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="stylesheet" href="_ds/linear-design-system-dark-b486a7f4-2f3f-4bd5-8dcd-4c72d1be33c0/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/linear-design-system-dark-b486a7f4-2f3f-4bd5-8dcd-4c72d1be33c0/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/linear-design-system-dark-b486a7f4-2f3f-4bd5-8dcd-4c72d1be33c0/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/linear-design-system-dark-b486a7f4-2f3f-4bd5-8dcd-4c72d1be33c0/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/linear-design-system-dark-b486a7f4-2f3f-4bd5-8dcd-4c72d1be33c0/tokens/shadows.css">
+  <link rel="stylesheet" href="_ds/linear-design-system-dark-b486a7f4-2f3f-4bd5-8dcd-4c72d1be33c0/components/fig-assets.css">
+  <link rel="stylesheet" href="_ds/linear-design-system-dark-b486a7f4-2f3f-4bd5-8dcd-4c72d1be33c0/styles.css">
+  <script src="_ds/linear-design-system-dark-b486a7f4-2f3f-4bd5-8dcd-4c72d1be33c0/_ds_bundle.js"></script>
+  <style>html,body{margin:0;background:#151621;}*{box-sizing:border-box;}a{color:#6c79ff;text-decoration:none;}a:hover{color:#7477f0;text-decoration:underline;}</style>
+</helmet>
+<section style="padding:56px 56px 0; display:flex; flex-direction:column; gap:28px; font-family:Inter, sans-serif; color:#eeeffc;">
+  <div style="display:flex; flex-direction:column; gap:6px;">
+    <div style="font-size:12px; line-height:16px; color:#858699;">Session deck · App icon</div>
+    <h1 style="margin:0; font-size:24px; line-height:32px; font-weight:500;"><a href="#2a">2a</a> as the application icon</h1>
+    <p style="margin:0; max-width:640px; font-size:13px; line-height:20px; color:#d2d3e0; text-wrap:pretty;">On the macOS icon grid: an 824px rounded tile inside a 1024px canvas, with the mark centred. Shown on a dark and a light desktop, down to 16px.</p>
+  </div>
+  <div style="display:flex; flex-wrap:wrap; gap:24px; align-items:flex-start;">
+    <div id="3a" style="display:flex; flex-direction:column; gap:20px; padding:24px; border-radius:8px; background:#191a23; box-shadow:inset 0 0 0 1px #2c2d3c;">
+      <div style="display:flex; align-items:baseline; gap:10px;">
+        <span style="font-size:11px; line-height:18px; padding:0 6px; border-radius:4px; background:#393a4b; color:#eeeffc; font-weight:500;">3a</span>
+        <span style="font-size:13px; font-weight:500;">Dark tile</span>
+        <span style="font-size:12px; color:#858699;">Matches the app window.</span>
+      </div>
+      <div style="display:flex; gap:24px; align-items:flex-end;">
+        <div style="display:flex; align-items:center; justify-content:center; width:300px; height:300px; border-radius:8px; background:#2c2d42;"><img src="app-icon/session-deck-icon.svg" alt="Session deck app icon" style="width:256px; height:256px;"></div>
+        <div style="display:flex; flex-direction:column; gap:20px;">
+          <div style="display:flex; gap:20px; align-items:flex-end;">
+            <div style="display:flex; flex-direction:column; align-items:center; gap:8px;"><img src="app-icon/session-deck-icon.svg" alt="" style="width:128px; height:128px;"><span style="font-size:11px; color:#858699;">128</span></div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:8px;"><img src="app-icon/session-deck-icon.svg" alt="" style="width:64px; height:64px;"><span style="font-size:11px; color:#858699;">64</span></div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:8px;"><img src="app-icon/session-deck-icon.svg" alt="" style="width:32px; height:32px;"><span style="font-size:11px; color:#858699;">32</span></div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:8px;"><img src="app-icon/session-deck-icon.svg" alt="" style="width:16px; height:16px;"><span style="font-size:11px; color:#858699;">16</span></div>
+          </div>
+          <div style="display:flex; flex-direction:column; align-items:center; gap:8px; width:96px; padding:12px 0 10px; border-radius:8px; background:#eeeffc;"><img src="app-icon/session-deck-icon.svg" alt="" style="width:64px; height:64px;"><span style="font-size:11px; color:#181921;">Session deck</span></div>
+        </div>
+      </div>
+    </div>
+    <div id="3b" style="display:flex; flex-direction:column; gap:20px; padding:24px; border-radius:8px; background:#191a23; box-shadow:inset 0 0 0 1px #2c2d3c;">
+      <div style="display:flex; align-items:baseline; gap:10px;">
+        <span style="font-size:11px; line-height:18px; padding:0 6px; border-radius:4px; background:#393a4b; color:#eeeffc; font-weight:500;">3b</span>
+        <span style="font-size:13px; font-weight:500;">Purple tile</span>
+        <span style="font-size:12px; color:#858699;">Stands out more in the Dock.</span>
+      </div>
+      <div style="display:flex; gap:24px; align-items:flex-end;">
+        <div style="display:flex; align-items:center; justify-content:center; width:300px; height:300px; border-radius:8px; background:#2c2d42;"><img src="app-icon/session-deck-icon-brand.svg" alt="Session deck app icon" style="width:256px; height:256px;"></div>
+        <div style="display:flex; flex-direction:column; gap:20px;">
+          <div style="display:flex; gap:20px; align-items:flex-end;">
+            <div style="display:flex; flex-direction:column; align-items:center; gap:8px;"><img src="app-icon/session-deck-icon-brand.svg" alt="" style="width:128px; height:128px;"><span style="font-size:11px; color:#858699;">128</span></div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:8px;"><img src="app-icon/session-deck-icon-brand.svg" alt="" style="width:64px; height:64px;"><span style="font-size:11px; color:#858699;">64</span></div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:8px;"><img src="app-icon/session-deck-icon-brand.svg" alt="" style="width:32px; height:32px;"><span style="font-size:11px; color:#858699;">32</span></div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:8px;"><img src="app-icon/session-deck-icon-brand.svg" alt="" style="width:16px; height:16px;"><span style="font-size:11px; color:#858699;">16</span></div>
+          </div>
+          <div style="display:flex; flex-direction:column; align-items:center; gap:8px; width:96px; padding:12px 0 10px; border-radius:8px; background:#eeeffc;"><img src="app-icon/session-deck-icon-brand.svg" alt="" style="width:64px; height:64px;"><span style="font-size:11px; color:#181921;">Session deck</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<section style="padding:56px 56px 0; display:flex; flex-direction:column; gap:28px; font-family:Inter, sans-serif; color:#eeeffc;">
+  <div style="display:flex; flex-direction:column; gap:6px;">
+    <div style="font-size:12px; line-height:16px; color:#858699;">Session deck · Logo, round 2</div>
+    <h1 style="margin:0; font-size:24px; line-height:32px; font-weight:500;"><a href="#1a">1a</a> with a pixel character</h1>
+    <p style="margin:0; max-width:640px; font-size:13px; line-height:20px; color:#d2d3e0; text-wrap:pretty;">The prompt on the front card is replaced by an original pixel character with an antenna, a rounded head and two feet.</p>
+  </div>
+  <div style="display:flex; flex-wrap:wrap; gap:24px; align-items:flex-start;">
+    <div id="2a" style="width:560px; display:flex; flex-direction:column; gap:16px; padding:20px; border-radius:8px; background:#191a23; box-shadow:inset 0 0 0 1px #2c2d3c;">
+      <div style="display:flex; align-items:baseline; gap:10px;">
+        <span style="font-size:11px; line-height:18px; padding:0 6px; border-radius:4px; background:#393a4b; color:#eeeffc; font-weight:500;">2a</span>
+        <span style="font-size:15px; font-weight:500;">Stack + sprite</span>
+        <span style="font-size:12px; color:#858699;">White character on the purple front card.</span>
+      </div>
+      <div style="height:240px; display:flex; align-items:center; justify-content:center; border-radius:5px; background:#181921; box-shadow:inset 0 0 0 1px #2c2d3c;">
+        <svg viewBox="0 0 32 32" width="112" height="112"><rect x="8" y="4" width="16" height="18" rx="3" fill="#2c2d42"></rect><rect x="6" y="7" width="20" height="18" rx="3" fill="#444556"></rect><rect x="4" y="10" width="24" height="18" rx="3.5" fill="#575bc7"></rect><g shape-rendering="crispEdges" fill="#ffffff"><rect x="15" y="13" width="2" height="2"></rect><rect x="11" y="15" width="10" height="2"></rect><rect x="9" y="17" width="14" height="6"></rect><rect x="11" y="23" width="2" height="2"></rect><rect x="19" y="23" width="2" height="2"></rect></g><g shape-rendering="crispEdges" fill="#575bc7"><rect x="13" y="18" width="2" height="2"></rect><rect x="17" y="18" width="2" height="2"></rect></g></svg>
+      </div>
+      <div style="display:grid; grid-template-columns:136px minmax(0,1fr); gap:12px;">
+        <div style="height:136px; display:flex; align-items:center; justify-content:center; border-radius:5px; background:#151621; box-shadow:inset 0 0 0 1px #2c2d3c;">
+          <div style="width:104px; height:104px; border-radius:24px; display:flex; align-items:center; justify-content:center; background:#202128; box-shadow:inset 0 0 0 1px #393a4b, 0 7px 24px rgba(0,0,0,.35);">
+            <svg viewBox="0 0 32 32" width="64" height="64"><rect x="8" y="4" width="16" height="18" rx="3" fill="#2c2d42"></rect><rect x="6" y="7" width="20" height="18" rx="3" fill="#444556"></rect><rect x="4" y="10" width="24" height="18" rx="3.5" fill="#575bc7"></rect><g shape-rendering="crispEdges" fill="#ffffff"><rect x="15" y="13" width="2" height="2"></rect><rect x="11" y="15" width="10" height="2"></rect><rect x="9" y="17" width="14" height="6"></rect><rect x="11" y="23" width="2" height="2"></rect><rect x="19" y="23" width="2" height="2"></rect></g><g shape-rendering="crispEdges" fill="#575bc7"><rect x="13" y="18" width="2" height="2"></rect><rect x="17" y="18" width="2" height="2"></rect></g></svg>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div style="flex:1; display:flex; align-items:center; gap:12px; padding:0 20px; border-radius:5px; background:#181921; box-shadow:inset 0 0 0 1px #2c2d3c;">
+            <svg viewBox="0 0 32 32" width="30" height="30"><rect x="8" y="4" width="16" height="18" rx="3" fill="#2c2d42"></rect><rect x="6" y="7" width="20" height="18" rx="3" fill="#444556"></rect><rect x="4" y="10" width="24" height="18" rx="3.5" fill="#575bc7"></rect><g shape-rendering="crispEdges" fill="#ffffff"><rect x="15" y="13" width="2" height="2"></rect><rect x="11" y="15" width="10" height="2"></rect><rect x="9" y="17" width="14" height="6"></rect><rect x="11" y="23" width="2" height="2"></rect><rect x="19" y="23" width="2" height="2"></rect></g><g shape-rendering="crispEdges" fill="#575bc7"><rect x="13" y="18" width="2" height="2"></rect><rect x="17" y="18" width="2" height="2"></rect></g></svg>
+            <span style="font-size:20px; font-weight:500; letter-spacing:-0.02em;">Session deck</span>
+          </div>
+          <div style="height:56px; display:flex; align-items:center; gap:20px; padding:0 20px; border-radius:5px; background:#181921; box-shadow:inset 0 0 0 1px #2c2d3c;">
+            <svg viewBox="0 0 32 32" width="32" height="32"><rect x="8" y="4" width="16" height="18" rx="3" fill="#2c2d42"></rect><rect x="6" y="7" width="20" height="18" rx="3" fill="#444556"></rect><rect x="4" y="10" width="24" height="18" rx="3.5" fill="#575bc7"></rect><g shape-rendering="crispEdges" fill="#ffffff"><rect x="15" y="13" width="2" height="2"></rect><rect x="11" y="15" width="10" height="2"></rect><rect x="9" y="17" width="14" height="6"></rect><rect x="11" y="23" width="2" height="2"></rect><rect x="19" y="23" width="2" height="2"></rect></g><g shape-rendering="crispEdges" fill="#575bc7"><rect x="13" y="18" width="2" height="2"></rect><rect x="17" y="18" width="2" height="2"></rect></g></svg>
+            <svg viewBox="0 0 32 32" width="20" height="20"><rect x="8" y="4" width="16" height="18" rx="3" fill="#2c2d42"></rect><rect x="6" y="7" width="20" height="18" rx="3" fill="#444556"></rect><rect x="4" y="10" width="24" height="18" rx="3.5" fill="#575bc7"></rect><g shape-rendering="crispEdges" fill="#ffffff"><rect x="15" y="13" width="2" height="2"></rect><rect x="11" y="15" width="10" height="2"></rect><rect x="9" y="17" width="14" height="6"></rect><rect x="11" y="23" width="2" height="2"></rect><rect x="19" y="23" width="2" height="2"></rect></g><g shape-rendering="crispEdges" fill="#575bc7"><rect x="13" y="18" width="2" height="2"></rect><rect x="17" y="18" width="2" height="2"></rect></g></svg>
+            <svg viewBox="0 0 32 32" width="16" height="16"><rect x="8" y="4" width="16" height="18" rx="3" fill="#2c2d42"></rect><rect x="6" y="7" width="20" height="18" rx="3" fill="#444556"></rect><rect x="4" y="10" width="24" height="18" rx="3.5" fill="#575bc7"></rect><g shape-rendering="crispEdges" fill="#ffffff"><rect x="15" y="13" width="2" height="2"></rect><rect x="11" y="15" width="10" height="2"></rect><rect x="9" y="17" width="14" height="6"></rect><rect x="11" y="23" width="2" height="2"></rect><rect x="19" y="23" width="2" height="2"></rect></g><g shape-rendering="crispEdges" fill="#575bc7"><rect x="13" y="18" width="2" height="2"></rect><rect x="17" y="18" width="2" height="2"></rect></g></svg>
+            <span style="flex:1;"></span>
+            <span style="font-size:12px; color:#858699;">32 · 20 · 16</span>
+          </div>
+        </div>
+      </div>
+      <div style="height:38px; display:flex; align-items:center; gap:8px; padding:0 14px; border-radius:5px; background:#191a23; box-shadow:inset 0 0 0 1px #2c2d3c;">
+        <span style="width:12px; height:12px; border-radius:50%; background:#ff5f57;"></span><span style="width:12px; height:12px; border-radius:50%; background:#febc2e;"></span><span style="width:12px; height:12px; border-radius:50%; background:#28c840;"></span>
+        <span style="width:12px;"></span>
+        <svg viewBox="0 0 32 32" width="16" height="16"><rect x="8" y="4" width="16" height="18" rx="3" fill="#2c2d42"></rect><rect x="6" y="7" width="20" height="18" rx="3" fill="#444556"></rect><rect x="4" y="10" width="24" height="18" rx="3.5" fill="#575bc7"></rect><g shape-rendering="crispEdges" fill="#ffffff"><rect x="15" y="13" width="2" height="2"></rect><rect x="11" y="15" width="10" height="2"></rect><rect x="9" y="17" width="14" height="6"></rect><rect x="11" y="23" width="2" height="2"></rect><rect x="19" y="23" width="2" height="2"></rect></g><g shape-rendering="crispEdges" fill="#575bc7"><rect x="13" y="18" width="2" height="2"></rect><rect x="17" y="18" width="2" height="2"></rect></g></svg>
+        <span style="font-size:13px; font-weight:500;">Session deck</span>
+      </div>
+    </div>
+
+    <div id="2b" style="width:560px; display:flex; flex-direction:column; gap:16px; padding:20px; border-radius:8px; background:#191a23; box-shadow:inset 0 0 0 1px #2c2d3c;">
+      <div style="display:flex; align-items:baseline; gap:10px;">
+        <span style="font-size:11px; line-height:18px; padding:0 6px; border-radius:4px; background:#393a4b; color:#eeeffc; font-weight:500;">2b</span>
+        <span style="font-size:15px; font-weight:500;">Stack + sprite, light card</span>
+        <span style="font-size:12px; color:#858699;">Purple character on a light front card.</span>
+      </div>
+      <div style="height:240px; display:flex; align-items:center; justify-content:center; border-radius:5px; background:#181921; box-shadow:inset 0 0 0 1px #2c2d3c;">
+        <svg viewBox="0 0 32 32" width="112" height="112"><rect x="8" y="4" width="16" height="18" rx="3" fill="#2c2d42"></rect><rect x="6" y="7" width="20" height="18" rx="3" fill="#444556"></rect><rect x="4" y="10" width="24" height="18" rx="3.5" fill="#eeeffc"></rect><g shape-rendering="crispEdges" fill="#575bc7"><rect x="15" y="13" width="2" height="2"></rect><rect x="11" y="15" width="10" height="2"></rect><rect x="9" y="17" width="14" height="6"></rect><rect x="11" y="23" width="2" height="2"></rect><rect x="19" y="23" width="2" height="2"></rect></g><g shape-rendering="crispEdges" fill="#eeeffc"><rect x="13" y="18" width="2" height="2"></rect><rect x="17" y="18" width="2" height="2"></rect></g></svg>
+      </div>
+      <div style="display:grid; grid-template-columns:136px minmax(0,1fr); gap:12px;">
+        <div style="height:136px; display:flex; align-items:center; justify-content:center; border-radius:5px; background:#151621; box-shadow:inset 0 0 0 1px #2c2d3c;">
+          <div style="width:104px; height:104px; border-radius:24px; display:flex; align-items:center; justify-content:center; background:#202128; box-shadow:inset 0 0 0 1px #393a4b, 0 7px 24px rgba(0,0,0,.35);">
+            <svg viewBox="0 0 32 32" width="64" height="64"><rect x="8" y="4" width="16" height="18" rx="3" fill="#2c2d42"></rect><rect x="6" y="7" width="20" height="18" rx="3" fill="#444556"></rect><rect x="4" y="10" width="24" height="18" rx="3.5" fill="#eeeffc"></rect><g shape-rendering="crispEdges" fill="#575bc7"><rect x="15" y="13" width="2" height="2"></rect><rect x="11" y="15" width="10" height="2"></rect><rect x="9" y="17" width="14" height="6"></rect><rect x="11" y="23" width="2" height="2"></rect><rect x="19" y="23" width="2" height="2"></rect></g><g shape-rendering="crispEdges" fill="#eeeffc"><rect x="13" y="18" width="2" height="2"></rect><rect x="17" y="18" width="2" height="2"></rect></g></svg>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div style="flex:1; display:flex; align-items:center; gap:12px; padding:0 20px; border-radius:5px; background:#181921; box-shadow:inset 0 0 0 1px #2c2d3c;">
+            <svg viewBox="0 0 32 32" width="30" height="30"><rect x="8" y="4" width="16" height="18" rx="3" fill="#2c2d42"></rect><rect x="6" y="7" width="20" height="18" rx="3" fill="#444556"></rect><rect x="4" y="10" width="24" height="18" rx="3.5" fill="#eeeffc"></rect><g shape-rendering="crispEdges" fill="#575bc7"><rect x="15" y="13" width="2" height="2"></rect><rect x="11" y="15" width="10" height="2"></rect><rect x="9" y="17" width="14" height="6"></rect><rect x="11" y="23" width="2" height="2"></rect><rect x="19" y="23" width="2" height="2"></rect></g><g shape-rendering="crispEdges" fill="#eeeffc"><rect x="13" y="18" width="2" height="2"></rect><rect x="17" y="18" width="2" height="2"></rect></g></svg>
+            <span style="font-size:20px; font-weight:500; letter-spacing:-0.02em;">Session deck</span>
+          </div>
+          <div style="height:56px; display:flex; align-items:center; gap:20px; padding:0 20px; border-radius:5px; background:#181921; box-shadow:inset 0 0 0 1px #2c2d3c;">
+            <svg viewBox="0 0 32 32" width="32" height="32"><rect x="8" y="4" width="16" height="18" rx="3" fill="#2c2d42"></rect><rect x="6" y="7" width="20" height="18" rx="3" fill="#444556"></rect><rect x="4" y="10" width="24" height="18" rx="3.5" fill="#eeeffc"></rect><g shape-rendering="crispEdges" fill="#575bc7"><rect x="15" y="13" width="2" height="2"></rect><rect x="11" y="15" width="10" height="2"></rect><rect x="9" y="17" width="14" height="6"></rect><rect x="11" y="23" width="2" height="2"></rect><rect x="19" y="23" width="2" height="2"></rect></g><g shape-rendering="crispEdges" fill="#eeeffc"><rect x="13" y="18" width="2" height="2"></rect><rect x="17" y="18" width="2" height="2"></rect></g></svg>
+            <svg viewBox="0 0 32 32" width="20" height="20"><rect x="8" y="4" width="16" height="18" rx="3" fill="#2c2d42"></rect><rect x="6" y="7" width="20" height="18" rx="3" fill="#444556"></rect><rect x="4" y="10" width="24" height="18" rx="3.5" fill="#eeeffc"></rect><g shape-rendering="crispEdges" fill="#575bc7"><rect x="15" y="13" width="2" height="2"></rect><rect x="11" y="15" width="10" height="2"></rect><rect x="9" y="17" width="14" height="6"></rect><rect x="11" y="23" width="2" height="2"></rect><rect x="19" y="23" width="2" height="2"></rect></g><g shape-rendering="crispEdges" fill="#eeeffc"><rect x="13" y="18" width="2" height="2"></rect><rect x="17" y="18" width="2" height="2"></rect></g></svg>
+            <svg viewBox="0 0 32 32" width="16" height="16"><rect x="8" y="4" width="16" height="18" rx="3" fill="#2c2d42"></rect><rect x="6" y="7" width="20" height="18" rx="3" fill="#444556"></rect><rect x="4" y="10" width="24" height="18" rx="3.5" fill="#eeeffc"></rect><g shape-rendering="crispEdges" fill="#575bc7"><rect x="15" y="13" width="2" height="2"></rect><rect x="11" y="15" width="10" height="2"></rect><rect x="9" y="17" width="14" height="6"></rect><rect x="11" y="23" width="2" height="2"></rect><rect x="19" y="23" width="2" height="2"></rect></g><g shape-rendering="crispEdges" fill="#eeeffc"><rect x="13" y="18" width="2" height="2"></rect><rect x="17" y="18" width="2" height="2"></rect></g></svg>
+            <span style="flex:1;"></span>
+            <span style="font-size:12px; color:#858699;">32 · 20 · 16</span>
+          </div>
+        </div>
+      </div>
+      <div style="height:38px; display:flex; align-items:center; gap:8px; padding:0 14px; border-radius:5px; background:#191a23; box-shadow:inset 0 0 0 1px #2c2d3c;">
+        <span style="width:12px; height:12px; border-radius:50%; background:#ff5f57;"></span><span style="width:12px; height:12px; border-radius:50%; background:#febc2e;"></span><span style="width:12px; height:12px; border-radius:50%; background:#28c840;"></span>
+        <span style="width:12px;"></span>
+        <svg viewBox="0 0 32 32" width="16" height="16"><rect x="8" y="4" width="16" height="18" rx="3" fill="#2c2d42"></rect><rect x="6" y="7" width="20" height="18" rx="3" fill="#444556"></rect><rect x="4" y="10" width="24" height="18" rx="3.5" fill="#eeeffc"></rect><g shape-rendering="crispEdges" fill="#575bc7"><rect x="15" y="13" width="2" height="2"></rect><rect x="11" y="15" width="10" height="2"></rect><rect x="9" y="17" width="14" height="6"></rect><rect x="11" y="23" width="2" height="2"></rect><rect x="19" y="23" width="2" height="2"></rect></g><g shape-rendering="crispEdges" fill="#eeeffc"><rect x="13" y="18" width="2" height="2"></rect><rect x="17" y="18" width="2" height="2"></rect></g></svg>
+        <span style="font-size:13px; font-weight:500;">Session deck</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+<section style="padding:56px; display:flex; flex-direction:column; gap:28px; font-family:Inter, sans-serif; color:#eeeffc;">
+  <div style="display:flex; flex-direction:column; gap:6px;">
+    <div style="font-size:12px; line-height:16px; color:#858699;">Session deck · Logo, round 1</div>
+    <h1 style="margin:0; font-size:24px; line-height:32px; font-weight:500;">Four directions for the mark</h1>
+    <p style="margin:0; max-width:640px; font-size:13px; line-height:20px; color:#d2d3e0; text-wrap:pretty;">Each one is shown large, as a macOS app icon, at small sizes and in the app's sidebar header. All four use the Linear purple and greys only.</p>
+  </div>
+  <div style="display:flex; flex-wrap:wrap; gap:24px; align-items:flex-start;">
+
+    <div id="1a" style="width:560px; display:flex; flex-direction:column; gap:16px; padding:20px; border-radius:8px; background:#191a23; box-shadow:inset 0 0 0 1px #2c2d3c;">
+      <div style="display:flex; align-items:baseline; gap:10px;">
+        <span style="font-size:11px; line-height:18px; padding:0 6px; border-radius:4px; background:#393a4b; color:#eeeffc; font-weight:500;">1a</span>
+        <span style="font-size:15px; font-weight:500;">Stack</span>
+        <span style="font-size:12px; color:#858699;">A deck of sessions, with the newest one on top showing a prompt.</span>
+      </div>
+      <div style="height:240px; display:flex; align-items:center; justify-content:center; border-radius:5px; background:#181921; box-shadow:inset 0 0 0 1px #2c2d3c;">
+        <svg viewBox="0 0 32 32" width="112" height="112"><rect x="8" y="4" width="16" height="18" rx="3" fill="#2c2d42"></rect><rect x="6" y="7" width="20" height="18" rx="3" fill="#444556"></rect><rect x="4" y="10" width="24" height="18" rx="3.5" fill="#575bc7"></rect><path d="M10 16.5l3.5 3-3.5 3" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M16.5 22.5h5" stroke="#fff" stroke-width="2" stroke-linecap="round"></path></svg>
+      </div>
+      <div style="display:grid; grid-template-columns:136px minmax(0,1fr); gap:12px;">
+        <div style="height:136px; display:flex; align-items:center; justify-content:center; border-radius:5px; background:#151621; box-shadow:inset 0 0 0 1px #2c2d3c;">
+          <div style="width:104px; height:104px; border-radius:24px; display:flex; align-items:center; justify-content:center; background:#202128; box-shadow:inset 0 0 0 1px #393a4b, 0 7px 24px rgba(0,0,0,.35);">
+            <svg viewBox="0 0 32 32" width="64" height="64"><rect x="8" y="4" width="16" height="18" rx="3" fill="#2c2d42"></rect><rect x="6" y="7" width="20" height="18" rx="3" fill="#444556"></rect><rect x="4" y="10" width="24" height="18" rx="3.5" fill="#575bc7"></rect><path d="M10 16.5l3.5 3-3.5 3" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M16.5 22.5h5" stroke="#fff" stroke-width="2" stroke-linecap="round"></path></svg>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div style="flex:1; display:flex; align-items:center; gap:12px; padding:0 20px; border-radius:5px; background:#181921; box-shadow:inset 0 0 0 1px #2c2d3c;">
+            <svg viewBox="0 0 32 32" width="30" height="30"><rect x="8" y="4" width="16" height="18" rx="3" fill="#2c2d42"></rect><rect x="6" y="7" width="20" height="18" rx="3" fill="#444556"></rect><rect x="4" y="10" width="24" height="18" rx="3.5" fill="#575bc7"></rect><path d="M10 16.5l3.5 3-3.5 3" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M16.5 22.5h5" stroke="#fff" stroke-width="2" stroke-linecap="round"></path></svg>
+            <span style="font-size:20px; font-weight:500; letter-spacing:-0.02em;">Session deck</span>
+          </div>
+          <div style="height:56px; display:flex; align-items:center; gap:20px; padding:0 20px; border-radius:5px; background:#181921; box-shadow:inset 0 0 0 1px #2c2d3c;">
+            <svg viewBox="0 0 32 32" width="32" height="32"><rect x="8" y="4" width="16" height="18" rx="3" fill="#2c2d42"></rect><rect x="6" y="7" width="20" height="18" rx="3" fill="#444556"></rect><rect x="4" y="10" width="24" height="18" rx="3.5" fill="#575bc7"></rect><path d="M10 16.5l3.5 3-3.5 3" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M16.5 22.5h5" stroke="#fff" stroke-width="2" stroke-linecap="round"></path></svg>
+            <svg viewBox="0 0 32 32" width="20" height="20"><rect x="8" y="4" width="16" height="18" rx="3" fill="#2c2d42"></rect><rect x="6" y="7" width="20" height="18" rx="3" fill="#444556"></rect><rect x="4" y="10" width="24" height="18" rx="3.5" fill="#575bc7"></rect><path d="M10 16.5l3.5 3-3.5 3" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M16.5 22.5h5" stroke="#fff" stroke-width="2" stroke-linecap="round"></path></svg>
+            <svg viewBox="0 0 32 32" width="16" height="16"><rect x="8" y="4" width="16" height="18" rx="3" fill="#2c2d42"></rect><rect x="6" y="7" width="20" height="18" rx="3" fill="#444556"></rect><rect x="4" y="10" width="24" height="18" rx="3.5" fill="#575bc7"></rect><path d="M10 16.5l3.5 3-3.5 3" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M16.5 22.5h5" stroke="#fff" stroke-width="2" stroke-linecap="round"></path></svg>
+            <span style="flex:1;"></span>
+            <span style="font-size:12px; color:#858699;">32 · 20 · 16</span>
+          </div>
+        </div>
+      </div>
+      <div style="height:38px; display:flex; align-items:center; gap:8px; padding:0 14px; border-radius:5px; background:#191a23; box-shadow:inset 0 0 0 1px #2c2d3c;">
+        <span style="width:12px; height:12px; border-radius:50%; background:#ff5f57;"></span><span style="width:12px; height:12px; border-radius:50%; background:#febc2e;"></span><span style="width:12px; height:12px; border-radius:50%; background:#28c840;"></span>
+        <span style="width:12px;"></span>
+        <svg viewBox="0 0 32 32" width="16" height="16"><rect x="8" y="4" width="16" height="18" rx="3" fill="#2c2d42"></rect><rect x="6" y="7" width="20" height="18" rx="3" fill="#444556"></rect><rect x="4" y="10" width="24" height="18" rx="3.5" fill="#575bc7"></rect><path d="M10 16.5l3.5 3-3.5 3" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M16.5 22.5h5" stroke="#fff" stroke-width="2" stroke-linecap="round"></path></svg>
+        <span style="font-size:13px; font-weight:500;">Session deck</span>
+      </div>
+    </div>
+
+    <div id="1b" style="width:560px; display:flex; flex-direction:column; gap:16px; padding:20px; border-radius:8px; background:#191a23; box-shadow:inset 0 0 0 1px #2c2d3c;">
+      <div style="display:flex; align-items:baseline; gap:10px;">
+        <span style="font-size:11px; line-height:18px; padding:0 6px; border-radius:4px; background:#393a4b; color:#eeeffc; font-weight:500;">1b</span>
+        <span style="font-size:15px; font-weight:500;">Rows</span>
+        <span style="font-size:12px; color:#858699;">The session list itself, with one session selected.</span>
+      </div>
+      <div style="height:240px; display:flex; align-items:center; justify-content:center; border-radius:5px; background:#181921; box-shadow:inset 0 0 0 1px #2c2d3c;">
+        <svg viewBox="0 0 32 32" width="112" height="112"><rect x="4" y="5" width="24" height="5.5" rx="2.75" fill="#393a4b"></rect><rect x="4" y="13.25" width="24" height="5.5" rx="2.75" fill="#575bc7"></rect><rect x="4" y="21.5" width="15" height="5.5" rx="2.75" fill="#393a4b"></rect><circle cx="8" cy="16" r="1.5" fill="#fff"></circle></svg>
+      </div>
+      <div style="display:grid; grid-template-columns:136px minmax(0,1fr); gap:12px;">
+        <div style="height:136px; display:flex; align-items:center; justify-content:center; border-radius:5px; background:#151621; box-shadow:inset 0 0 0 1px #2c2d3c;">
+          <div style="width:104px; height:104px; border-radius:24px; display:flex; align-items:center; justify-content:center; background:#202128; box-shadow:inset 0 0 0 1px #393a4b, 0 7px 24px rgba(0,0,0,.35);">
+            <svg viewBox="0 0 32 32" width="64" height="64"><rect x="4" y="5" width="24" height="5.5" rx="2.75" fill="#393a4b"></rect><rect x="4" y="13.25" width="24" height="5.5" rx="2.75" fill="#575bc7"></rect><rect x="4" y="21.5" width="15" height="5.5" rx="2.75" fill="#393a4b"></rect><circle cx="8" cy="16" r="1.5" fill="#fff"></circle></svg>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div style="flex:1; display:flex; align-items:center; gap:12px; padding:0 20px; border-radius:5px; background:#181921; box-shadow:inset 0 0 0 1px #2c2d3c;">
+            <svg viewBox="0 0 32 32" width="30" height="30"><rect x="4" y="5" width="24" height="5.5" rx="2.75" fill="#393a4b"></rect><rect x="4" y="13.25" width="24" height="5.5" rx="2.75" fill="#575bc7"></rect><rect x="4" y="21.5" width="15" height="5.5" rx="2.75" fill="#393a4b"></rect><circle cx="8" cy="16" r="1.5" fill="#fff"></circle></svg>
+            <span style="font-size:20px; font-weight:500; letter-spacing:-0.02em;">Session deck</span>
+          </div>
+          <div style="height:56px; display:flex; align-items:center; gap:20px; padding:0 20px; border-radius:5px; background:#181921; box-shadow:inset 0 0 0 1px #2c2d3c;">
+            <svg viewBox="0 0 32 32" width="32" height="32"><rect x="4" y="5" width="24" height="5.5" rx="2.75" fill="#393a4b"></rect><rect x="4" y="13.25" width="24" height="5.5" rx="2.75" fill="#575bc7"></rect><rect x="4" y="21.5" width="15" height="5.5" rx="2.75" fill="#393a4b"></rect><circle cx="8" cy="16" r="1.5" fill="#fff"></circle></svg>
+            <svg viewBox="0 0 32 32" width="20" height="20"><rect x="4" y="5" width="24" height="5.5" rx="2.75" fill="#393a4b"></rect><rect x="4" y="13.25" width="24" height="5.5" rx="2.75" fill="#575bc7"></rect><rect x="4" y="21.5" width="15" height="5.5" rx="2.75" fill="#393a4b"></rect><circle cx="8" cy="16" r="1.5" fill="#fff"></circle></svg>
+            <svg viewBox="0 0 32 32" width="16" height="16"><rect x="4" y="5" width="24" height="5.5" rx="2.75" fill="#393a4b"></rect><rect x="4" y="13.25" width="24" height="5.5" rx="2.75" fill="#575bc7"></rect><rect x="4" y="21.5" width="15" height="5.5" rx="2.75" fill="#393a4b"></rect><circle cx="8" cy="16" r="1.5" fill="#fff"></circle></svg>
+            <span style="flex:1;"></span>
+            <span style="font-size:12px; color:#858699;">32 · 20 · 16</span>
+          </div>
+        </div>
+      </div>
+      <div style="height:38px; display:flex; align-items:center; gap:8px; padding:0 14px; border-radius:5px; background:#191a23; box-shadow:inset 0 0 0 1px #2c2d3c;">
+        <span style="width:12px; height:12px; border-radius:50%; background:#ff5f57;"></span><span style="width:12px; height:12px; border-radius:50%; background:#febc2e;"></span><span style="width:12px; height:12px; border-radius:50%; background:#28c840;"></span>
+        <span style="width:12px;"></span>
+        <svg viewBox="0 0 32 32" width="16" height="16"><rect x="4" y="5" width="24" height="5.5" rx="2.75" fill="#393a4b"></rect><rect x="4" y="13.25" width="24" height="5.5" rx="2.75" fill="#575bc7"></rect><rect x="4" y="21.5" width="15" height="5.5" rx="2.75" fill="#393a4b"></rect><circle cx="8" cy="16" r="1.5" fill="#fff"></circle></svg>
+        <span style="font-size:13px; font-weight:500;">Session deck</span>
+      </div>
+    </div>
+
+    <div id="1c" style="width:560px; display:flex; flex-direction:column; gap:16px; padding:20px; border-radius:8px; background:#191a23; box-shadow:inset 0 0 0 1px #2c2d3c;">
+      <div style="display:flex; align-items:baseline; gap:10px;">
+        <span style="font-size:11px; line-height:18px; padding:0 6px; border-radius:4px; background:#393a4b; color:#eeeffc; font-weight:500;">1c</span>
+        <span style="font-size:15px; font-weight:500;">Fan</span>
+        <span style="font-size:12px; color:#858699;">A hand of cards: pick one session out of many.</span>
+      </div>
+      <div style="height:240px; display:flex; align-items:center; justify-content:center; border-radius:5px; background:#181921; box-shadow:inset 0 0 0 1px #2c2d3c;">
+        <svg viewBox="0 0 32 32" width="112" height="112"><rect x="10" y="4" width="12" height="19" rx="2.5" fill="#2c2d42" transform="rotate(-16 16 27)"></rect><rect x="10" y="4" width="12" height="19" rx="2.5" fill="#444556" transform="rotate(16 16 27)"></rect><rect x="10" y="5" width="12" height="20" rx="2.5" fill="#575bc7"></rect><path d="M14 12.5l3 2.5-3 2.5" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </div>
+      <div style="display:grid; grid-template-columns:136px minmax(0,1fr); gap:12px;">
+        <div style="height:136px; display:flex; align-items:center; justify-content:center; border-radius:5px; background:#151621; box-shadow:inset 0 0 0 1px #2c2d3c;">
+          <div style="width:104px; height:104px; border-radius:24px; display:flex; align-items:center; justify-content:center; background:#202128; box-shadow:inset 0 0 0 1px #393a4b, 0 7px 24px rgba(0,0,0,.35);">
+            <svg viewBox="0 0 32 32" width="64" height="64"><rect x="10" y="4" width="12" height="19" rx="2.5" fill="#2c2d42" transform="rotate(-16 16 27)"></rect><rect x="10" y="4" width="12" height="19" rx="2.5" fill="#444556" transform="rotate(16 16 27)"></rect><rect x="10" y="5" width="12" height="20" rx="2.5" fill="#575bc7"></rect><path d="M14 12.5l3 2.5-3 2.5" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div style="flex:1; display:flex; align-items:center; gap:12px; padding:0 20px; border-radius:5px; background:#181921; box-shadow:inset 0 0 0 1px #2c2d3c;">
+            <svg viewBox="0 0 32 32" width="30" height="30"><rect x="10" y="4" width="12" height="19" rx="2.5" fill="#2c2d42" transform="rotate(-16 16 27)"></rect><rect x="10" y="4" width="12" height="19" rx="2.5" fill="#444556" transform="rotate(16 16 27)"></rect><rect x="10" y="5" width="12" height="20" rx="2.5" fill="#575bc7"></rect><path d="M14 12.5l3 2.5-3 2.5" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            <span style="font-size:20px; font-weight:500; letter-spacing:-0.02em;">Session deck</span>
+          </div>
+          <div style="height:56px; display:flex; align-items:center; gap:20px; padding:0 20px; border-radius:5px; background:#181921; box-shadow:inset 0 0 0 1px #2c2d3c;">
+            <svg viewBox="0 0 32 32" width="32" height="32"><rect x="10" y="4" width="12" height="19" rx="2.5" fill="#2c2d42" transform="rotate(-16 16 27)"></rect><rect x="10" y="4" width="12" height="19" rx="2.5" fill="#444556" transform="rotate(16 16 27)"></rect><rect x="10" y="5" width="12" height="20" rx="2.5" fill="#575bc7"></rect><path d="M14 12.5l3 2.5-3 2.5" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            <svg viewBox="0 0 32 32" width="20" height="20"><rect x="10" y="4" width="12" height="19" rx="2.5" fill="#2c2d42" transform="rotate(-16 16 27)"></rect><rect x="10" y="4" width="12" height="19" rx="2.5" fill="#444556" transform="rotate(16 16 27)"></rect><rect x="10" y="5" width="12" height="20" rx="2.5" fill="#575bc7"></rect><path d="M14 12.5l3 2.5-3 2.5" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            <svg viewBox="0 0 32 32" width="16" height="16"><rect x="10" y="4" width="12" height="19" rx="2.5" fill="#2c2d42" transform="rotate(-16 16 27)"></rect><rect x="10" y="4" width="12" height="19" rx="2.5" fill="#444556" transform="rotate(16 16 27)"></rect><rect x="10" y="5" width="12" height="20" rx="2.5" fill="#575bc7"></rect><path d="M14 12.5l3 2.5-3 2.5" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            <span style="flex:1;"></span>
+            <span style="font-size:12px; color:#858699;">32 · 20 · 16</span>
+          </div>
+        </div>
+      </div>
+      <div style="height:38px; display:flex; align-items:center; gap:8px; padding:0 14px; border-radius:5px; background:#191a23; box-shadow:inset 0 0 0 1px #2c2d3c;">
+        <span style="width:12px; height:12px; border-radius:50%; background:#ff5f57;"></span><span style="width:12px; height:12px; border-radius:50%; background:#febc2e;"></span><span style="width:12px; height:12px; border-radius:50%; background:#28c840;"></span>
+        <span style="width:12px;"></span>
+        <svg viewBox="0 0 32 32" width="16" height="16"><rect x="10" y="4" width="12" height="19" rx="2.5" fill="#2c2d42" transform="rotate(-16 16 27)"></rect><rect x="10" y="4" width="12" height="19" rx="2.5" fill="#444556" transform="rotate(16 16 27)"></rect><rect x="10" y="5" width="12" height="20" rx="2.5" fill="#575bc7"></rect><path d="M14 12.5l3 2.5-3 2.5" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        <span style="font-size:13px; font-weight:500;">Session deck</span>
+      </div>
+    </div>
+
+    <div id="1d" style="width:560px; display:flex; flex-direction:column; gap:16px; padding:20px; border-radius:8px; background:#191a23; box-shadow:inset 0 0 0 1px #2c2d3c;">
+      <div style="display:flex; align-items:baseline; gap:10px;">
+        <span style="font-size:11px; line-height:18px; padding:0 6px; border-radius:4px; background:#393a4b; color:#eeeffc; font-weight:500;">1d</span>
+        <span style="font-size:15px; font-weight:500;">D prompt</span>
+        <span style="font-size:12px; color:#858699;">A "D" monogram with a terminal prompt inside.</span>
+      </div>
+      <div style="height:240px; display:flex; align-items:center; justify-content:center; border-radius:5px; background:#181921; box-shadow:inset 0 0 0 1px #2c2d3c;">
+        <svg viewBox="0 0 32 32" width="112" height="112"><path d="M6 5h9.5a11 11 0 0 1 0 22H6z" fill="#575bc7"></path><path d="M11 12l4 4-4 4" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M17 20h3.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"></path></svg>
+      </div>
+      <div style="display:grid; grid-template-columns:136px minmax(0,1fr); gap:12px;">
+        <div style="height:136px; display:flex; align-items:center; justify-content:center; border-radius:5px; background:#151621; box-shadow:inset 0 0 0 1px #2c2d3c;">
+          <div style="width:104px; height:104px; border-radius:24px; display:flex; align-items:center; justify-content:center; background:#202128; box-shadow:inset 0 0 0 1px #393a4b, 0 7px 24px rgba(0,0,0,.35);">
+            <svg viewBox="0 0 32 32" width="64" height="64"><path d="M6 5h9.5a11 11 0 0 1 0 22H6z" fill="#575bc7"></path><path d="M11 12l4 4-4 4" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M17 20h3.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"></path></svg>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div style="flex:1; display:flex; align-items:center; gap:12px; padding:0 20px; border-radius:5px; background:#181921; box-shadow:inset 0 0 0 1px #2c2d3c;">
+            <svg viewBox="0 0 32 32" width="30" height="30"><path d="M6 5h9.5a11 11 0 0 1 0 22H6z" fill="#575bc7"></path><path d="M11 12l4 4-4 4" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M17 20h3.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"></path></svg>
+            <span style="font-size:20px; font-weight:500; letter-spacing:-0.02em;">Session deck</span>
+          </div>
+          <div style="height:56px; display:flex; align-items:center; gap:20px; padding:0 20px; border-radius:5px; background:#181921; box-shadow:inset 0 0 0 1px #2c2d3c;">
+            <svg viewBox="0 0 32 32" width="32" height="32"><path d="M6 5h9.5a11 11 0 0 1 0 22H6z" fill="#575bc7"></path><path d="M11 12l4 4-4 4" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M17 20h3.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"></path></svg>
+            <svg viewBox="0 0 32 32" width="20" height="20"><path d="M6 5h9.5a11 11 0 0 1 0 22H6z" fill="#575bc7"></path><path d="M11 12l4 4-4 4" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M17 20h3.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"></path></svg>
+            <svg viewBox="0 0 32 32" width="16" height="16"><path d="M6 5h9.5a11 11 0 0 1 0 22H6z" fill="#575bc7"></path><path d="M11 12l4 4-4 4" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M17 20h3.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"></path></svg>
+            <span style="flex:1;"></span>
+            <span style="font-size:12px; color:#858699;">32 · 20 · 16</span>
+          </div>
+        </div>
+      </div>
+      <div style="height:38px; display:flex; align-items:center; gap:8px; padding:0 14px; border-radius:5px; background:#191a23; box-shadow:inset 0 0 0 1px #2c2d3c;">
+        <span style="width:12px; height:12px; border-radius:50%; background:#ff5f57;"></span><span style="width:12px; height:12px; border-radius:50%; background:#febc2e;"></span><span style="width:12px; height:12px; border-radius:50%; background:#28c840;"></span>
+        <span style="width:12px;"></span>
+        <svg viewBox="0 0 32 32" width="16" height="16"><path d="M6 5h9.5a11 11 0 0 1 0 22H6z" fill="#575bc7"></path><path d="M11 12l4 4-4 4" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M17 20h3.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"></path></svg>
+        <span style="font-size:13px; font-weight:500;">Session deck</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+</body>
+</html>
