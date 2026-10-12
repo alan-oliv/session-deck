@@ -6,6 +6,7 @@ import { blurRadius } from '../shared/appearance'
 import { initBlur, setWindowBlur } from './blur'
 import { createIndexer } from './indexer'
 import { broadcast, registerIpc } from './ipc'
+import { createLabelsStore } from './labels'
 import { PATHS } from './paths'
 import { createSettingsStore, isTerminal, normalizeSettings } from './settings'
 import { installTee, removeTee } from './statusline'
@@ -70,6 +71,7 @@ function appendLine(path: string, line: string): void {
 app.whenReady().then(() => {
   const userData = app.getPath('userData')
   const settings = createSettingsStore(join(userData, 'settings.json'))
+  const labels = createLabelsStore(join(userData, 'labels.json'))
   initBlur((err) => console.error('blur', err))
   applyAppIcon(settings.get())
   const indexer = createIndexer({
@@ -168,6 +170,13 @@ app.whenReady().then(() => {
     getToolOutput: async (id, turn, item) => {
       if (!Number.isInteger(turn) || !Number.isInteger(item) || turn < 0 || item < 0) throw new Error('Invalid tool call')
       return transcripts.output(sessionFor(id).id, turn, item)
+    },
+    getLabels: async () => labels.get(),
+    saveLabels: async (store) => {
+      if (!store || typeof store !== 'object' || !Array.isArray((store as { list?: unknown }).list)) throw new Error('Invalid labels')
+      const next = labels.save(store)
+      broadcast('labelsChanged')
+      return next
     },
   })
 

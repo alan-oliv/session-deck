@@ -1,24 +1,25 @@
-import { PUBLISHED_KIND, prCommand, resumeCommand, SETTINGS_DEFAULTS, TERMINALS, type Artifact, type IconName, type Session, type Settings, type Terminal } from './api'
+import { PUBLISHED_KIND, prCommand, resumeCommand, SETTINGS_DEFAULTS, TERMINALS, type Artifact, type IconName, type LabelStore, type Session, type Settings, type Terminal } from './api'
 import { makeSession } from './fixtures'
 import { agoShort, attention, daysAgo, fileSize, plural, tildify } from './format'
+import { countByLabel, labelIdsOf, NO_LABELS } from './labels'
 import { visible } from './tree'
 import { byRecent } from './views'
 
-export type KindId = 'sessions' | 'ask' | 'files' | 'artifacts' | 'prs' | 'in' | 'is' | 'when' | 'actions' | 'terminal' | 'rename'
+export type KindId = 'sessions' | 'ask' | 'files' | 'artifacts' | 'prs' | 'in' | 'is' | 'when' | 'label' | 'actions' | 'terminal' | 'rename'
 export interface Kind { id: KindId; prefix: string; label: string; icon: IconName; desc: string; examples: string[] }
 export type ActionId =
   | 'resume' | 'copy' | 'fork' | 'openFolder' | 'openPr' | 'copyPr' | 'showRepo'
-  | 'rename' | 'archive' | 'unarchive' | 'changeTerminal' | 'teeOn' | 'teeOff'
+  | 'rename' | 'archive' | 'unarchive' | 'changeTerminal' | 'teeOn' | 'teeOff' | 'label'
 
 interface Row { key: string; icon: IconName; iconColor: string; title: string; sub: string; mono: boolean; right: string; keycap: string }
 export type Result =
   | (Row & { type: 'kind'; kind: Kind })
   | (Row & { type: 'session'; session: Session; reason: string | null; artifact: Artifact | null })
   | (Row & { type: 'option'; fill: { kind: KindId; query: string } })
-  | (Row & { type: 'action'; action: ActionId; session: Session; detail: string })
+  | (Row & { type: 'action'; action: ActionId; session: Session; detail: string; labelId?: string })
   | (Row & { type: 'terminal'; terminal: Terminal })
 export interface ResultGroup { label: string; results: Result[] }
-export interface SearchContext { now: Date; selected: Session | null; settings: Settings }
+export interface SearchContext { now: Date; selected: Session | null; settings: Settings; labels: LabelStore }
 type SessionResult = Extract<Result, { type: 'session' }>
 
 export const KINDS: Kind[] = [
@@ -30,6 +31,7 @@ export const KINDS: Kind[] = [
   { id: 'in', prefix: 'in:', label: 'Repository', icon: 'Box', desc: 'Limit to one repository or folder, then keep typing to search inside it.', examples: ['in:team8', 'in:meetnotes live', 'in:~/code'] },
   { id: 'is', prefix: 'is:', label: 'Status', icon: 'Loader', desc: 'Running, waiting, interrupted, failed or completed sessions, plus hidden and archived ones.', examples: ['is:running', 'is:interrupted', 'is:hidden'] },
   { id: 'when', prefix: 'when:', label: 'Time', icon: 'ClockOutline', desc: 'Today, yesterday or this week.', examples: ['when:today', 'when:yesterday', 'when:week'] },
+  { id: 'label', prefix: 'label:', label: 'Label', icon: 'Label', desc: 'Find sessions by a label you gave them. Pick a label, then keep typing to search inside it.', examples: ['label:bug', 'label:feature refactor'] },
 ]
 // Reached from inside the bar, never typed: Actions needs a highlighted session to act on.
 const INTERNAL_KINDS: Kind[] = [
@@ -153,7 +155,7 @@ const optionRow = (title: string, sub: string, icon: IconName, fill: { kind: Kin
 const baseName = (p: string) => p.split('/').pop() ?? p
 const dirName = (p: string) => p.split('/').slice(0, -1).join('/')
 
-function actionsFor(s: Session, settings: Settings): Result[] {
+function actionsFor(s: Session, settings: Settings, labels: LabelStore): Result[] {
   const a = (action: ActionId, title: string, icon: IconName, detail: string): Result => ({
     type: 'action', action, session: s, detail, key: `a:${action}`, icon, iconColor: SECONDARY, title, sub: '', mono: false, right: '', keycap: '',
   })
@@ -170,8 +172,13 @@ function actionsFor(s: Session, settings: Settings): Result[] {
     )
   }
   if (s.repo) list.push(a('showRepo', `Show ${s.repo.name} in the tree`, 'Box', tildify(s.repo.root)))
+  list.push(a('rename', 'Rename session', 'Edit', 'Appends a custom-title record to the transcript, as /rename does.'))
+  const applied = labelIdsOf(labels, s.id)
+  for (const l of labels.list) {
+    const on = applied.includes(l.id)
+    list.push({ ...a('label', `${on ? 'Remove' : 'Add'} label “${l.name}”`, 'Label', on ? 'Takes this label off the session.' : 'Puts this label on the session.'), key: `a:label:${l.id}`, labelId: l.id } as Result)
+  }
   list.push(
-    a('rename', 'Rename session', 'Edit', 'Appends a custom-title record to the transcript, as /rename does.'),
     s.archived
       ? a('unarchive', 'Restore from archive', 'Archive', 'Moves it back to All sessions.')
       : a('archive', 'Archive session', 'Archive', 'Hides it from All sessions. Nothing is deleted.'),
@@ -308,8 +315,22 @@ export function search(all: Session[], kind: KindId, query: string, ctx: SearchC
       else add(label, opts.filter(([name]) => !q || name.startsWith(ql)).map(([name, xs]) => optionRow(name, plural(xs.length, 'session'), kindById(kind).icon, { kind, query: name })))
       break
     }
+    case 'label': {
+      const labels = ctx.labels.list
+      const hit = labels
+        .filter((l) => ql === l.name.toLowerCase() || ql.startsWith(`${l.name.toLowerCase()} `))
+        .sort((a, b) => b.name.length - a.name.length)[0]
+      if (hit) {
+        const rest = q.slice(hit.name.length).trim()
+        add(`Label: ${hit.name}`, shown.filter((s) => labelIdsOf(ctx.labels, s.id).includes(hit.id) && matches(s, rest)).map((s) => row(s)))
+      } else {
+        const counts = countByLabel(ctx.labels, shown)
+        add('Labels', labels.filter((l) => !q || l.name.toLowerCase().includes(ql)).map((l) => ({ ...optionRow(l.name, plural(counts[l.id], 'session'), 'Label', { kind: 'label', query: `${l.name} ` }), iconColor: l.color }) as Result))
+      }
+      break
+    }
     case 'actions':
-      if (ctx.selected) add(`Actions on “${ctx.selected.title}”`, actionsFor(ctx.selected, ctx.settings).filter((r) => !q || r.title.toLowerCase().includes(ql)))
+      if (ctx.selected) add(`Actions on “${ctx.selected.title}”`, actionsFor(ctx.selected, ctx.settings, ctx.labels).filter((r) => !q || r.title.toLowerCase().includes(ql)))
       break
     case 'terminal':
       add('Resume in', TERMINALS.filter((t) => !q || t.label.toLowerCase().includes(ql)).map((t): Result => ({
@@ -346,7 +367,11 @@ if (import.meta.vitest) {
   const hidden = makeSession({ title: 'sdk run', hidden: true, end: at(6) })
   const archived = makeSession({ title: 'old thing', archived: true, end: at(6) })
   const all = [folder, team8, live, hidden, archived]
-  const ctx = { now, selected: live, settings }
+  const ctx = { now, selected: live, settings, labels: NO_LABELS }
+  const labelStore: LabelStore = {
+    list: [{ id: 'bug', name: 'Bug', color: '#eb5757' }, { id: 'code', name: 'Code review', color: '#4ea7fc' }],
+    map: {},
+  }
   const titles = (gs: ResultGroup[]) => gs.flatMap((g) => g.results.map((r) => r.title))
 
   it('turns a typed prefix into its kind, longest prefix first, ignoring case', () => {
@@ -359,7 +384,7 @@ if (import.meta.vitest) {
   it('shows the search kinds and the three newest sessions on empty input, and only kinds after a slash', () => {
     const empty = search(all, 'sessions', '', ctx)
     expect(empty.map((g) => g.label)).toEqual(['Search kinds', 'Recent'])
-    expect(empty[0].results.map((r) => r.keycap)).toEqual(['?', 'file:', 'art:', 'pr:', 'in:', 'is:', 'when:'])
+    expect(empty[0].results.map((r) => r.keycap)).toEqual(['?', 'file:', 'art:', 'pr:', 'in:', 'is:', 'when:', 'label:'])
     expect(empty[1].results.map((r) => r.title)).toEqual(['live-meeting', 'perf pass', 'disk cleanup'])
     expect(search(all, 'sessions', '/', ctx).map((g) => g.label)).toEqual(['Search kinds'])
   })
@@ -476,6 +501,35 @@ if (import.meta.vitest) {
     expect(acts.results[2]).toMatchObject({ type: 'action', action: 'fork', detail: `claude --resume ${live.id} --fork-session` })
     expect(titles(search(all, 'actions', 'open', { ...ctx, selected: folder }))).toEqual(['Open folder'])
     expect(search(all, 'actions', '', { ...ctx, selected: null })).toEqual([])
+  })
+  it('detects the label: prefix', () => {
+    expect(detectKind('label:bug')).toEqual({ kind: 'label', rest: 'bug' })
+    expect(detectKind('LABEL: code review')).toEqual({ kind: 'label', rest: 'code review' })
+  })
+  it('lists labels with their session counts, then the sessions of a label, matching names with spaces', () => {
+    const [a, b] = all.filter((s) => !s.hidden && !s.archived)
+    const lctx = { ...ctx, labels: { ...labelStore, map: { [a.id]: ['bug'], [b.id]: ['bug', 'code'] } } }
+    const opts = search(all, 'label', '', lctx)[0]
+    expect(opts.label).toBe('Labels')
+    expect(opts.results.map((r) => [r.title, r.sub, r.type === 'option' && r.fill])).toEqual([
+      ['Bug', '2 sessions', { kind: 'label', query: 'Bug ' }],
+      ['Code review', '1 session', { kind: 'label', query: 'Code review ' }],
+    ])
+    expect(opts.results[0].iconColor).toBe('#eb5757')
+    expect(search(all, 'label', 'cod', lctx)[0].results.map((r) => r.title)).toEqual(['Code review'])
+    expect(search(all, 'label', 'bug', lctx)[0]).toMatchObject({ label: 'Label: Bug' })
+    expect(titles(search(all, 'label', 'bug ', lctx)).sort()).toEqual([a.title, b.title].sort())
+    expect(titles(search(all, 'label', 'code review', lctx))).toEqual([b.title])
+  })
+  it('offers one Add or Remove action per label after Rename and tags it with the label id', () => {
+    const s = all.find((x) => !x.hidden && !x.archived)!
+    const on = { ...ctx, selected: s, labels: { ...labelStore, map: { [s.id]: ['bug'] } } }
+    const results = search(all, 'actions', 'label', on)[0].results
+    expect(results.map((r) => r.title)).toEqual(['Remove label “Bug”', 'Add label “Code review”'])
+    expect(results.map((r) => r.type === 'action' && r.labelId)).toEqual(['bug', 'code'])
+    expect(new Set(results.map((r) => r.key)).size).toBe(2)
+    const names = search(all, 'actions', '', on)[0].results.map((r) => r.title)
+    expect(names.indexOf('Remove label “Bug”')).toBe(names.indexOf('Rename session') + 1)
   })
   it('offers every terminal and marks the current one', () => {
     const rows = search(all, 'terminal', '', ctx)[0].results

@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { prCommand, resumeCommand, SETTINGS_DEFAULTS, terminalLabel, type OpenIn, type Session, type Settings, type SettingsPatch, type Terminal } from '../../shared/api'
+import { prCommand, resumeCommand, SETTINGS_DEFAULTS, terminalLabel, type OpenIn, type Session, type LabelStore, type Settings, type SettingsPatch, type Terminal } from '../../shared/api'
 import { appearanceVars } from '../../shared/appearance'
 import { makeSession } from '../../shared/fixtures'
+import { applyNewLabel, countByLabel, createLabel, deleteLabel, deleteToastText, moveLabel, NO_LABELS, recolorLabel, renameLabel, toggleLabel } from '../../shared/labels'
 import { clampPane, PANES_KEY, paneMax, readPaneWidths, type PaneKey, type PaneWidths } from '../../shared/panes'
 import { archivedOf, buildChips, buildTree, inScope, scopeTitle, sessionProject, visible, type Scope } from '../../shared/tree'
 import { byRecent, dayKey, latestDay, listForView, type ViewMode, type YearMonth } from '../../shared/views'
 import { CommandBar, type BarAction, type BarOpen } from './CommandBar'
 import { Detail, type CopiedKey, type DetailTab } from './Detail'
-import { errorText, useNow, useSessions, useSettings } from './hooks'
+import { errorText, useLabels, useNow, useSessions, useSettings } from './hooks'
 import { SessionList } from './SessionList'
 import { SettingsModal } from './Settings'
 import { Sidebar } from './Sidebar'
@@ -28,11 +29,13 @@ function savedPanes(): PaneWidths {
 }
 
 type Pending = { id: string; fork: boolean }
-type Toast = { id: string; title: string; archived: boolean }
+type Toast = { text: string; undo(): void }
+const LABEL_TOAST_MS = 5000
 
 export function App() {
   const sessions = useSessions()
   const settings = useSettings()
+  const labels = useLabels()
   const now = useNow()
   const [installed, setInstalled] = useState<Terminal[] | null>(null)
   useEffect(() => {
@@ -42,13 +45,13 @@ export function App() {
     if (!settings) return
     for (const [k, v] of Object.entries(appearanceVars(settings))) document.documentElement.style.setProperty(k, v)
   }, [settings?.accent, settings?.opacity])
-  return sessions && settings && installed ? <Deck all={sessions} settings={settings} installed={installed} now={now} /> : <div className="app-loading" />
+  return sessions && settings && installed && labels ? <Deck all={sessions} settings={settings} installed={installed} now={now} labels={labels} /> : <div className="app-loading" />
 }
 
-export function Deck({ all, settings, installed, now }: { all: Session[]; settings: Settings; installed: Terminal[]; now: Date }) {
+export function Deck({ all, settings, installed, now, labels }: { all: Session[]; settings: Settings; installed: Terminal[]; now: Date; labels: LabelStore }) {
   const shown = useMemo(() => byRecent(visible(all)), [all])
   const archived = useMemo(() => byRecent(archivedOf(all)), [all])
-  const tree = useMemo(() => buildTree(shown, archived.length), [shown, archived])
+  const tree = useMemo(() => buildTree(shown, archived.length, labels), [shown, archived, labels])
   const [scope, setScope] = useState<Scope>({ type: 'all' })
   const [mode, setMode] = useState<ViewMode>('list')
   const [month, setMonth] = useState<YearMonth | null>(null)
@@ -66,9 +69,17 @@ export function Deck({ all, settings, installed, now }: { all: Session[]; settin
   const barSeq = useRef(0)
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  // Label edits build on the last store sent, not the prop: the prop only catches up after save, broadcast and
+  // getLabels, so two quick edits would both start from the same old store and the second would drop the first.
+  const latestLabels = useRef(labels)
+  const savingLabels = useRef(0)
+  useEffect(() => {
+    if (!savingLabels.current) latestLabels.current = labels
+  }, [labels])
 
   const viewMode: ViewMode = scope.type === 'all' ? mode : 'list'
-  const scoped = scope.type === 'archived' ? archived : shown.filter((s) => inScope(s, scope))
+  const scoped = scope.type === 'archived' ? archived : shown.filter((s) => inScope(s, scope, labels))
+  const labelCounts = useMemo(() => countByLabel(labels, all.filter((s) => !s.hidden)), [labels, all])
   const latest = latestDay(scoped)
   const calMonth = month ?? (latest ? { year: latest.getFullYear(), month: latest.getMonth() } : { year: now.getFullYear(), month: now.getMonth() })
   const calDay = day ?? (latest ? dayKey(latest) : null)
@@ -149,6 +160,11 @@ export function Deck({ all, settings, installed, now }: { all: Session[]; settin
     clearTimeout(copyTimer.current)
     copyTimer.current = setTimeout(() => setCopied(null), COPIED_MS)
   }
+  const showToast = (t: Toast, ms: number) => {
+    setToast(t)
+    clearTimeout(toastTimer.current)
+    toastTimer.current = setTimeout(() => setToast(null), ms)
+  }
   const copy = (id: string, what: CopiedKey['what'], text: string) => {
     void navigator.clipboard.writeText(text).then(() => flash({ id, what }), fail)
   }
@@ -165,20 +181,22 @@ export function Deck({ all, settings, installed, now }: { all: Session[]; settin
   const archive = (s: Session, archived: boolean) =>
     void call(
       () => window.api.setArchived(s.id, archived),
-      () => {
-        setToast({ id: s.id, title: s.title, archived })
-        clearTimeout(toastTimer.current)
-        toastTimer.current = setTimeout(() => setToast(null), TOAST_MS)
-      },
-    )
-  const undoArchive = (t: Toast) =>
-    void call(
-      () => window.api.setArchived(t.id, !t.archived),
-      () => {
-        clearTimeout(toastTimer.current)
-        setToast(null)
-        setSelectedId(t.id)
-      },
+      () =>
+        showToast(
+          {
+            text: `${archived ? 'Archived' : 'Restored'} “${s.title}”`,
+            undo: () =>
+              void call(
+                () => window.api.setArchived(s.id, !archived),
+                () => {
+                  clearTimeout(toastTimer.current)
+                  setToast(null)
+                  setSelectedId(s.id)
+                },
+              ),
+          },
+          TOAST_MS,
+        ),
     )
   const saveSettings = (patch: SettingsPatch) => void call(() => window.api.saveSettings(patch))
   const terminal = settings.terminal && installed.includes(settings.terminal) ? settings.terminal : null
@@ -190,6 +208,34 @@ export function Deck({ all, settings, installed, now }: { all: Session[]; settin
     } catch (e) {
       fail(e)
     }
+  }
+  const saveLabels = (edit: (store: LabelStore) => LabelStore | null, after?: () => void) => {
+    const base = latestLabels.current
+    const next = edit(base)
+    if (!next) return
+    latestLabels.current = next
+    savingLabels.current++
+    void call(async () => {
+      try {
+        const saved = await window.api.saveLabels(next)
+        if (latestLabels.current === next) latestLabels.current = saved
+      } catch (e) {
+        if (latestLabels.current === next) latestLabels.current = base
+        throw e
+      } finally {
+        savingLabels.current--
+      }
+    }, after)
+  }
+  const deleteLabelWithUndo = (id: string) => {
+    const prev = latestLabels.current
+    const gone = prev.list.find((l) => l.id === id)
+    if (!gone) return
+    const r = deleteLabel(prev, id)
+    saveLabels(() => r.store, () => {
+      if (scope.type === 'label' && scope.id === id) setScope({ type: 'all' })
+      showToast({ text: deleteToastText(gone.name, r.sessions), undo: () => saveLabels(() => prev, () => setToast(null)) }, LABEL_TOAST_MS)
+    })
   }
 
   const onAction = async (a: BarAction) => {
@@ -222,6 +268,8 @@ export function Deck({ all, settings, installed, now }: { all: Session[]; settin
         return call(() => window.api.renameSession(a.id, a.title), closeBar)
       case 'tee':
         return call(() => window.api.setStatusTee(a.enabled), closeBar)
+      case 'label':
+        return saveLabels((l) => toggleLabel(l, a.id, a.labelId), closeBar)
       case 'terminal': {
         const p = bar?.pending
         return call(
@@ -249,6 +297,11 @@ export function Deck({ all, settings, installed, now }: { all: Session[]; settin
           onScope={setScope}
           settingsOpen={settingsOpen}
           onSettings={toggleSettings}
+          onLabelCreate={(name) => saveLabels((l) => createLabel(l, name)?.store ?? null)}
+          onLabelDelete={deleteLabelWithUndo}
+          onLabelRename={(id, name) => saveLabels((l) => renameLabel(l, id, name))}
+          onLabelColor={(id, color) => saveLabels((l) => recolorLabel(l, id, color))}
+          onLabelMove={(id, before) => saveLabels((l) => moveLabel(l, id, before))}
         />
       )}
       {!focus && (
@@ -273,6 +326,7 @@ export function Deck({ all, settings, installed, now }: { all: Session[]; settin
           day={calDay}
           onMonth={setMonth}
           onDay={setDay}
+          labels={labels}
         />
       )}
       {selected ? (
@@ -295,6 +349,10 @@ export function Deck({ all, settings, installed, now }: { all: Session[]; settin
           onCopyPr={() => selected.pr && copy(selected.id, 'pr', prCommand(selected.pr.number))}
           onEnableTee={() => void call(() => window.api.setStatusTee(true))}
           onArchive={() => archive(selected, !selected.archived)}
+          labels={labels}
+          labelCounts={labelCounts}
+          onToggleLabel={(labelId) => saveLabels((l) => toggleLabel(l, selected.id, labelId))}
+          onCreateLabel={(name) => saveLabels((l) => applyNewLabel(l, selected.id, name))}
         />
       ) : (
         <main className="detail" />
@@ -305,6 +363,7 @@ export function Deck({ all, settings, installed, now }: { all: Session[]; settin
           open={bar.open}
           sessions={all}
           settings={settings}
+          labels={labels}
           now={now}
           note={note}
           resultsWidth={panes.pal}
@@ -315,8 +374,8 @@ export function Deck({ all, settings, installed, now }: { all: Session[]; settin
       )}
       {toast && (
         <div className="toast">
-          <span>{toast.archived ? 'Archived' : 'Restored'} “{toast.title}”</span>
-          <button type="button" className="toast-undo" onClick={() => undoArchive(toast)}>Undo</button>
+          <span>{toast.text}</span>
+          <button type="button" className="toast-undo" onClick={toast.undo}>Undo</button>
         </div>
       )}
       {settingsOpen && <SettingsModal settings={settings} installed={installed} onChange={saveSettings} onClose={() => setSettingsOpen(false)} />}
@@ -332,7 +391,7 @@ if (import.meta.vitest) {
   it('shows the sidebar, the list with its view switcher and the newest session in the detail pane', () => {
     const newest = makeSession({ title: 'live-meeting', end: new Date(2026, 9, 6, 9, 12).toISOString() })
     const older = makeSession({ title: 'perf pass', end: new Date(2026, 9, 5).toISOString() })
-    const html = renderToStaticMarkup(<Deck all={[older, newest, makeSession({ title: 'sdk run', hidden: true })]} settings={settings} installed={installed} now={now} />)
+    const html = renderToStaticMarkup(<Deck all={[older, newest, makeSession({ title: 'sdk run', hidden: true })]} settings={settings} installed={installed} now={now} labels={NO_LABELS} />)
     expect(html).toContain('All sessions')
     expect(html).toContain('class="modes"')
     expect(html).toContain('>live-meeting</h2>')
@@ -340,7 +399,7 @@ if (import.meta.vitest) {
     expect(html).not.toContain('sdk run')
   })
   it('shows the empty list, no detail, and the sidebar and list at their default widths with the drag strip after them', () => {
-    const html = renderToStaticMarkup(<Deck all={[]} settings={settings} installed={installed} now={now} />)
+    const html = renderToStaticMarkup(<Deck all={[]} settings={settings} installed={installed} now={now} labels={NO_LABELS} />)
     expect(html).toContain('No sessions here.')
     expect(html).not.toContain('<h2')
     expect(html).toContain('class="app-drag" style="left:600px"')
@@ -350,15 +409,31 @@ if (import.meta.vitest) {
   it('lists archived sessions only under the Archived scope and keeps the count in the sidebar', () => {
     const kept = makeSession({ title: 'kept' })
     const gone = makeSession({ title: 'put away', archived: true })
-    const html = renderToStaticMarkup(<Deck all={[kept, gone]} settings={settings} installed={installed} now={now} />)
+    const html = renderToStaticMarkup(<Deck all={[kept, gone]} settings={settings} installed={installed} now={now} labels={NO_LABELS} />)
     expect(html).toContain('>Archived</span><span class="side-count">1<')
     expect(html).toContain('>1 session<')
     expect(html).not.toContain('put away')
   })
   it('renders the detail tab bar on Overview for the selected session', () => {
-    const html = renderToStaticMarkup(<Deck all={[makeSession({ title: 'live-meeting' })]} settings={settings} installed={installed} now={now} />)
+    const html = renderToStaticMarkup(<Deck all={[makeSession({ title: 'live-meeting' })]} settings={settings} installed={installed} now={now} labels={NO_LABELS} />)
     expect(html).toContain('tab is-active">Overview<')
     expect(html).toContain('>Focus<')
     expect(html).not.toContain('app-drag')
+  })
+  it('shows label dots on rows and the Labels row in the detail pane', () => {
+    const s = makeSession({ title: 'tagged' })
+    const labels: LabelStore = { list: [{ id: 'bug', name: 'Bug', color: '#eb5757' }], map: { [s.id]: ['bug'] } }
+    const html = renderToStaticMarkup(<Deck all={[s]} settings={settings} installed={installed} now={now} labels={labels} />)
+    expect(html).toContain('class="row-labels" title="Bug"')
+    expect(html).toContain('lbl-chip" title="Change labels"')
+    expect(html).toMatch(/side-label">Bug<\/span><span class="side-count">1</)
+  })
+  it('counts a label only over the sessions that carry it while the list keeps all sessions', () => {
+    const a = makeSession({ title: 'with label' })
+    const b = makeSession({ title: 'without' })
+    const labels: LabelStore = { list: [{ id: 'bug', name: 'Bug', color: '#eb5757' }], map: { [a.id]: ['bug'] } }
+    const html = renderToStaticMarkup(<Deck all={[a, b]} settings={settings} installed={installed} now={now} labels={labels} />)
+    expect(html).toMatch(/side-label">Bug<\/span><span class="side-count">1</)
+    expect(html).toContain('>2 sessions<')
   })
 }

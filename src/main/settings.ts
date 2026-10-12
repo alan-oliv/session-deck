@@ -28,7 +28,7 @@ export interface SettingsStore {
   save(patch: Partial<Settings>): Settings
 }
 
-function readJson(path: string): unknown {
+export function readJson(path: string): unknown {
   try {
     return JSON.parse(readFileSync(path, 'utf8'))
   } catch {

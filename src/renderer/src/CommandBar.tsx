@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { PUBLISHED_KIND, SETTINGS_DEFAULTS, type IconName, type Session, type Settings, type Terminal } from '../../shared/api'
+import { PUBLISHED_KIND, SETTINGS_DEFAULTS, type IconName, type LabelStore, type Session, type Settings, type Terminal } from '../../shared/api'
 import { makeSession } from '../../shared/fixtures'
 import { agoLong, fileSize, tildify } from '../../shared/format'
+import { NO_LABELS } from '../../shared/labels'
 import { PANES } from '../../shared/panes'
 import { detectKind, kindById, search, type Kind, type KindId, type Result } from '../../shared/search'
 import { Icon } from './icons'
@@ -26,11 +27,13 @@ export type BarAction =
   | { type: 'rename'; id: string; title: string }
   | { type: 'terminal'; terminal: Terminal }
   | { type: 'tee'; enabled: boolean }
+  | { type: 'label'; id: string; labelId: string }
 
 export interface CommandBarProps {
   open: BarOpen
   sessions: Session[]
   settings: Settings
+  labels: LabelStore
   now: Date
   note: string | null
   resultsWidth: number
@@ -80,6 +83,8 @@ export function activate(r: Result): Step {
           return { type: 'emit', action: { type: 'tee', enabled: true } }
         case 'teeOff':
           return { type: 'emit', action: { type: 'tee', enabled: false } }
+        case 'label':
+          return { type: 'emit', action: { type: 'label', id, labelId: r.labelId ?? '' } }
       }
     }
   }
@@ -181,7 +186,7 @@ export function CommandBar(p: CommandBarProps) {
   const kind = kindById(kindId)
 
   const target = p.sessions.find((s) => s.id === targetId) ?? null
-  const groups = search(p.sessions, kindId, query, { now: p.now, selected: target, settings: p.settings })
+  const groups = search(p.sessions, kindId, query, { now: p.now, selected: target, settings: p.settings, labels: p.labels })
   const flat = groups.flatMap((g) => g.results)
   const cur = flat[Math.min(idx, Math.max(0, flat.length - 1))]
   const renameBlocked = kindId === 'rename' && !!target?.live
@@ -336,7 +341,7 @@ if (import.meta.vitest) {
     artifacts: [{ name: 'veracity-report.md', kind: 'markdown', path: '/Users/me/code/app/r.md', bytes: 9000, preview: '# Veracity report' }],
   })
   const render = (open: BarOpen, over: Partial<CommandBarProps> = {}) =>
-    renderToStaticMarkup(<CommandBar open={open} sessions={[s]} settings={settings} now={now} note={null} resultsWidth={380} onResultsWidth={() => {}} onClose={() => {}} onAction={() => {}} {...over} />)
+    renderToStaticMarkup(<CommandBar open={open} sessions={[s]} settings={settings} labels={NO_LABELS} now={now} note={null} resultsWidth={380} onResultsWidth={() => {}} onClose={() => {}} onAction={() => {}} {...over} />)
 
   it('opens on the search kinds and recent sessions with no hint for kinds it already lists or actions it has no session for', () => {
     const html = render({ kind: 'sessions', query: '' })
@@ -394,8 +399,25 @@ if (import.meta.vitest) {
     expect(html).toContain('>Repository<')
     expect(html).toContain('>In team8<')
   })
+  it('maps a label action to a toggle on that label and closes the bar through the app', () => {
+    const labels: LabelStore = { list: [{ id: 'bug', name: 'Bug', color: '#eb5757' }], map: {} }
+    const results = search([s], 'actions', 'label', { now, selected: s, settings, labels })[0].results
+    expect(activate(results[0])).toEqual({ type: 'emit', action: { type: 'label', id: s.id, labelId: 'bug' } })
+  })
+  it('lists a label action in the actions kind and previews what it does', () => {
+    const labels: LabelStore = { list: [{ id: 'bug', name: 'Bug', color: '#eb5757' }], map: {} }
+    const html = render({ kind: 'actions', query: 'label', target: s.id }, { labels })
+    expect(html).toContain('Add label “Bug”')
+    expect(html).toContain('Puts this label on the session.')
+  })
+  it('searches sessions by label with the label: kind and its own chip', () => {
+    const labels: LabelStore = { list: [{ id: 'bug', name: 'Bug', color: '#eb5757' }], map: { [s.id]: ['bug'] } }
+    const html = render({ kind: 'label', query: 'bug ' }, { labels })
+    expect(html).toContain('bar-chip')
+    expect(html).toContain('>live-meeting<')
+  })
   it('maps each highlighted result to a kind switch or an app action', () => {
-    const groups = search([s], 'actions', '', { now, selected: s, settings })
+    const groups = search([s], 'actions', '', { now, selected: s, settings, labels: NO_LABELS })
     const byAction = (id: string) => groups[0].results.find((r) => r.type === 'action' && r.action === id)!
     expect(activate(byAction('fork'))).toEqual({ type: 'emit', action: { type: 'resume', id: s.id, fork: true } })
     expect(activate(byAction('copy'))).toEqual({ type: 'emit', action: { type: 'copy', id: s.id, what: 'resume', text: `claude --resume ${s.id}` }, copied: true })
@@ -403,10 +425,10 @@ if (import.meta.vitest) {
     expect(activate(byAction('changeTerminal'))).toEqual({ type: 'kind', kind: 'terminal', query: '' })
     expect(activate(byAction('archive'))).toEqual({ type: 'emit', action: { type: 'archive', id: s.id, archived: true } })
     expect(activate(byAction('teeOn'))).toEqual({ type: 'emit', action: { type: 'tee', enabled: true } })
-    const recent = search([s], 'sessions', '', { now, selected: s, settings })
+    const recent = search([s], 'sessions', '', { now, selected: s, settings, labels: NO_LABELS })
     expect(activate(recent[0].results[0])).toEqual({ type: 'kind', kind: 'ask', query: '' })
     expect(activate(recent[1].results[0])).toEqual({ type: 'emit', action: { type: 'select', id: s.id } })
-    const term = search([s], 'terminal', '', { now, selected: s, settings })[0].results[3]
+    const term = search([s], 'terminal', '', { now, selected: s, settings, labels: NO_LABELS })[0].results[3]
     expect(activate(term)).toEqual({ type: 'emit', action: { type: 'terminal', terminal: 'warp' } })
   })
 }

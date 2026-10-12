@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { Session, Settings } from '../../shared/api'
+import type { LabelStore, Session, Settings } from '../../shared/api'
 
 // State lives in main: load once, then reload whenever main says it changed.
 function useLive<T>(load: () => Promise<T>, subscribe: (cb: () => void) => () => void): T | null {
@@ -28,6 +28,7 @@ function useLive<T>(load: () => Promise<T>, subscribe: (cb: () => void) => () =>
 
 export const useSessions = (): Session[] | null => useLive(() => window.api.listSessions(), (cb) => window.api.onSessionsChanged(cb))
 export const useSettings = (): Settings | null => useLive(() => window.api.getSettings(), (cb) => window.api.onSettingsChanged(cb))
+export const useLabels = (): LabelStore | null => useLive(() => window.api.getLabels(), (cb) => window.api.onLabelsChanged(cb))
 
 export function useNow(ms = 60_000): Date {
   const [now, setNow] = useState(() => new Date())

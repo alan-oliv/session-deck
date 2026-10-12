@@ -95,6 +95,12 @@ export interface Session {
   usage: Usage
 }
 
+export interface Label { id: string; name: string; color: string }
+export interface LabelStore {
+  list: Label[] // ordered; the sidebar shows this order
+  map: Record<string, string[]> // session id -> label ids, in the order applied
+}
+
 export type DiffSign = ' ' | '+' | '-'
 export type DiffLine = [lineNo: number, sign: DiffSign, text: string]
 export interface ToolItem {
@@ -134,11 +140,14 @@ export interface Api {
   setStatusTee(enabled: boolean): Promise<void>
   getTranscript(id: string): Promise<Transcript>
   getToolOutput(id: string, turn: number, item: number): Promise<string[]>
+  getLabels(): Promise<LabelStore>
+  saveLabels(store: LabelStore): Promise<LabelStore>
   onSessionsChanged(cb: () => void): () => void
   onSettingsChanged(cb: () => void): () => void
+  onLabelsChanged(cb: () => void): () => void
 }
 
-export const API_EVENTS = { onSessionsChanged: 'sessionsChanged', onSettingsChanged: 'settingsChanged' } as const
+export const API_EVENTS = { onSessionsChanged: 'sessionsChanged', onSettingsChanged: 'settingsChanged', onLabelsChanged: 'labelsChanged' } as const
 export type EventName = keyof typeof API_EVENTS
 export type EventChannel = (typeof API_EVENTS)[EventName]
 export type ApiMethod = Exclude<keyof Api, EventName>
@@ -155,6 +164,8 @@ export const API_METHODS = [
   'setStatusTee',
   'getTranscript',
   'getToolOutput',
+  'getLabels',
+  'saveLabels',
 ] as const satisfies readonly ApiMethod[]
 
 // Fails to compile if a method is added to Api but not to API_METHODS.
@@ -174,6 +185,7 @@ export const ICON_NAMES = [
   'AllItems', 'Box', 'Branch', 'Layers', 'Storage', 'ChevronDown2', 'Search1', 'Bolt', 'Document', 'Attachment2',
   'Loader', 'ClockOutline', 'Code', 'Code2', 'ViewList', 'Timeline', 'CalendarEmpty', 'ArrowRight', 'Clipboard',
   'Link', 'Edit', 'Archive', 'Check', 'Edit2', 'Expand', 'Settings', 'Close', 'Layout',
+  'Plus', 'Trash', 'Label',
 ] as const
 export type IconName = (typeof ICON_NAMES)[number]
 

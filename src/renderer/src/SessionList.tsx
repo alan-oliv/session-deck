@@ -1,7 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server'
-import type { IconName, Session } from '../../shared/api'
+import type { IconName, Label, LabelStore, Session } from '../../shared/api'
 import { makeSession } from '../../shared/fixtures'
 import { agoShort, attention, clock, plural, tildify } from '../../shared/format'
+import { labelsOf, NO_LABELS } from '../../shared/labels'
 import { PANES } from '../../shared/panes'
 import { buildChips, sameScope, type Chip, type Scope } from '../../shared/tree'
 import { dayKey, groupSessions, listForView, type ViewMode, type YearMonth } from '../../shared/views'
@@ -19,6 +20,7 @@ const MODES: { id: ViewMode; label: string; icon: IconName }[] = [
 ]
 
 export interface SessionListProps {
+  labels: LabelStore
   title: string
   width: number
   maxWidth: number
@@ -41,9 +43,9 @@ export interface SessionListProps {
   onDay(key: string): void
 }
 
-interface RowProps { s: Session; mode: ViewMode; now: Date; selected: boolean; onSelect(id: string): void; onScope(scope: Scope): void; onArchive(s: Session): void }
+interface RowProps { s: Session; mode: ViewMode; now: Date; selected: boolean; onSelect(id: string): void; onScope(scope: Scope): void; onArchive(s: Session): void; labels: Label[] }
 
-function Row({ s, mode, now, selected, onSelect, onScope, onArchive }: RowProps) {
+function Row({ s, mode, now, selected, onSelect, onScope, onArchive, labels }: RowProps) {
   const dot = attention(s.status)
   const timeline = mode === 'timeline'
   const where = `${mode !== 'repo' && s.repo ? `${s.repo.name} · ` : ''}${tildify(s.cwd)}${s.forks ? ` · ${plural(s.forks, 'fork')}` : ''}`
@@ -70,6 +72,13 @@ function Row({ s, mode, now, selected, onSelect, onScope, onArchive }: RowProps)
         <div className="row-line">
           {dot && <span className="dot" title={dot.label} style={{ background: dot.color }} />}
           <span className="row-title">{s.title}</span>
+          {labels.length > 0 && (
+            <span className="row-labels" title={labels.map((l) => l.name).join(', ')}>
+              {labels.map((l) => (
+                <span key={l.id} className="row-label-dot" style={{ background: l.color }} />
+              ))}
+            </span>
+          )}
           {!timeline && <span className="row-ago">{agoShort(s.end, now)}</span>}
         </div>
         <div className="row-where">
@@ -149,7 +158,7 @@ export function SessionList(p: SessionListProps) {
               </div>
             )}
             {g.sessions.map((s) => (
-              <Row key={s.id} s={s} mode={p.mode} now={p.now} selected={s.id === p.selectedId} onSelect={p.onSelect} onScope={p.onScope} onArchive={p.onArchive} />
+              <Row key={s.id} s={s} mode={p.mode} now={p.now} selected={s.id === p.selectedId} onSelect={p.onSelect} onScope={p.onScope} onArchive={p.onArchive} labels={labelsOf(p.labels, s.id)} />
             ))}
           </div>
         ))}
@@ -164,7 +173,7 @@ if (import.meta.vitest) {
   const now = new Date(2026, 9, 6, 11, 0)
   const base = {
     title: 'All sessions', width: 380, maxWidth: 600, onWidth: () => {}, chips: [], scope: { type: 'all' } as Scope, onScope: () => {}, showModes: true, mode: 'list' as ViewMode, onMode: () => {}, selectedId: null,
-    onSelect: () => {}, onArchive: () => {}, onOpenBar: () => {}, now, month: { year: 2026, month: 9 }, day: null, onMonth: () => {}, onDay: () => {},
+    onSelect: () => {}, onArchive: () => {}, onOpenBar: () => {}, now, month: { year: 2026, month: 9 }, day: null, onMonth: () => {}, onDay: () => {}, labels: NO_LABELS,
   }
   const live = makeSession({ title: 'live-meeting', status: 'running', forks: 1, end: new Date(2026, 9, 6, 9, 12).toISOString() })
   const old = makeSession({ title: 'old pass', end: new Date(2026, 9, 3, 9, 0).toISOString(), repo: null, cwd: '/Users/me/code' })
@@ -220,6 +229,18 @@ if (import.meta.vitest) {
   it('gives every row an archive button that reads Restore for archived sessions', () => {
     expect(render().match(/row-archive" title="Archive"/g)).toHaveLength(2)
     expect(render({ sessions: [makeSession({ archived: true })] })).toContain('row-archive" title="Restore from archive"')
+  })
+  it('shows one dot per label after the title with the names as the tooltip, and none without labels', () => {
+    const store: LabelStore = {
+      list: [{ id: 'bug', name: 'Bug', color: '#eb5757' }, { id: 'inv', name: 'Investigation', color: '#4ea7fc' }],
+      map: { [live.id]: ['bug', 'inv'] },
+    }
+    const html = render({ labels: store })
+    expect(html).toContain('class="row-labels" title="Bug, Investigation"')
+    expect(html).toContain('row-label-dot" style="background:#eb5757"')
+    expect(html).toMatch(/row-title">live-meeting<\/span><span class="row-labels"[\s\S]*row-ago">/)
+    expect(html.match(/class="row-labels"/g)).toHaveLength(1)
+    expect(render()).not.toContain('row-labels')
   })
   it('says so when there is nothing to show', () => {
     expect(render({ sessions: [] })).toContain('No sessions here.')

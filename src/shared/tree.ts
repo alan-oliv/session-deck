@@ -1,6 +1,7 @@
-import type { IconName, Session, Status } from './api'
+import type { IconName, Label, LabelStore, Session, Status } from './api'
 import { makeSession } from './fixtures'
 import { tildify } from './format'
+import { countByLabel, labelIdsOf, NO_LABELS } from './labels'
 
 export type Scope =
   | { type: 'all' }
@@ -10,10 +11,12 @@ export type Scope =
   | { type: 'branch'; repo: string; branch: string }
   | { type: 'wt'; repo: string; path: string }
   | { type: 'folder'; path: string }
+  | { type: 'label'; id: string }
 
 export interface Project { kind: 'repo' | 'folder'; id: string; label: string; title: string; count: number; scope: Scope }
 export interface Chip { label: string; count: number; icon: IconName | null; title: string; removed: boolean; scope: Scope }
-export interface Tree { all: number; needs: number; archived: number; projects: Project[] }
+export interface TreeLabel extends Label { count: number }
+export interface Tree { all: number; needs: number; archived: number; projects: Project[]; labels: TreeLabel[] }
 
 // Interrupted sessions stay yellow in the list but don't nag: an Esc from a week ago isn't a request.
 const NEEDS: Status[] = ['waiting', 'failed']
@@ -22,7 +25,7 @@ export const needsYou = (s: Session): boolean => NEEDS.includes(s.status)
 export const visible = (all: Session[]): Session[] => all.filter((s) => !s.hidden && !s.archived)
 export const archivedOf = (all: Session[]): Session[] => all.filter((s) => !s.hidden && s.archived)
 
-export function inScope(s: Session, scope: Scope): boolean {
+export function inScope(s: Session, scope: Scope, store: LabelStore = NO_LABELS): boolean {
   switch (scope.type) {
     case 'all':
       return true
@@ -38,6 +41,8 @@ export function inScope(s: Session, scope: Scope): boolean {
       return s.worktree?.path === scope.path
     case 'folder':
       return !s.repo && s.cwd === scope.path
+    case 'label':
+      return labelIdsOf(store, s.id).includes(scope.id)
   }
 }
 
@@ -65,7 +70,7 @@ function groupBy(xs: Session[], key: (s: Session) => string | null): Map<string,
 }
 
 // `sessions` are the visible ones; the archived count comes from the rest.
-export function buildTree(sessions: Session[], archived = 0): Tree {
+export function buildTree(sessions: Session[], archived = 0, store: LabelStore = NO_LABELS): Tree {
   const repos = [...groupBy(sessions, (s) => s.repo?.root ?? null)].map(([root, xs]): Project & { last: string } => ({
     kind: 'repo', id: root, label: xs[0].repo?.name ?? root, title: tildify(root), count: xs.length, scope: { type: 'repo', repo: root }, last: latest(xs),
   }))
@@ -73,7 +78,9 @@ export function buildTree(sessions: Session[], archived = 0): Tree {
     kind: 'folder', id: path, label: tildify(path), title: `${tildify(path)} (not a git repository)`, count: xs.length, scope: { type: 'folder', path }, last: latest(xs),
   }))
   const projects = [...repos, ...folders].sort((a, b) => b.last.localeCompare(a.last)).map(({ last: _, ...p }) => p)
-  return { all: sessions.length, needs: sessions.filter(needsYou).length, archived, projects }
+  const counts = countByLabel(store, sessions)
+  const labels = store.list.map((l): TreeLabel => ({ ...l, count: counts[l.id] }))
+  return { all: sessions.length, needs: sessions.filter(needsYou).length, archived, projects, labels }
 }
 
 // Branch chips need two sessions to earn a place; the active branch is kept so a row-link filter stays visible.
@@ -115,6 +122,8 @@ export function scopeTitle(scope: Scope, tree: Tree): string {
       return 'Archived'
     case 'folder':
       return tildify(scope.path)
+    case 'label':
+      return tree.labels.find((l) => l.id === scope.id)?.name ?? ''
     default:
       return ''
   }
@@ -152,6 +161,24 @@ if (import.meta.vitest) {
     expect(ids({ type: 'branch', repo: root, branch: 'main' })).toEqual([main.id, main2.id, wt.id])
     expect(ids({ type: 'wt', repo: root, path: `${root}/.worktrees/transcriptions` })).toEqual([wt.id])
     expect(ids({ type: 'folder', path: '/Users/me/code' })).toEqual([folder.id])
+  })
+  const lstore: LabelStore = {
+    list: [{ id: 'bug', name: 'Bug', color: '#eb5757' }, { id: 'ui', name: 'UI', color: '#bb87fc' }],
+    map: { [main.id]: ['bug'], [main2.id]: ['bug', 'ui'], [folder.id]: ['gone'] },
+  }
+  it('filters by label, ignoring ids of deleted labels', () => {
+    const ids = (scope: Scope) => all.filter((s) => inScope(s, scope, lstore)).map((s) => s.id)
+    expect(ids({ type: 'label', id: 'bug' })).toEqual([main.id, main2.id])
+    expect(ids({ type: 'label', id: 'ui' })).toEqual([main2.id])
+    expect(ids({ type: 'label', id: 'gone' })).toEqual([])
+    expect(all.filter((s) => inScope(s, { type: 'label', id: 'bug' }))).toEqual([])
+  })
+  it('counts each label over the visible sessions it is on and titles its scope by name', () => {
+    const t = buildTree(all, 0, lstore)
+    expect(t.labels).toEqual([{ id: 'bug', name: 'Bug', color: '#eb5757', count: 2 }, { id: 'ui', name: 'UI', color: '#bb87fc', count: 1 }])
+    expect(buildTree(all).labels).toEqual([])
+    expect(scopeTitle({ type: 'label', id: 'ui' }, t)).toBe('UI')
+    expect(scopeTitle({ type: 'label', id: 'gone' }, t)).toBe('')
   })
   it('builds All, branches with two or more sessions by count, then worktrees, striking removed ones', () => {
     const chips = buildChips(all, { type: 'repo', repo: root })
