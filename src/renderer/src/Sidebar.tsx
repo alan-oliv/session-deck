@@ -63,7 +63,7 @@ function NameInput({ color, initial = '', onDone }: { color: string; initial?: s
   )
 }
 
-export function ColorPopover({ current, onPick, onClose }: { current: string; onPick(color: string): void; onClose(): void }) {
+function ColorPopover({ current, onPick, onClose }: { current: string; onPick(color: string): void; onClose(): void }) {
   return (
     <>
       <div className="label-dismiss" onClick={(e) => { e.stopPropagation(); onClose() }} />
@@ -109,7 +109,7 @@ function LabelRow({ label, selected, drag, onSelect, onDelete, onRename, onColor
   return (
     <div
       className={`side-item side-label-row${selected ? ' is-selected' : ''}${dropping}`}
-      draggable
+      draggable={!picking}
       onClick={onSelect}
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = 'move'
