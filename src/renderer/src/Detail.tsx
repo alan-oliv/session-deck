@@ -281,6 +281,7 @@ if (import.meta.vitest) {
     const html = renderToStaticMarkup(<Detail session={makeSession()} now={now} copied={null} teeOn={false} {...handlers} />)
     expect(html).toMatch(/class="facts"><span class="fact-k lbl-k">Labels<\/span>/)
   })
+
   it('lists facts in the handoff order, skipping rows without data', () => {
     const s = makeSession({
       branch: 'live-meeting', pr, forks: 1, named: true,

@@ -29,7 +29,7 @@ export function LabelPicker(p: LabelPickerProps) {
   return (
     <>
       <div className="lp-dismiss" onClick={p.onClose} />
-      <div className="lp">
+      <div className="lp" onMouseDown={(e) => e.preventDefault()}>
         <input
           className="lp-input"
           autoFocus
