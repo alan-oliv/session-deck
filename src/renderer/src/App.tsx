@@ -210,7 +210,8 @@ export function Deck({ all, settings, installed, now, labels }: { all: Session[]
     }
   }
   const saveLabels = (edit: (store: LabelStore) => LabelStore | null, after?: () => void) => {
-    const next = edit(latestLabels.current)
+    const base = latestLabels.current
+    const next = edit(base)
     if (!next) return
     latestLabels.current = next
     savingLabels.current++
@@ -218,6 +219,9 @@ export function Deck({ all, settings, installed, now, labels }: { all: Session[]
       try {
         const saved = await window.api.saveLabels(next)
         if (latestLabels.current === next) latestLabels.current = saved
+      } catch (e) {
+        if (latestLabels.current === next) latestLabels.current = base
+        throw e
       } finally {
         savingLabels.current--
       }

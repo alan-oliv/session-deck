@@ -1,4 +1,4 @@
-import { mkdtempSync } from 'node:fs'
+import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { isSessionId, type Label, type LabelStore } from '../shared/api'
@@ -41,8 +41,9 @@ export function createLabelsStore(path: string): LabelsStore {
   return {
     get: () => current,
     save(raw) {
-      current = normalizeLabels(raw)
-      writeJsonAtomic(path, current)
+      const next = normalizeLabels(raw)
+      writeJsonAtomic(path, next)
+      current = next
       return current
     },
   }
@@ -84,5 +85,13 @@ if (import.meta.vitest) {
     const saved = createLabelsStore(path).save({ list: [{ id: 'x', name: 'Mine', color: '#26b5ce' }], map: { [sid]: ['x'], bad: ['x'] } })
     expect(saved).toEqual({ list: [{ id: 'x', name: 'Mine', color: '#26b5ce' }], map: { [sid]: ['x'] } })
     expect(createLabelsStore(path).get()).toEqual(saved)
+  })
+  it('keeps the last saved labels when the write fails', () => {
+    const file = join(mkdtempSync(join(tmpdir(), 'deck-labels-')), 'file')
+    writeFileSync(file, '')
+    const store = createLabelsStore(join(file, 'labels.json'))
+    const before = store.get()
+    expect(() => store.save({ list: [{ id: 'x', name: 'Mine', color: '#26b5ce' }], map: {} })).toThrow()
+    expect(store.get()).toBe(before)
   })
 }
