@@ -2,6 +2,10 @@ appId: dev.alanoliv.session-deck
 productName: Session Deck
 directories:
   output: dist
+publish:
+  provider: github
+  owner: alan-oliv
+  repo: session-deck
 files:
   - out/**
 extraResources:

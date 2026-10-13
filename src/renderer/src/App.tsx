@@ -9,7 +9,7 @@ import { archivedOf, buildChips, buildTree, inScope, scopeTitle, sessionProject,
 import { byRecent, dayKey, latestDay, listForView, type ViewMode, type YearMonth } from '../../shared/views'
 import { CommandBar, type BarAction, type BarOpen } from './CommandBar'
 import { Detail, type CopiedKey, type DetailTab } from './Detail'
-import { errorText, useLabels, useNow, useSessions, useSettings } from './hooks'
+import { errorText, useLabels, useNow, useSessions, useSettings, useUpdate } from './hooks'
 import { SessionList } from './SessionList'
 import { SettingsModal } from './Settings'
 import { Sidebar } from './Sidebar'
@@ -36,6 +36,7 @@ export function App() {
   const sessions = useSessions()
   const settings = useSettings()
   const labels = useLabels()
+  const update = useUpdate()
   const now = useNow()
   const [installed, setInstalled] = useState<Terminal[] | null>(null)
   useEffect(() => {
@@ -45,10 +46,10 @@ export function App() {
     if (!settings) return
     for (const [k, v] of Object.entries(appearanceVars(settings))) document.documentElement.style.setProperty(k, v)
   }, [settings?.accent, settings?.opacity])
-  return sessions && settings && installed && labels ? <Deck all={sessions} settings={settings} installed={installed} now={now} labels={labels} /> : <div className="app-loading" />
+  return sessions && settings && installed && labels ? <Deck all={sessions} settings={settings} installed={installed} now={now} labels={labels} update={update} /> : <div className="app-loading" />
 }
 
-export function Deck({ all, settings, installed, now, labels }: { all: Session[]; settings: Settings; installed: Terminal[]; now: Date; labels: LabelStore }) {
+export function Deck({ all, settings, installed, now, labels, update }: { all: Session[]; settings: Settings; installed: Terminal[]; now: Date; labels: LabelStore; update?: string | null }) {
   const shown = useMemo(() => byRecent(visible(all)), [all])
   const archived = useMemo(() => byRecent(archivedOf(all)), [all])
   const tree = useMemo(() => buildTree(shown, archived.length, labels), [shown, archived, labels])
@@ -378,6 +379,12 @@ export function Deck({ all, settings, installed, now, labels }: { all: Session[]
           <button type="button" className="toast-undo" onClick={toast.undo}>Undo</button>
         </div>
       )}
+      {update && (
+        <div className="toast update-toast">
+          <span>{`Version ${update} is ready`}</span>
+          <button type="button" className="toast-undo" onClick={() => void call(() => window.api.installUpdate())}>Restart to update</button>
+        </div>
+      )}
       {settingsOpen && <SettingsModal settings={settings} installed={installed} onChange={saveSettings} onClose={() => setSettingsOpen(false)} />}
     </div>
   )
@@ -388,6 +395,13 @@ if (import.meta.vitest) {
   const now = new Date(2026, 9, 6, 11, 0)
   const settings: Settings = SETTINGS_DEFAULTS
   const installed: Terminal[] = ['terminal']
+  it('offers a restart only when an update has been downloaded', () => {
+    const deck = (update?: string | null) => renderToStaticMarkup(<Deck all={[makeSession({ title: 'perf pass' })]} settings={settings} installed={installed} now={now} labels={NO_LABELS} update={update} />)
+    expect(deck('0.2.0')).toContain('Version 0.2.0 is ready')
+    expect(deck('0.2.0')).toContain('Restart to update')
+    expect(deck(null)).not.toContain('Restart to update')
+    expect(deck()).not.toContain('Restart to update')
+  })
   it('shows the sidebar, the list with its view switcher and the newest session in the detail pane', () => {
     const newest = makeSession({ title: 'live-meeting', end: new Date(2026, 9, 6, 9, 12).toISOString() })
     const older = makeSession({ title: 'perf pass', end: new Date(2026, 9, 5).toISOString() })
