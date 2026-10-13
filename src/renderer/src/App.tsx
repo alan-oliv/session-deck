@@ -11,12 +11,15 @@ import { CommandBar, type BarAction, type BarOpen } from './CommandBar'
 import { Detail, type CopiedKey, type DetailTab } from './Detail'
 import { errorText, useLabels, useNow, useSessions, useSettings, useUpdate } from './hooks'
 import { SessionList } from './SessionList'
+import { Onboarding } from './Onboarding'
 import { SettingsModal } from './Settings'
 import { Sidebar } from './Sidebar'
 import './App.css'
 
 const COPIED_MS = 1600
 const TOAST_MS = 2400
+// Long enough to read the refusal and reach for its button.
+const AUTOMATION_TOAST_MS = 12_000
 // Static renders in tests have no window; the default window width stands in.
 const windowWidth = () => (typeof window === 'undefined' ? 1360 : window.innerWidth)
 
@@ -29,8 +32,18 @@ function savedPanes(): PaneWidths {
 }
 
 type Pending = { id: string; fork: boolean }
-type Toast = { text: string; undo(): void }
+type Toast = { text: string; undo?(): void; action?: { label: string; run(): void } }
 const LABEL_TOAST_MS = 5000
+
+function ToastView({ toast }: { toast: Toast }) {
+  return (
+    <div className={toast.action ? 'toast toast-wide' : 'toast'}>
+      <span>{toast.text}</span>
+      {toast.undo && <button type="button" className="toast-undo" onClick={toast.undo}>Undo</button>}
+      {toast.action && <button type="button" className="toast-undo" onClick={toast.action.run}>{toast.action.label}</button>}
+    </div>
+  )
+}
 
 export function App() {
   const sessions = useSessions()
@@ -68,6 +81,7 @@ export function Deck({ all, settings, installed, now, labels, update }: { all: S
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [setupOpen, setSetupOpen] = useState(!settings.onboarded)
   const [toast, setToast] = useState<Toast | null>(null)
+  const [suggested, setSuggested] = useState<Terminal | null>(null)
   const barSeq = useRef(0)
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -158,6 +172,10 @@ export function Deck({ all, settings, installed, now, labels, update }: { all: S
     return () => window.removeEventListener('keydown', onKey, true)
   }, [settingsOpen, setupOpen])
 
+  useEffect(() => {
+    if (setupOpen && !suggested) window.api.suggestTerminal().then(setSuggested, (e) => console.error(e))
+  }, [setupOpen])
+
   const flash = (key: CopiedKey) => {
     setCopied(key)
     clearTimeout(copyTimer.current)
@@ -176,6 +194,9 @@ export function Deck({ all, settings, installed, now, labels, update }: { all: S
       const r = await window.api.resumeSession(id, { fork, open })
       if (r.ok) return flash({ id, what: fork ? 'forked' : 'resumed' })
       flash({ id, what: fork ? 'fork' : 'resume' })
+      if (r.automation) {
+        return showToast({ text: r.message, action: { label: 'Open System Settings', run: () => void call(() => window.api.openAutomationSettings()) } }, AUTOMATION_TOAST_MS)
+      }
       fail(new Error(r.message))
     } catch (e) {
       fail(e)
@@ -376,12 +397,7 @@ export function Deck({ all, settings, installed, now, labels, update }: { all: S
           onAction={(a) => void onAction(a)}
         />
       )}
-      {toast && (
-        <div className="toast">
-          <span>{toast.text}</span>
-          <button type="button" className="toast-undo" onClick={toast.undo}>Undo</button>
-        </div>
-      )}
+      {toast && <ToastView toast={toast} />}
       {update && (
         <div className="toast update-toast">
           <span>{`Version ${update} is ready`}</span>
@@ -389,6 +405,19 @@ export function Deck({ all, settings, installed, now, labels, update }: { all: S
         </div>
       )}
       {settingsOpen && <SettingsModal settings={settings} installed={installed} onChange={saveSettings} onRerunSetup={() => { setSettingsOpen(false); setSetupOpen(true) }} onClose={() => setSettingsOpen(false)} />}
+      {setupOpen && suggested && (
+        <Onboarding
+          settings={settings}
+          installed={installed}
+          suggested={suggested}
+          onChange={saveSettings}
+          onFinish={(openSettings) => {
+            saveSettings({ onboarded: true })
+            setSetupOpen(false)
+            if (openSettings) setSettingsOpen(true)
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -396,8 +425,9 @@ export function Deck({ all, settings, installed, now, labels, update }: { all: S
 if (import.meta.vitest) {
   const { it, expect } = import.meta.vitest
   const now = new Date(2026, 9, 6, 11, 0)
-  const settings: Settings = SETTINGS_DEFAULTS
+  const settings: Settings = { ...SETTINGS_DEFAULTS, onboarded: true }
   const installed: Terminal[] = ['terminal']
+  const toastView = (t: Toast) => renderToStaticMarkup(<ToastView toast={t} />)
   it('offers a restart only when an update has been downloaded', () => {
     const deck = (update?: string | null) => renderToStaticMarkup(<Deck all={[makeSession({ title: 'perf pass' })]} settings={settings} installed={installed} now={now} labels={NO_LABELS} update={update} />)
     expect(deck('0.2.0')).toContain('Version 0.2.0 is ready')
@@ -452,5 +482,12 @@ if (import.meta.vitest) {
     const html = renderToStaticMarkup(<Deck all={[a, b]} settings={settings} installed={installed} now={now} labels={labels} />)
     expect(html).toMatch(/side-label">Bug<\/span><span class="side-count">1</)
     expect(html).toContain('>2 sessions<')
+  })
+  it('shows no onboarding for an onboarded install', () => {
+    expect(renderToStaticMarkup(<Deck all={[]} settings={settings} installed={installed} now={now} labels={NO_LABELS} />)).not.toContain('ob-panel')
+  })
+  it('shows a toast with an Open System Settings button for an Automation refusal', () => {
+    expect(toastView({ text: "Session Deck can't control iTerm2.", action: { label: 'Open System Settings', run: () => {} } })).toContain('>Open System Settings<')
+    expect(toastView({ text: 'Archived', undo: () => {} })).toContain('>Undo<')
   })
 }
