@@ -8,7 +8,7 @@ import { createIndexer } from './indexer'
 import { broadcast, registerIpc } from './ipc'
 import { createLabelsStore } from './labels'
 import { PATHS } from './paths'
-import { createSettingsStore, isTerminal, normalizeSettings } from './settings'
+import { applyPatch, createSettingsStore, isTerminal } from './settings'
 import { installTee, removeTee } from './statusline'
 import { CannotRunError, defaultTerminal, folderToOpen, installedTerminals, launch, terminalCommand } from './terminal'
 import { cleanTitle, customTitleLine } from './transcript'
@@ -100,9 +100,8 @@ app.whenReady().then(() => {
     saveSettings: async (patch: SettingsPatch) => {
       const p = (patch && typeof patch === 'object' ? patch : {}) as Record<string, unknown>
       if ('terminal' in p && p.terminal !== null && !isTerminal(p.terminal)) throw new Error('Unknown terminal')
-      const keys = ['terminal', 'open', 'accent', 'opacity', 'blur', 'appIcon'] as const
       const prev = settings.get()
-      const clean = normalizeSettings({ ...prev, ...Object.fromEntries(keys.filter((k) => k in p).map((k) => [k, p[k]])) })
+      const clean = applyPatch(prev, p)
       const next = settings.save(clean)
       for (const win of BrowserWindow.getAllWindows()) applyBlur(win, next)
       if (next.appIcon !== prev.appIcon) applyAppIcon(next)
