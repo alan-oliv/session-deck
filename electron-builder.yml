@@ -16,7 +16,10 @@ mac:
   icon: build/icon.icns
   identity: 'YOUR_SIGNING_IDENTITY'
   hardenedRuntime: true
+  artifactName: Session-Deck-${arch}.${ext}
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     NSAppleEventsUsageDescription: Session Deck opens your terminal to resume Claude sessions.
+dmg:
+  sign: true
