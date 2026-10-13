@@ -20,6 +20,7 @@ export function normalizeSettings(raw: unknown): Settings {
     appIcon: r.appIcon === 'purple' ? 'purple' : 'dark',
     archived: Array.isArray(r.archived) ? [...new Set(r.archived.filter(isSessionId))] : [],
     statusTee: r.statusTee === true,
+    skipPermissions: r.skipPermissions === true,
   }
 }
 
@@ -61,6 +62,10 @@ if (import.meta.vitest) {
     expect(normalizeSettings({ terminal: 'kitty', archived: [id, id, '../x'], statusTee: 'yes' }))
       .toEqual({ ...SETTINGS_DEFAULTS, archived: [id] })
     expect(normalizeSettings(null)).toEqual(SETTINGS_DEFAULTS)
+  })
+  it('keeps skipPermissions only when it is exactly true', () => {
+    expect(normalizeSettings({ skipPermissions: true }).skipPermissions).toBe(true)
+    expect(normalizeSettings({ skipPermissions: 'true' }).skipPermissions).toBe(false)
   })
   it('clamps the appearance numbers and falls back on unknown choices', () => {
     expect(normalizeSettings({ open: 'window', accent: 'teal', opacity: 12, blur: 99.6, appIcon: 'purple' }))

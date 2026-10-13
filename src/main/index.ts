@@ -115,15 +115,15 @@ app.whenReady().then(() => {
       if (opts.open !== undefined && opts.open !== 'tab' && opts.open !== 'window') throw new Error('Invalid options')
       const s = sessionFor(id)
       const fork = opts.fork
-      const { terminal: chosen } = settings.get()
+      const { terminal: chosen, skipPermissions } = settings.get()
       const open = opts.open ?? settings.get().open
       const installed = installedTerminals()
       const terminal = chosen && installed.includes(chosen) ? chosen : defaultTerminal(installed)
       try {
-        await launch(terminal, open, s, fork)
+        await launch(terminal, open, s, fork, skipPermissions)
         return { ok: true }
       } catch (e) {
-        clipboard.writeText(terminalCommand(s, fork))
+        clipboard.writeText(terminalCommand(s, fork, skipPermissions))
         if (e instanceof CannotRunError) return { ok: false, message: e.message }
         return { ok: false, message: `Couldn't open ${terminalLabel(terminal)}, so the command was copied. ${e instanceof Error ? e.message : String(e)}` }
       }
