@@ -91,6 +91,29 @@ export const warpConfig = (title: string, cwd: string, cmd: string): string =>
 export const warpUri = (open: OpenIn): string =>
   `warp://tab_config/${encodeURIComponent(basename(PATHS.warpConfig, '.toml'))}${open === 'window' ? '?new_window=true' : ''}`
 
+// System Events needs Accessibility permission; a refusal throws and launch() falls back to the URI.
+export const warpTabScript = (cmd: string): string =>
+  [
+    'tell application "Warp" to activate',
+    'delay 0.3',
+    'tell application "System Events"',
+    '  tell process "Warp"',
+    '    if (count of windows) is 0 then return "none"',
+    '    keystroke "t" using command down',
+    '    delay 0.4',
+    `    keystroke ${appleScriptString(cmd)}`,
+    '    key code 36',
+    '  end tell',
+    'end tell',
+    'return "tab"',
+  ].join('\n')
+
+// `application "Warp" is running` answers without launching Warp.
+async function isRunning(app: string): Promise<boolean> {
+  const { stdout } = await run('osascript', ['-e', `application ${appleScriptString(app)} is running`])
+  return stdout.trim() === 'true'
+}
+
 const WEZTERM = '/Applications/WezTerm.app/Contents/MacOS/wezterm'
 
 export class CannotRunError extends Error {
@@ -123,6 +146,10 @@ export async function launch(terminal: Terminal, open: OpenIn, s: Session, fork:
   const claude = resumeCommand(s.id, fork, skip).split(' ')
   switch (terminal) {
     case 'warp':
+      if (open === 'tab' && (await isRunning('Warp').catch(() => false))) {
+        const typed = await run('osascript', ['-e', warpTabScript(cmd)]).then((r) => r.stdout.trim() === 'tab', () => false)
+        if (typed) return
+      }
       mkdirSync(dirname(PATHS.warpConfig), { recursive: true })
       writeFileSync(PATHS.warpConfig, warpConfig(s.title, dir, resumeCommand(s.id, fork, skip)))
       await run('open', [warpUri(open)])
@@ -223,6 +250,7 @@ if (import.meta.vitest) {
     mkdirSync(dirname(PATHS.warpConfig), { recursive: true })
     writeFileSync(PATHS.warpConfig, warpConfig('session-deck-check', PATHS.home, echo))
     await run('open', [warpUri('tab')])
+    await run('osascript', ['-e', warpTabScript(echo)])
   }, 120_000)
   it('recognises the macOS Automation refusal and nothing else', () => {
     expect(isAutomationDenied({ stderr: '0:36: execution error: Not authorized to send Apple events to iTerm. (-1743)' })).toBe(true)
@@ -235,5 +263,17 @@ if (import.meta.vitest) {
     expect(e.terminal).toBe('iterm')
     expect(e.message).toContain("can't control iTerm2")
     expect(e.message).toContain('Privacy & Security → Automation')
+  })
+  it('types the command into a new Warp tab only when a Warp window exists', () => {
+    const script = warpTabScript(`cd '/x' && claude --resume ${id}`)
+    expect(script).toContain('tell application "Warp" to activate')
+    expect(script).toContain('if (count of windows) is 0 then return "none"')
+    expect(script).toContain('keystroke "t" using command down')
+    expect(script).toContain(`keystroke "cd '/x' && claude --resume ${id}"`)
+    expect(script).toContain('key code 36')
+    expect(script.trimEnd().endsWith('return "tab"')).toBe(true)
+  })
+  it('escapes quotes in the command typed into Warp', () => {
+    expect(warpTabScript('say "hi"')).toContain('keystroke "say \\"hi\\""')
   })
 }
