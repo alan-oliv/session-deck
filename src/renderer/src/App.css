@@ -32,6 +32,12 @@
   white-space: nowrap;
 }
 
+.update-toast {
+  left: auto;
+  right: 20px;
+  transform: none;
+}
+
 .toast-undo {
   padding: 4px 8px;
   border: 0;

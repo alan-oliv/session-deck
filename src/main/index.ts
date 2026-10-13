@@ -13,6 +13,7 @@ import { installTee, removeTee } from './statusline'
 import { CannotRunError, defaultTerminal, folderToOpen, installedTerminals, launch, terminalCommand } from './terminal'
 import { cleanTitle, customTitleLine } from './transcript'
 import { createTranscriptStore } from './transcripts'
+import { createUpdates } from './updates'
 
 // The renderer tints its own background by the opacity setting; the window server blurs the desktop under it.
 const applyBlur = (win: BrowserWindow, s: Settings) => setWindowBlur(win, blurRadius(s))
@@ -84,6 +85,7 @@ app.whenReady().then(() => {
     onChange: () => broadcast('sessionsChanged'),
   })
   const transcripts = createTranscriptStore((id) => indexer.transcriptPath(id))
+  const updates = createUpdates(() => broadcast('updateChanged'))
 
   const sessionFor = (id: unknown): Session => {
     if (!isSessionId(id)) throw new Error('Invalid session id')
@@ -177,6 +179,11 @@ app.whenReady().then(() => {
       const next = labels.save(store)
       broadcast('labelsChanged')
       return next
+    },
+    getUpdate: async () => updates.ready(),
+    installUpdate: async () => {
+      if (!updates.ready()) throw new Error('No update is ready')
+      updates.install()
     },
   })
 

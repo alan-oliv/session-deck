@@ -29,6 +29,7 @@ function useLive<T>(load: () => Promise<T>, subscribe: (cb: () => void) => () =>
 export const useSessions = (): Session[] | null => useLive(() => window.api.listSessions(), (cb) => window.api.onSessionsChanged(cb))
 export const useSettings = (): Settings | null => useLive(() => window.api.getSettings(), (cb) => window.api.onSettingsChanged(cb))
 export const useLabels = (): LabelStore | null => useLive(() => window.api.getLabels(), (cb) => window.api.onLabelsChanged(cb))
+export const useUpdate = (): string | null => useLive(() => window.api.getUpdate(), (cb) => window.api.onUpdateChanged(cb))
 
 export function useNow(ms = 60_000): Date {
   const [now, setNow] = useState(() => new Date())

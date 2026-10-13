@@ -69,7 +69,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          FILES="dist/Session-Deck-arm64.dmg dist/Session-Deck-arm64.dmg.sha256"
+          FILES="dist/Session-Deck-arm64.dmg dist/Session-Deck-arm64.dmg.sha256 dist/Session-Deck-arm64.zip dist/Session-Deck-arm64.zip.blockmap dist/latest-mac.yml"
           if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" $FILES --clobber
           else

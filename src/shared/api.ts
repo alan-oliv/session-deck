@@ -142,12 +142,15 @@ export interface Api {
   getToolOutput(id: string, turn: number, item: number): Promise<string[]>
   getLabels(): Promise<LabelStore>
   saveLabels(store: LabelStore): Promise<LabelStore>
+  getUpdate(): Promise<string | null>
+  installUpdate(): Promise<void>
   onSessionsChanged(cb: () => void): () => void
   onSettingsChanged(cb: () => void): () => void
   onLabelsChanged(cb: () => void): () => void
+  onUpdateChanged(cb: () => void): () => void
 }
 
-export const API_EVENTS = { onSessionsChanged: 'sessionsChanged', onSettingsChanged: 'settingsChanged', onLabelsChanged: 'labelsChanged' } as const
+export const API_EVENTS = { onSessionsChanged: 'sessionsChanged', onSettingsChanged: 'settingsChanged', onLabelsChanged: 'labelsChanged', onUpdateChanged: 'updateChanged' } as const
 export type EventName = keyof typeof API_EVENTS
 export type EventChannel = (typeof API_EVENTS)[EventName]
 export type ApiMethod = Exclude<keyof Api, EventName>
@@ -166,6 +169,8 @@ export const API_METHODS = [
   'getToolOutput',
   'getLabels',
   'saveLabels',
+  'getUpdate',
+  'installUpdate',
 ] as const satisfies readonly ApiMethod[]
 
 // Fails to compile if a method is added to Api but not to API_METHODS.
