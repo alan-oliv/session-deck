@@ -10,7 +10,7 @@ import { createLabelsStore } from './labels'
 import { PATHS } from './paths'
 import { applyPatch, createSettingsStore, isTerminal } from './settings'
 import { installTee, removeTee } from './statusline'
-import { AutomationDeniedError, CannotRunError, defaultTerminal, folderToOpen, installedTerminals, launch, terminalCommand } from './terminal'
+import { AutomationDeniedError, CannotRunError, defaultTerminal, folderToOpen, installedTerminals, launch, suggestTerminal, terminalCommand } from './terminal'
 import { cleanTitle, customTitleLine } from './transcript'
 import { createTranscriptStore } from './transcripts'
 import { createUpdates } from './updates'
@@ -109,7 +109,7 @@ app.whenReady().then(() => {
       return next
     },
     listTerminals: async () => installedTerminals(),
-    suggestTerminal: async () => defaultTerminal(installedTerminals()),
+    suggestTerminal: async () => suggestTerminal(installedTerminals()),
     openAutomationSettings: async () => {
       await shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Automation')
     },

@@ -17,6 +17,25 @@ export function defaultTerminal(installed: readonly Terminal[]): Terminal {
   return (['ghostty', 'iterm', 'terminal'] as const).find((t) => installed.includes(t)) ?? 'terminal'
 }
 
+// macOS keeps no usage history, so a terminal pinned in the Dock is the nearest signal for "the one they use".
+// Dock tiles hold bookmark data, which plutil refuses to print as JSON, so this reads persistent-apps as XML.
+export function dockTerminals(dockXml: string, installed: readonly Terminal[]): Terminal[] {
+  return [...dockXml.matchAll(/<key>_CFURLString<\/key>\s*<string>([^<]*)<\/string>/g)].flatMap(([, u]) => {
+    const url = decodeURIComponent(u).replace(/\/$/, '')
+    const t = TERMINALS.find((x) => installed.includes(x.id) && url.endsWith(`/${x.app}`))
+    return t ? [t.id] : []
+  })
+}
+
+export async function suggestTerminal(installed: readonly Terminal[]): Promise<Terminal> {
+  try {
+    const { stdout } = await run('plutil', ['-extract', 'persistent-apps', 'xml1', '-o', '-', join(PATHS.home, 'Library/Preferences/com.apple.dock.plist')])
+    return dockTerminals(stdout, installed)[0] ?? defaultTerminal(installed)
+  } catch {
+    return defaultTerminal(installed)
+  }
+}
+
 export const shellQuote = (s: string): string => `'${s.replace(/'/g, `'\\''`)}'`
 export const appleScriptString = (s: string): string => `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
 
@@ -275,5 +294,17 @@ if (import.meta.vitest) {
   })
   it('escapes quotes in the command typed into Warp', () => {
     expect(warpTabScript('say "hi"')).toContain('keystroke "say \\"hi\\""')
+  })
+  it('lists the installed terminals pinned in the Dock, in Dock order', () => {
+    const tile = (url: string) =>
+      `<dict><key>tile-data</key><dict><key>book</key><data>Ym9vaw==</data><key>file-data</key><dict>
+        <key>_CFURLString</key>\n\t<string>${url}</string><key>_CFURLStringType</key><integer>15</integer></dict></dict></dict>`
+    const dock = `<plist version="1.0"><array>${['Safari.app', 'Visual%20Studio%20Code.app', 'Warp.app'].map((a) => tile(`file:///Applications/${a}/`)).join('')}</array></plist>`
+    expect(dockTerminals(dock, ['terminal', 'warp', 'vscode'])).toEqual(['vscode', 'warp'])
+    expect(dockTerminals(dock, ['terminal'])).toEqual([])
+  })
+  it('returns nothing for a Dock it cannot read', () => {
+    expect(dockTerminals('not xml', ['terminal'])).toEqual([])
+    expect(dockTerminals('', ['terminal'])).toEqual([])
   })
 }
