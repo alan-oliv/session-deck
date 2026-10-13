@@ -25,6 +25,7 @@ export interface DetailProps {
   copied: CopiedKey | null
   teeOn: boolean
   open: OpenIn
+  skip: boolean
   terminalName: string
   tab: DetailTab
   focus: boolean
@@ -190,6 +191,7 @@ export function Detail(p: DetailProps) {
                 session={s}
                 label={label}
                 open={p.open}
+                skip={p.skip}
                 terminalName={p.terminalName}
                 onResume={p.onResume}
                 onFork={p.onFork}
@@ -258,7 +260,7 @@ if (import.meta.vitest) {
   const now = new Date(2026, 9, 6, 11, 0)
   const pr = { repo: 'alan-oliv/meetnotes', number: 27, url: 'https://github.com/alan-oliv/meetnotes/pull/27' }
   const noop = () => {}
-  const handlers = { tab: 'overview' as DetailTab, focus: false, open: 'tab' as OpenIn, terminalName: 'Ghostty', onTab: noop, onFocus: noop, onResume: noop, onCopy: noop, onFork: noop, onRename: noop, onOpenFolder: noop, onCopyPr: noop, onEnableTee: noop, onArchive: noop, labels: NO_LABELS, labelCounts: {}, onToggleLabel: noop, onCreateLabel: noop }
+  const handlers = { tab: 'overview' as DetailTab, focus: false, open: 'tab' as OpenIn, skip: false, terminalName: 'Ghostty', onTab: noop, onFocus: noop, onResume: noop, onCopy: noop, onFork: noop, onRename: noop, onOpenFolder: noop, onCopyPr: noop, onEnableTee: noop, onArchive: noop, labels: NO_LABELS, labelCounts: {}, onToggleLabel: noop, onCreateLabel: noop }
 
   it('shows the tab bar with Focus, and swaps the overview for the transcript tab', () => {
     const s = makeSession({ title: 'live-meeting' })

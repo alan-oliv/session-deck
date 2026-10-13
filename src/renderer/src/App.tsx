@@ -337,13 +337,14 @@ export function Deck({ all, settings, installed, now, labels, update }: { all: S
           copied={copied}
           teeOn={settings.statusTee}
           open={settings.open}
+          skip={settings.skipPermissions}
           terminalName={terminalName}
           tab={detailTab}
           focus={focus}
           onTab={setDetailTab}
           onFocus={() => setFocus(!focus)}
           onResume={(open) => void resume(selected.id, false, open)}
-          onCopy={() => copy(selected.id, 'resume', resumeCommand(selected.id, false))}
+          onCopy={() => copy(selected.id, 'resume', resumeCommand(selected.id, false, settings.skipPermissions))}
           onFork={() => void resume(selected.id, true)}
           onRename={(title) => void call(() => window.api.renameSession(selected.id, title))}
           onOpenFolder={() => void call(() => window.api.openFolder(selected.id))}

@@ -159,10 +159,11 @@ function actionsFor(s: Session, settings: Settings, labels: LabelStore): Result[
   const a = (action: ActionId, title: string, icon: IconName, detail: string): Result => ({
     type: 'action', action, session: s, detail, key: `a:${action}`, icon, iconColor: SECONDARY, title, sub: '', mono: false, right: '', keycap: '',
   })
+  const skip = settings.skipPermissions
   const list: Result[] = [
-    a('resume', 'Resume', 'ArrowRight', resumeCommand(s.id, false)),
-    a('copy', 'Copy resume command', 'Clipboard', resumeCommand(s.id, false)),
-    a('fork', 'Fork into a new session', 'Layers', resumeCommand(s.id, true)),
+    a('resume', 'Resume', 'ArrowRight', resumeCommand(s.id, false, skip)),
+    a('copy', 'Copy resume command', 'Clipboard', resumeCommand(s.id, false, skip)),
+    a('fork', 'Fork into a new session', 'Layers', resumeCommand(s.id, true, skip)),
   ]
   if (s.cwdExists) list.push(a('openFolder', 'Open folder', 'Storage', tildify(s.cwd)))
   if (s.pr) {
@@ -490,6 +491,12 @@ if (import.meta.vitest) {
     expect(titles(search(all, 'when', 'today', ctx))).toEqual(['live-meeting'])
     expect(titles(search(all, 'when', 'yesterday', ctx))).toEqual(['perf pass'])
     expect(titles(search(all, 'when', 'week', ctx))).toEqual(['live-meeting', 'perf pass', 'disk cleanup'])
+  })
+  it('adds the skip-permissions flag to resume, copy and fork actions when the setting is on', () => {
+    const cmds = search(all, 'actions', '', { ...ctx, settings: { ...settings, skipPermissions: true } })[0].results.slice(0, 3).map((r) => (r.type === 'action' ? r.detail : ''))
+    expect(cmds).toHaveLength(3)
+    for (const c of cmds) expect(c).toMatch(/ --dangerously-skip-permissions$/)
+    expect(search(all, 'actions', '', ctx)[0].results[0]).not.toMatchObject({ detail: expect.stringContaining('skip-permissions') })
   })
   it('lists actions for the selected session, with PR actions only when it has a PR', () => {
     const acts = search(all, 'actions', '', ctx)[0]
