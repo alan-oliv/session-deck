@@ -187,17 +187,20 @@ if (import.meta.vitest) {
     renderToStaticMarkup(<SettingsModal settings={{ ...SETTINGS_DEFAULTS, ...over }} installed={installed} onChange={() => {}} onRerunSetup={() => {}} onClose={() => {}} />)
 
   it('shows the chosen terminal on the dropdown trigger and a prompt when none is chosen or it is missing', () => {
-    expect(render({ terminal: 'iterm' })).toMatch(/set-dd-trigger[^>]*>.*?>iTerm2</)
+    expect(render({ terminal: 'iterm' })).toMatch(/set-dd-trigger[^>]*>(?:(?!<button).)*>iTerm2</)
     expect(render({ terminal: null })).toContain('>Choose a terminal<')
     expect(render({ terminal: 'warp' })).toContain('>Choose a terminal<')
   })
   it('opens a menu of only the installed terminals with a check on the chosen one', () => {
-    const html = renderToStaticMarkup(<TerminalDropdown value="iterm" installed={['terminal', 'iterm', 'ghostty']} onChange={() => {}} defaultOpen />)
+    const menu = (value: Terminal) => renderToStaticMarkup(<TerminalDropdown value={value} installed={['terminal', 'iterm', 'ghostty']} onChange={() => {}} defaultOpen />)
+    const checkedITerm = /aria-selected="true"[^>]*>(?:(?!<button).)*>iTerm2<(?:(?!<button).)*set-dd-check/
+    const html = menu('iterm')
     expect(html).toContain('role="listbox"')
     expect(html).toContain('>Ghostty<')
     expect(html).not.toContain('>Warp<')
     expect(html.match(/aria-selected="true"/g)).toHaveLength(1)
-    expect(html).toMatch(/aria-selected="true"[^>]*>.*?>iTerm2<.*?set-dd-check/)
+    expect(html).toMatch(checkedITerm)
+    expect(menu('terminal')).not.toMatch(checkedITerm)
   })
   it('offers to run setup again', () => {
     expect(render()).toContain('>Run setup again<')

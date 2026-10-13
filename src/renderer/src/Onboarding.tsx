@@ -1,4 +1,4 @@
-import { useEffect, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import mark from '../../../build/session-deck-mark.svg'
 import { SETTINGS_DEFAULTS, TERMINALS, terminalLabel, type OpenIn, type Settings, type SettingsPatch, type Terminal } from '../../shared/api'
@@ -48,6 +48,8 @@ function OnboardingView({ settings: s, installed, suggested, step, onStep, onCha
   const name = terminalLabel(terminal)
   const openLabel = s.open === 'tab' ? 'New tab' : 'New window'
   const permLabel = s.skipPermissions ? 'Skip permission prompts' : 'Ask before running tools'
+  const panel = useRef<HTMLDivElement>(null)
+  useEffect(() => panel.current?.focus(), [])
 
   const next = () => {
     if (step === 0) onChange({ terminal })
@@ -97,7 +99,7 @@ function OnboardingView({ settings: s, installed, suggested, step, onStep, onCha
 
   return (
     <div className="ob-scrim">
-      <div className="ob-panel" role="dialog" aria-modal="true" aria-labelledby="ob-title">
+      <div className="ob-panel" role="dialog" aria-modal="true" aria-labelledby="ob-title" tabIndex={-1} ref={panel}>
         <div className="ob-top">
           <img className="ob-mark" src={mark} alt="" />
           <span className="ob-brand">Session Deck</span>
@@ -207,14 +209,16 @@ if (import.meta.vitest) {
     renderToStaticMarkup(<OnboardingView step={step} settings={{ ...SETTINGS_DEFAULTS, ...over }} installed={installed} suggested="terminal" onStep={() => {}} onChange={() => {}} onFinish={() => {}} />)
 
   it('step 1 lists installed terminals and selects the saved one, else the suggestion', () => {
+    const selected = (label: string) => new RegExp(`ob-option is-selected[^>]*>(?:(?!<button).)*>${label}<`)
     const html = render({ terminal: 'iterm' })
     expect(html).toContain('Welcome to Session Deck')
     expect(html).toContain('Step 1 of 4 · Terminal')
     expect(html).not.toContain('>VS Code<')
     expect(html.match(/ob-option is-selected/g)).toHaveLength(1)
-    expect(html).toMatch(/ob-option is-selected[^>]*>.*?>iTerm2</)
-    expect(render({ terminal: null })).toMatch(/ob-option is-selected[^>]*>.*?>Terminal</)
-    expect(render({ terminal: 'warp' }, 0, ['terminal'])).toMatch(/ob-option is-selected[^>]*>.*?>Terminal</)
+    expect(html).toMatch(selected('iTerm2'))
+    expect(render({ terminal: 'terminal' })).not.toMatch(selected('iTerm2'))
+    expect(render({ terminal: null })).toMatch(selected('Terminal'))
+    expect(render({ terminal: 'warp' }, 0, ['terminal'])).toMatch(selected('Terminal'))
   })
   it('step 2 names the chosen terminal and marks New tab as recommended', () => {
     const html = render({ terminal: 'warp' }, 1)
