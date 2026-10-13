@@ -70,6 +70,13 @@ export function SettingsModal({ settings: s, installed, onChange, onClose }: Set
               ))}
             </div>
           </div>
+          <div className="set-row">
+            <div className="set-text">
+              <span className="set-label" id="set-skip">Skip permission prompts when resuming</span>
+              <span className="set-help">Claude won't stop to ask before running tools. Only use this in projects you trust.</span>
+            </div>
+            <input type="checkbox" className="set-check" aria-labelledby="set-skip" checked={s.skipPermissions} onChange={(e) => onChange({ skipPermissions: e.target.checked })} />
+          </div>
           <span className="set-section is-divided">Appearance</span>
           <div className="set-row is-first">
             <div className="set-text">
@@ -175,6 +182,11 @@ if (import.meta.vitest) {
     expect(html).toContain('aria-label="App icon"')
     expect(html).toMatch(/set-term has-icon is-selected"[^>]*>.*?>Purple</)
     expect(html.match(/set-term has-icon is-selected/g)).toHaveLength(1)
+  })
+  it('shows the skip-permissions checkbox, checked only when the setting is on', () => {
+    expect(render()).toContain('Skip permission prompts when resuming')
+    expect(render()).not.toMatch(/<input type="checkbox"[^>]*checked/)
+    expect(render({ skipPermissions: true })).toMatch(/<input type="checkbox"[^>]*checked/)
   })
   it('explains that blur needs a translucent window at 100% opacity', () => {
     expect(render({ opacity: 100 })).toContain('Only visible when opacity is below 100%.')

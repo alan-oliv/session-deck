@@ -37,8 +37,8 @@ export function folderToOpen(cwd: string): string | null {
   return statSync(real).isDirectory() && !/\.app$/i.test(real) ? real : null
 }
 
-export function terminalCommand(s: Pick<Session, 'id' | 'cwd' | 'cwdExists'>, fork: boolean): string {
-  const cmd = resumeCommand(s.id, fork)
+export function terminalCommand(s: Pick<Session, 'id' | 'cwd' | 'cwdExists'>, fork: boolean, skip = false): string {
+  const cmd = resumeCommand(s.id, fork, skip)
   const cwd = cdTarget(s)
   return cwd ? `cd ${shellQuote(cwd)} && ${cmd}` : cmd
 }
@@ -100,14 +100,14 @@ export class CannotRunError extends Error {
 }
 
 // Throws CannotRunError when the terminal opened but cannot be told to run the command (VS Code).
-export async function launch(terminal: Terminal, open: OpenIn, s: Session, fork: boolean): Promise<void> {
-  const cmd = terminalCommand(s, fork)
+export async function launch(terminal: Terminal, open: OpenIn, s: Session, fork: boolean, skip = false): Promise<void> {
+  const cmd = terminalCommand(s, fork, skip)
   const dir = cdTarget(s) ?? PATHS.home
-  const claude = resumeCommand(s.id, fork).split(' ')
+  const claude = resumeCommand(s.id, fork, skip).split(' ')
   switch (terminal) {
     case 'warp':
       mkdirSync(dirname(PATHS.warpConfig), { recursive: true })
-      writeFileSync(PATHS.warpConfig, warpConfig(s.title, dir, resumeCommand(s.id, fork)))
+      writeFileSync(PATHS.warpConfig, warpConfig(s.title, dir, resumeCommand(s.id, fork, skip)))
       await run('open', [warpUri(open)])
       return
     case 'iterm':
@@ -149,6 +149,10 @@ if (import.meta.vitest) {
   it('changes into an existing cwd before resuming, and resumes from anywhere when it is gone', () => {
     expect(terminalCommand({ id, cwd: '/Users/me/my app', cwdExists: true }, false)).toBe(`cd '/Users/me/my app' && claude --resume ${id}`)
     expect(terminalCommand({ id, cwd: '/gone', cwdExists: false }, true)).toBe(`claude --resume ${id} --fork-session`)
+  })
+  it('adds the skip-permissions flag to the typed command when asked', () => {
+    expect(terminalCommand({ id, cwd: '/Users/me/app', cwdExists: true }, true, true))
+      .toBe(`cd '/Users/me/app' && claude --resume ${id} --fork-session --dangerously-skip-permissions`)
   })
   it('never types a cwd holding control characters, which the line editor would act on', () => {
     const s = { id, cwd: '/x\x15rm -rf ~ #', cwdExists: true }

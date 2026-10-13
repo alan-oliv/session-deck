@@ -237,6 +237,14 @@
   accent-color: var(--app-brand);
 }
 
+.set-check {
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  accent-color: var(--app-brand);
+}
+
 .set-range-value {
   width: 44px;
   text-align: right;

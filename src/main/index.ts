@@ -8,7 +8,7 @@ import { createIndexer } from './indexer'
 import { broadcast, registerIpc } from './ipc'
 import { createLabelsStore } from './labels'
 import { PATHS } from './paths'
-import { createSettingsStore, isTerminal, normalizeSettings } from './settings'
+import { applyPatch, createSettingsStore, isTerminal } from './settings'
 import { installTee, removeTee } from './statusline'
 import { CannotRunError, defaultTerminal, folderToOpen, installedTerminals, launch, terminalCommand } from './terminal'
 import { cleanTitle, customTitleLine } from './transcript'
@@ -100,9 +100,8 @@ app.whenReady().then(() => {
     saveSettings: async (patch: SettingsPatch) => {
       const p = (patch && typeof patch === 'object' ? patch : {}) as Record<string, unknown>
       if ('terminal' in p && p.terminal !== null && !isTerminal(p.terminal)) throw new Error('Unknown terminal')
-      const keys = ['terminal', 'open', 'accent', 'opacity', 'blur', 'appIcon'] as const
       const prev = settings.get()
-      const clean = normalizeSettings({ ...prev, ...Object.fromEntries(keys.filter((k) => k in p).map((k) => [k, p[k]])) })
+      const clean = applyPatch(prev, p)
       const next = settings.save(clean)
       for (const win of BrowserWindow.getAllWindows()) applyBlur(win, next)
       if (next.appIcon !== prev.appIcon) applyAppIcon(next)
@@ -115,15 +114,15 @@ app.whenReady().then(() => {
       if (opts.open !== undefined && opts.open !== 'tab' && opts.open !== 'window') throw new Error('Invalid options')
       const s = sessionFor(id)
       const fork = opts.fork
-      const { terminal: chosen } = settings.get()
+      const { terminal: chosen, skipPermissions } = settings.get()
       const open = opts.open ?? settings.get().open
       const installed = installedTerminals()
       const terminal = chosen && installed.includes(chosen) ? chosen : defaultTerminal(installed)
       try {
-        await launch(terminal, open, s, fork)
+        await launch(terminal, open, s, fork, skipPermissions)
         return { ok: true }
       } catch (e) {
-        clipboard.writeText(terminalCommand(s, fork))
+        clipboard.writeText(terminalCommand(s, fork, skipPermissions))
         if (e instanceof CannotRunError) return { ok: false, message: e.message }
         return { ok: false, message: `Couldn't open ${terminalLabel(terminal)}, so the command was copied. ${e instanceof Error ? e.message : String(e)}` }
       }

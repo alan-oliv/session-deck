@@ -13,9 +13,10 @@ export interface Settings {
   appIcon: AppIcon
   archived: string[]
   statusTee: boolean
+  skipPermissions: boolean
 }
-export type SettingsPatch = Partial<Pick<Settings, 'terminal' | 'open' | 'accent' | 'opacity' | 'blur' | 'appIcon'>>
-export const SETTINGS_DEFAULTS: Settings = { terminal: null, open: 'tab', accent: 'brand', opacity: 88, blur: 24, appIcon: 'dark', archived: [], statusTee: false }
+export type SettingsPatch = Partial<Pick<Settings, 'terminal' | 'open' | 'accent' | 'opacity' | 'blur' | 'appIcon' | 'skipPermissions'>>
+export const SETTINGS_DEFAULTS: Settings = { terminal: null, open: 'tab', accent: 'brand', opacity: 88, blur: 24, appIcon: 'dark', archived: [], statusTee: false, skipPermissions: false }
 
 export const TERMINALS: { id: Terminal; label: string; app: string }[] = [
   { id: 'terminal', label: 'Terminal', app: 'Terminal.app' },
@@ -181,8 +182,8 @@ export const SESSION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[
 export const isSessionId = (v: unknown): v is string => typeof v === 'string' && SESSION_ID_RE.test(v)
 
 // Always the id, never the custom name: names can repeat across sessions.
-export const resumeCommand = (id: string, fork: boolean): string =>
-  `claude --resume ${id}${fork ? ' --fork-session' : ''}`
+export const resumeCommand = (id: string, fork: boolean, skip = false): string =>
+  `claude --resume ${id}${fork ? ' --fork-session' : ''}${skip ? ' --dangerously-skip-permissions' : ''}`
 export const prCommand = (n: number): string => `claude --from-pr ${n}`
 
 // Linear Design System icons the app draws; src/renderer/src/icons.tsx holds their SVG bodies.
@@ -200,6 +201,11 @@ if (import.meta.vitest) {
     const id = 'c3f1a9d2-6b84-4e07-9a15-7d20e8b4f6a1'
     expect(resumeCommand(id, false)).toBe(`claude --resume ${id}`)
     expect(resumeCommand(id, true)).toBe(`claude --resume ${id} --fork-session`)
+  })
+  it('appends --dangerously-skip-permissions after the fork flag only when asked', () => {
+    const id = 'c3f1a9d2-6b84-4e07-9a15-7d20e8b4f6a1'
+    expect(resumeCommand(id, false, true)).toBe(`claude --resume ${id} --dangerously-skip-permissions`)
+    expect(resumeCommand(id, true, true)).toBe(`claude --resume ${id} --fork-session --dangerously-skip-permissions`)
   })
   it('accepts only UUID-shaped session ids', () => {
     expect(isSessionId('c3f1a9d2-6b84-4e07-9a15-7d20e8b4f6a1')).toBe(true)

@@ -8,6 +8,11 @@ const isAccent = (v: unknown): v is Accent => ACCENTS.some((a) => a.id === v)
 const clamp = (v: unknown, min: number, max: number, def: number): number =>
   typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(min, Math.round(v))) : def
 
+const PATCH_KEYS = ['terminal', 'open', 'accent', 'opacity', 'blur', 'appIcon', 'skipPermissions'] as const
+
+export const applyPatch = (prev: Settings, p: Record<string, unknown>): Settings =>
+  normalizeSettings({ ...prev, ...Object.fromEntries(PATCH_KEYS.filter((k) => k in p).map((k) => [k, p[k]])) })
+
 export function normalizeSettings(raw: unknown): Settings {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
   const d = SETTINGS_DEFAULTS
@@ -20,6 +25,7 @@ export function normalizeSettings(raw: unknown): Settings {
     appIcon: r.appIcon === 'purple' ? 'purple' : 'dark',
     archived: Array.isArray(r.archived) ? [...new Set(r.archived.filter(isSessionId))] : [],
     statusTee: r.statusTee === true,
+    skipPermissions: r.skipPermissions === true,
   }
 }
 
@@ -61,6 +67,15 @@ if (import.meta.vitest) {
     expect(normalizeSettings({ terminal: 'kitty', archived: [id, id, '../x'], statusTee: 'yes' }))
       .toEqual({ ...SETTINGS_DEFAULTS, archived: [id] })
     expect(normalizeSettings(null)).toEqual(SETTINGS_DEFAULTS)
+  })
+  it('saves skipPermissions from a patch and ignores fields outside the patch keys', () => {
+    expect(applyPatch(SETTINGS_DEFAULTS, { skipPermissions: true }).skipPermissions).toBe(true)
+    expect(applyPatch({ ...SETTINGS_DEFAULTS, skipPermissions: true }, { open: 'window' }).skipPermissions).toBe(true)
+    expect(applyPatch(SETTINGS_DEFAULTS, { statusTee: true }).statusTee).toBe(false)
+  })
+  it('keeps skipPermissions only when it is exactly true', () => {
+    expect(normalizeSettings({ skipPermissions: true }).skipPermissions).toBe(true)
+    expect(normalizeSettings({ skipPermissions: 'true' }).skipPermissions).toBe(false)
   })
   it('clamps the appearance numbers and falls back on unknown choices', () => {
     expect(normalizeSettings({ open: 'window', accent: 'teal', opacity: 12, blur: 99.6, appIcon: 'purple' }))

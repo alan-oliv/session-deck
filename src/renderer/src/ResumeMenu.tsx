@@ -11,6 +11,7 @@ export interface ResumeMenuProps {
   label: string
   open: OpenIn
   terminalName: string
+  skip: boolean
   onResume(open: OpenIn): void
   onFork(): void
   onRename(): void
@@ -26,7 +27,7 @@ const other = (o: OpenIn): OpenIn => (o === 'tab' ? 'window' : 'tab')
 export function ResumeMenu(p: ResumeMenuProps) {
   const [menu, setMenu] = useState(false)
   const s = p.session
-  const cmd = resumeCommand(s.id, false)
+  const cmd = resumeCommand(s.id, false, p.skip)
   const pick = (fn: () => void) => () => {
     setMenu(false)
     fn()
@@ -37,7 +38,7 @@ export function ResumeMenu(p: ResumeMenuProps) {
       { icon: 'Layout', label: `Resume in a new ${other(p.open)}`, cmd, run: () => p.onResume(other(p.open)) },
     ],
     [
-      { icon: 'Branch', label: 'Branch conversation', sub: 'Starts a new session from this point. The original stays as it is.', key: 'B', cmd: resumeCommand(s.id, true), run: p.onFork },
+      { icon: 'Branch', label: 'Branch conversation', sub: 'Starts a new session from this point. The original stays as it is.', key: 'B', cmd: resumeCommand(s.id, true, p.skip), run: p.onFork },
       { icon: 'Edit', label: 'Rename…', sub: s.named ? undefined : 'Give it a name so you can resume by name.', key: 'R', run: p.onRename },
     ],
     [
@@ -104,12 +105,16 @@ export function ResumeMenu(p: ResumeMenuProps) {
 if (import.meta.vitest) {
   const { it, expect } = import.meta.vitest
   const noop = () => {}
-  const render = (over: Partial<Session> = {}, open: OpenIn = 'tab') =>
-    renderToStaticMarkup(<ResumeMenu session={makeSession(over)} label="Resume" open={open} terminalName="Ghostty" onResume={noop} onFork={noop} onRename={noop} onCopy={noop} onOpenFolder={noop} onArchive={noop} />)
+  const render = (over: Partial<Session> = {}, open: OpenIn = 'tab', skip = false) =>
+    renderToStaticMarkup(<ResumeMenu session={makeSession(over)} label="Resume" open={open} terminalName="Ghostty" skip={skip} onResume={noop} onFork={noop} onRename={noop} onCopy={noop} onOpenFolder={noop} onArchive={noop} />)
   it('renders the split button closed, with the command as the tooltip', () => {
     const html = render()
     expect(html).toContain('rm-main" title="claude --resume ')
     expect(html).toContain('title="More ways to resume"')
     expect(html).not.toContain('rm-menu')
+    expect(html).not.toContain('skip-permissions')
+  })
+  it('puts the skip-permissions flag in the tooltip when the setting is on', () => {
+    expect(render({}, 'tab', true)).toMatch(/rm-main" title="claude --resume [^"]* --dangerously-skip-permissions"/)
   })
 }
