@@ -8,7 +8,7 @@ const isAccent = (v: unknown): v is Accent => ACCENTS.some((a) => a.id === v)
 const clamp = (v: unknown, min: number, max: number, def: number): number =>
   typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(min, Math.round(v))) : def
 
-const PATCH_KEYS = ['terminal', 'open', 'accent', 'opacity', 'blur', 'appIcon', 'skipPermissions'] as const
+const PATCH_KEYS = ['terminal', 'open', 'accent', 'opacity', 'blur', 'appIcon', 'skipPermissions', 'onboarded'] as const
 
 export const applyPatch = (prev: Settings, p: Record<string, unknown>): Settings =>
   normalizeSettings({ ...prev, ...Object.fromEntries(PATCH_KEYS.filter((k) => k in p).map((k) => [k, p[k]])) })
@@ -26,6 +26,7 @@ export function normalizeSettings(raw: unknown): Settings {
     archived: Array.isArray(r.archived) ? [...new Set(r.archived.filter(isSessionId))] : [],
     statusTee: r.statusTee === true,
     skipPermissions: r.skipPermissions === true,
+    onboarded: r.onboarded === true,
   }
 }
 
@@ -48,8 +49,17 @@ export function writeJsonAtomic(path: string, value: unknown): void {
   renameSync(`${path}.tmp`, path)
 }
 
-export function createSettingsStore(path: string): SettingsStore {
-  let current = normalizeSettings(readJson(path))
+// No `onboarded` key means the file predates onboarding, so the user is not new. A fresh install has neither file.
+export function initialSettings(raw: unknown, hasIndex: boolean): Settings {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const existing = 'onboarded' in r ? r.onboarded === true : raw !== null || hasIndex
+  return normalizeSettings({ ...r, onboarded: existing })
+}
+
+export function createSettingsStore(path: string, hasIndex = false): SettingsStore {
+  const raw = readJson(path)
+  let current = initialSettings(raw, hasIndex)
+  if (!(raw && typeof raw === 'object' && 'onboarded' in raw)) writeJsonAtomic(path, current)
   return {
     get: () => current,
     save(patch) {
@@ -86,5 +96,26 @@ if (import.meta.vitest) {
     const path = join(mkdtempSync(join(tmpdir(), 'deck-settings-')), 'nested', 'settings.json')
     createSettingsStore(path).save({ terminal: 'iterm', archived: [id] })
     expect(createSettingsStore(path).get()).toEqual({ ...SETTINGS_DEFAULTS, terminal: 'iterm', archived: [id] })
+  })
+  it('treats a missing settings file with no session cache as a fresh install', () => {
+    expect(initialSettings(null, false).onboarded).toBe(false)
+  })
+  it('treats an old settings file without the flag, or a session cache alone, as an existing install', () => {
+    expect(initialSettings({ open: 'window' }, false).onboarded).toBe(true)
+    expect(initialSettings(null, true).onboarded).toBe(true)
+  })
+  it('keeps an explicit onboarded value, so quitting mid-setup shows setup again', () => {
+    expect(initialSettings({ onboarded: false }, true).onboarded).toBe(false)
+    expect(initialSettings({ onboarded: true }, false).onboarded).toBe(true)
+  })
+  it('writes the decision on first read so it survives a relaunch', () => {
+    const path = join(mkdtempSync(join(tmpdir(), 'deck-settings-')), 'settings.json')
+    expect(createSettingsStore(path).get().onboarded).toBe(false)
+    expect(readJson(path)).toMatchObject({ onboarded: false })
+    expect(createSettingsStore(path, true).get().onboarded).toBe(false)
+  })
+  it('accepts onboarded in a patch and keeps it only when exactly true', () => {
+    expect(applyPatch(SETTINGS_DEFAULTS, { onboarded: true }).onboarded).toBe(true)
+    expect(normalizeSettings({ onboarded: 'yes' }).onboarded).toBe(false)
   })
 }

@@ -14,9 +14,10 @@ export interface Settings {
   archived: string[]
   statusTee: boolean
   skipPermissions: boolean
+  onboarded: boolean
 }
-export type SettingsPatch = Partial<Pick<Settings, 'terminal' | 'open' | 'accent' | 'opacity' | 'blur' | 'appIcon' | 'skipPermissions'>>
-export const SETTINGS_DEFAULTS: Settings = { terminal: null, open: 'tab', accent: 'brand', opacity: 88, blur: 24, appIcon: 'dark', archived: [], statusTee: false, skipPermissions: false }
+export type SettingsPatch = Partial<Pick<Settings, 'terminal' | 'open' | 'accent' | 'opacity' | 'blur' | 'appIcon' | 'skipPermissions' | 'onboarded'>>
+export const SETTINGS_DEFAULTS: Settings = { terminal: null, open: 'tab', accent: 'brand', opacity: 88, blur: 24, appIcon: 'dark', archived: [], statusTee: false, skipPermissions: false, onboarded: false }
 
 export const TERMINALS: { id: Terminal; label: string; app: string }[] = [
   { id: 'terminal', label: 'Terminal', app: 'Terminal.app' },
@@ -125,14 +126,16 @@ export interface Transcript { cli: string; turns: Turn[] }
 const TOOL_LABELS: Record<string, string> = { Edit: 'Update', MultiEdit: 'Update', Grep: 'Search', Glob: 'Search' }
 export const toolLabel = (tool: string): string => TOOL_LABELS[tool] ?? tool
 
-// Not ok: the command is on the clipboard and `message` says why.
-export type ResumeResult = { ok: true } | { ok: false; message: string }
+// Not ok: the command is on the clipboard and `message` says why. `automation` names the terminal macOS refused to let us control.
+export type ResumeResult = { ok: true } | { ok: false; message: string; automation?: Terminal }
 
 export interface Api {
   listSessions(): Promise<Session[]>
   getSettings(): Promise<Settings>
   saveSettings(patch: SettingsPatch): Promise<Settings>
   listTerminals(): Promise<Terminal[]>
+  suggestTerminal(): Promise<Terminal>
+  openAutomationSettings(): Promise<void>
   resumeSession(id: string, opts: { fork: boolean; open?: OpenIn }): Promise<ResumeResult>
   openFolder(id: string): Promise<void>
   openPr(id: string): Promise<void>
@@ -160,6 +163,8 @@ export const API_METHODS = [
   'getSettings',
   'saveSettings',
   'listTerminals',
+  'suggestTerminal',
+  'openAutomationSettings',
   'resumeSession',
   'openFolder',
   'openPr',

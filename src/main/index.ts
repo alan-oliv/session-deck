@@ -1,5 +1,5 @@
 import { app, BrowserWindow, clipboard, shell } from 'electron'
-import { appendFileSync, closeSync, openSync, readSync, statSync } from 'node:fs'
+import { appendFileSync, closeSync, existsSync, openSync, readSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { isSessionId, terminalLabel, type ResumeResult, type Session, type Settings, type SettingsPatch } from '../shared/api'
 import { blurRadius } from '../shared/appearance'
@@ -71,7 +71,7 @@ function appendLine(path: string, line: string): void {
 
 app.whenReady().then(() => {
   const userData = app.getPath('userData')
-  const settings = createSettingsStore(join(userData, 'settings.json'))
+  const settings = createSettingsStore(join(userData, 'settings.json'), existsSync(join(userData, 'index.json')))
   const labels = createLabelsStore(join(userData, 'labels.json'))
   initBlur((err) => console.error('blur', err))
   applyAppIcon(settings.get())
@@ -109,6 +109,10 @@ app.whenReady().then(() => {
       return next
     },
     listTerminals: async () => installedTerminals(),
+    suggestTerminal: async () => defaultTerminal(installedTerminals()),
+    openAutomationSettings: async () => {
+      await shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Automation')
+    },
     resumeSession: async (id, opts): Promise<ResumeResult> => {
       if (!opts || typeof opts !== 'object' || typeof opts.fork !== 'boolean') throw new Error('Invalid options')
       if (opts.open !== undefined && opts.open !== 'tab' && opts.open !== 'window') throw new Error('Invalid options')
