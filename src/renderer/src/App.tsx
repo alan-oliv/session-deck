@@ -66,6 +66,7 @@ export function Deck({ all, settings, installed, now, labels, update }: { all: S
   const [detailTab, setDetailTab] = useState<DetailTab>('overview')
   const [focus, setFocus] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [setupOpen, setSetupOpen] = useState(!settings.onboarded)
   const [toast, setToast] = useState<Toast | null>(null)
   const barSeq = useRef(0)
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -137,6 +138,7 @@ export function Deck({ all, settings, installed, now, labels, update }: { all: S
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (setupOpen) return
       if ((e.metaKey || e.ctrlKey) && e.key === ',') {
         e.preventDefault()
         toggleSettings()
@@ -154,7 +156,7 @@ export function Deck({ all, settings, installed, now, labels, update }: { all: S
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [settingsOpen])
+  }, [settingsOpen, setupOpen])
 
   const flash = (key: CopiedKey) => {
     setCopied(key)
@@ -386,7 +388,7 @@ export function Deck({ all, settings, installed, now, labels, update }: { all: S
           <button type="button" className="toast-undo" onClick={() => void call(() => window.api.installUpdate())}>Restart to update</button>
         </div>
       )}
-      {settingsOpen && <SettingsModal settings={settings} installed={installed} onChange={saveSettings} onClose={() => setSettingsOpen(false)} />}
+      {settingsOpen && <SettingsModal settings={settings} installed={installed} onChange={saveSettings} onRerunSetup={() => { setSettingsOpen(false); setSetupOpen(true) }} onClose={() => setSettingsOpen(false)} />}
     </div>
   )
 }

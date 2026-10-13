@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import darkIcon from '../../../build/icon-dark.png'
 import purpleIcon from '../../../build/icon-purple.png'
@@ -16,15 +16,53 @@ export interface SettingsModalProps {
   settings: Settings
   installed: Terminal[]
   onChange(patch: SettingsPatch): void
+  onRerunSetup(): void
   onClose(): void
 }
 
-export function SettingsModal({ settings: s, installed, onChange, onClose }: SettingsModalProps) {
+export function TerminalDropdown({ value, installed, onChange, defaultOpen = false }: { value: Terminal | null; installed: Terminal[]; onChange(t: Terminal): void; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen)
+  const terms = TERMINALS.filter((t) => installed.includes(t.id))
+  const cur = terms.find((t) => t.id === value)
+  return (
+    <div className="set-dd">
+      <button type="button" className={open ? 'set-dd-trigger is-open' : 'set-dd-trigger'} aria-haspopup="listbox" aria-expanded={open} aria-label="Terminal" onClick={() => setOpen((o) => !o)}>
+        <Icon name="Code" size={14} />
+        <span className="set-dd-name">{cur ? cur.label : 'Choose a terminal'}</span>
+        <Icon name="ChevronDown2" size={10} />
+      </button>
+      {open && (
+        <>
+          <div className="set-dd-dismiss" onPointerDown={() => setOpen(false)} />
+          <div className="set-dd-menu" role="listbox" aria-label="Terminal">
+            {terms.map((t) => (
+              <button
+                type="button"
+                role="option"
+                aria-selected={t.id === value}
+                key={t.id}
+                className={t.id === value ? 'set-dd-item is-selected' : 'set-dd-item'}
+                onClick={() => {
+                  onChange(t.id)
+                  setOpen(false)
+                }}
+              >
+                <span className="set-dd-name">{t.label}</span>
+                <span className="set-dd-check">{t.id === value && <Icon name="Check" size={12} />}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+export function SettingsModal({ settings: s, installed, onChange, onRerunSetup, onClose }: SettingsModalProps) {
   const panel = useRef<HTMLDivElement>(null)
   useEffect(() => panel.current?.focus(), [])
   const accent = ACCENTS.find((a) => a.id === s.accent) ?? ACCENTS[0]
   const translucent = s.opacity < 100
-  const terms = TERMINALS.filter((t) => installed.includes(t.id))
   const reset = () => {
     const { terminal, open, accent, opacity, blur, appIcon } = SETTINGS_DEFAULTS
     onChange({ terminal, open, accent, opacity, blur, appIcon })
@@ -45,17 +83,7 @@ export function SettingsModal({ settings: s, installed, onChange, onClose }: Set
               <span className="set-label">Terminal</span>
               <span className="set-help">Where Resume and Branch conversation open the session.</span>
             </div>
-            <div className="set-terms" role="radiogroup" aria-label="Terminal">
-              {terms.map((t) => {
-                const cur = t.id === s.terminal
-                return (
-                  <button type="button" role="radio" aria-checked={cur} key={t.id} className={cur ? 'set-term is-selected' : 'set-term'} onClick={() => onChange({ terminal: t.id })}>
-                    <span className="set-term-name">{t.label}</span>
-                    <span className="set-term-check">{cur && <Icon name="Check" size={12} />}</span>
-                  </button>
-                )
-              })}
-            </div>
+            <TerminalDropdown value={s.terminal} installed={installed} onChange={(terminal) => onChange({ terminal })} />
           </div>
           <div className="set-row">
             <div className="set-text">
@@ -145,6 +173,7 @@ export function SettingsModal({ settings: s, installed, onChange, onClose }: Set
         </div>
         <div className="set-foot">
           <span className="set-saved">Saved on this Mac.</span>
+          <button type="button" className="set-text-btn" onClick={onRerunSetup}>Run setup again</button>
           <Button kind="secondary" onClick={reset}>Reset to defaults</Button>
         </div>
       </div>
@@ -155,19 +184,23 @@ export function SettingsModal({ settings: s, installed, onChange, onClose }: Set
 if (import.meta.vitest) {
   const { it, expect } = import.meta.vitest
   const render = (over: Partial<Settings> = {}, installed: Terminal[] = ['terminal', 'iterm', 'ghostty']) =>
-    renderToStaticMarkup(<SettingsModal settings={{ ...SETTINGS_DEFAULTS, ...over }} installed={installed} onChange={() => {}} onClose={() => {}} />)
+    renderToStaticMarkup(<SettingsModal settings={{ ...SETTINGS_DEFAULTS, ...over }} installed={installed} onChange={() => {}} onRerunSetup={() => {}} onClose={() => {}} />)
 
-  it('lists only installed terminals and marks the chosen one', () => {
-    const html = render({ terminal: 'iterm' })
-    expect(html).toContain('>iTerm2<')
+  it('shows the chosen terminal on the dropdown trigger and a prompt when none is chosen or it is missing', () => {
+    expect(render({ terminal: 'iterm' })).toMatch(/set-dd-trigger[^>]*>.*?>iTerm2</)
+    expect(render({ terminal: null })).toContain('>Choose a terminal<')
+    expect(render({ terminal: 'warp' })).toContain('>Choose a terminal<')
+  })
+  it('opens a menu of only the installed terminals with a check on the chosen one', () => {
+    const html = renderToStaticMarkup(<TerminalDropdown value="iterm" installed={['terminal', 'iterm', 'ghostty']} onChange={() => {}} defaultOpen />)
+    expect(html).toContain('role="listbox"')
     expect(html).toContain('>Ghostty<')
     expect(html).not.toContain('>Warp<')
-    expect(html).toMatch(/set-term is-selected"[^>]*>.*?>iTerm2</)
-    expect(html.match(/set-term is-selected/g)).toHaveLength(1)
+    expect(html.match(/aria-selected="true"/g)).toHaveLength(1)
+    expect(html).toMatch(/aria-selected="true"[^>]*>.*?>iTerm2<.*?set-dd-check/)
   })
-  it('shows no selected terminal when the saved one is missing or unset', () => {
-    expect(render({ terminal: 'warp' })).not.toContain('set-term is-selected')
-    expect(render({ terminal: null })).not.toContain('set-term is-selected')
+  it('offers to run setup again', () => {
+    expect(render()).toContain('>Run setup again<')
   })
   it('shows the open mode, the accent name and the range values', () => {
     const html = render({ open: 'window', accent: 'teal', opacity: 70, blur: 10 })
