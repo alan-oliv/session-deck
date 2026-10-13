@@ -118,8 +118,12 @@ export const warpTabScript = (cmd: string): string =>
     'tell application "System Events"',
     '  tell process "Warp"',
     '    if (count of windows) is 0 then return "none"',
+    // keystroke goes to the frontmost app, so the command must never be typed while another app has focus.
+    '    set frontmost to true',
+    '    if not frontmost then return "none"',
     '    keystroke "t" using command down',
     '    delay 0.4',
+    '    if not frontmost then return "none"',
     `    keystroke ${appleScriptString(cmd)}`,
     '    key code 36',
     '  end tell',
@@ -287,6 +291,7 @@ if (import.meta.vitest) {
     const script = warpTabScript(`cd '/x' && claude --resume ${id}`)
     expect(script).toContain('tell application "Warp" to activate')
     expect(script).toContain('if (count of windows) is 0 then return "none"')
+    expect(script).toContain('set frontmost to true\n    if not frontmost then return "none"')
     expect(script).toContain('keystroke "t" using command down')
     expect(script).toContain(`keystroke "cd '/x' && claude --resume ${id}"`)
     expect(script).toContain('key code 36')
