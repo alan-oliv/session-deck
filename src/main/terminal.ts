@@ -99,6 +99,23 @@ export class CannotRunError extends Error {
   }
 }
 
+export class AutomationDeniedError extends Error {
+  constructor(readonly terminal: Terminal) {
+    super(`Session Deck can't control ${terminalLabel(terminal)}. Allow it in System Settings → Privacy & Security → Automation. Resume command copied.`)
+  }
+}
+
+export const isAutomationDenied = (e: unknown): boolean =>
+  /-1743|not authori[sz]ed to send apple events/i.test(String((e as { stderr?: unknown } | undefined)?.stderr ?? (e instanceof Error ? e.message : '')))
+
+async function osascript(terminal: Terminal, script: string): Promise<void> {
+  try {
+    await run('osascript', ['-e', script])
+  } catch (e) {
+    throw isAutomationDenied(e) ? new AutomationDeniedError(terminal) : e
+  }
+}
+
 // Throws CannotRunError when the terminal opened but cannot be told to run the command (VS Code).
 export async function launch(terminal: Terminal, open: OpenIn, s: Session, fork: boolean, skip = false): Promise<void> {
   const cmd = terminalCommand(s, fork, skip)
@@ -112,14 +129,14 @@ export async function launch(terminal: Terminal, open: OpenIn, s: Session, fork:
       return
     case 'iterm':
       // execFile, never a shell: the script is a single argv entry.
-      await run('osascript', ['-e', itermScript(cmd, open)])
+      await osascript('iterm', itermScript(cmd, open))
       return
     case 'terminal':
-      if (open === 'window') return void (await run('osascript', ['-e', terminalAppScript(cmd)]))
+      if (open === 'window') return void (await osascript('terminal', terminalAppScript(cmd)))
       try {
-        await run('osascript', ['-e', terminalAppTabScript(cmd)])
+        await osascript('terminal', terminalAppTabScript(cmd))
       } catch {
-        await run('osascript', ['-e', terminalAppScript(cmd)])
+        await osascript('terminal', terminalAppScript(cmd))
       }
       return
     case 'ghostty':
@@ -207,4 +224,16 @@ if (import.meta.vitest) {
     writeFileSync(PATHS.warpConfig, warpConfig('session-deck-check', PATHS.home, echo))
     await run('open', [warpUri('tab')])
   }, 120_000)
+  it('recognises the macOS Automation refusal and nothing else', () => {
+    expect(isAutomationDenied({ stderr: '0:36: execution error: Not authorized to send Apple events to iTerm. (-1743)' })).toBe(true)
+    expect(isAutomationDenied(new Error('osascript: (-1743)'))).toBe(true)
+    expect(isAutomationDenied({ stderr: 'execution error: iTerm got an error: Can’t get window 1. (-1728)' })).toBe(false)
+    expect(isAutomationDenied(undefined)).toBe(false)
+  })
+  it('names the terminal and the System Settings path in the refusal message', () => {
+    const e = new AutomationDeniedError('iterm')
+    expect(e.terminal).toBe('iterm')
+    expect(e.message).toContain("can't control iTerm2")
+    expect(e.message).toContain('Privacy & Security → Automation')
+  })
 }

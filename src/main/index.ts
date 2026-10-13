@@ -10,7 +10,7 @@ import { createLabelsStore } from './labels'
 import { PATHS } from './paths'
 import { applyPatch, createSettingsStore, isTerminal } from './settings'
 import { installTee, removeTee } from './statusline'
-import { CannotRunError, defaultTerminal, folderToOpen, installedTerminals, launch, terminalCommand } from './terminal'
+import { AutomationDeniedError, CannotRunError, defaultTerminal, folderToOpen, installedTerminals, launch, terminalCommand } from './terminal'
 import { cleanTitle, customTitleLine } from './transcript'
 import { createTranscriptStore } from './transcripts'
 import { createUpdates } from './updates'
@@ -127,6 +127,7 @@ app.whenReady().then(() => {
         return { ok: true }
       } catch (e) {
         clipboard.writeText(terminalCommand(s, fork, skipPermissions))
+        if (e instanceof AutomationDeniedError) return { ok: false, message: e.message, automation: e.terminal }
         if (e instanceof CannotRunError) return { ok: false, message: e.message }
         return { ok: false, message: `Couldn't open ${terminalLabel(terminal)}, so the command was copied. ${e instanceof Error ? e.message : String(e)}` }
       }
