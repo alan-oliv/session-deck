@@ -17,6 +17,25 @@ export function defaultTerminal(installed: readonly Terminal[]): Terminal {
   return (['ghostty', 'iterm', 'terminal'] as const).find((t) => installed.includes(t)) ?? 'terminal'
 }
 
+// macOS keeps no usage history, so a terminal pinned in the Dock is the nearest signal for "the one they use".
+// Dock tiles hold bookmark data, which plutil refuses to print as JSON, so this reads persistent-apps as XML.
+export function dockTerminals(dockXml: string, installed: readonly Terminal[]): Terminal[] {
+  return [...dockXml.matchAll(/<key>_CFURLString<\/key>\s*<string>([^<]*)<\/string>/g)].flatMap(([, u]) => {
+    const url = decodeURIComponent(u).replace(/\/$/, '')
+    const t = TERMINALS.find((x) => installed.includes(x.id) && url.endsWith(`/${x.app}`))
+    return t ? [t.id] : []
+  })
+}
+
+export async function suggestTerminal(installed: readonly Terminal[]): Promise<Terminal> {
+  try {
+    const { stdout } = await run('plutil', ['-extract', 'persistent-apps', 'xml1', '-o', '-', join(PATHS.home, 'Library/Preferences/com.apple.dock.plist')])
+    return dockTerminals(stdout, installed)[0] ?? defaultTerminal(installed)
+  } catch {
+    return defaultTerminal(installed)
+  }
+}
+
 export const shellQuote = (s: string): string => `'${s.replace(/'/g, `'\\''`)}'`
 export const appleScriptString = (s: string): string => `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
 
@@ -91,11 +110,55 @@ export const warpConfig = (title: string, cwd: string, cmd: string): string =>
 export const warpUri = (open: OpenIn): string =>
   `warp://tab_config/${encodeURIComponent(basename(PATHS.warpConfig, '.toml'))}${open === 'window' ? '?new_window=true' : ''}`
 
+// System Events needs Accessibility permission; a refusal throws and launch() falls back to the URI.
+export const warpTabScript = (cmd: string): string =>
+  [
+    'tell application "Warp" to activate',
+    'delay 0.3',
+    'tell application "System Events"',
+    '  tell process "Warp"',
+    '    if (count of windows) is 0 then return "none"',
+    // keystroke goes to the frontmost app, so the command must never be typed while another app has focus.
+    '    set frontmost to true',
+    '    if not frontmost then return "none"',
+    '    keystroke "t" using command down',
+    '    delay 0.4',
+    '    if not frontmost then return "none"',
+    `    keystroke ${appleScriptString(cmd)}`,
+    '    key code 36',
+    '  end tell',
+    'end tell',
+    'return "tab"',
+  ].join('\n')
+
+// `application "Warp" is running` answers without launching Warp.
+async function isRunning(app: string): Promise<boolean> {
+  const { stdout } = await run('osascript', ['-e', `application ${appleScriptString(app)} is running`])
+  return stdout.trim() === 'true'
+}
+
 const WEZTERM = '/Applications/WezTerm.app/Contents/MacOS/wezterm'
 
 export class CannotRunError extends Error {
   constructor(terminal: Terminal) {
     super(`Couldn't run it in ${terminalLabel(terminal)}. Resume command copied.`)
+  }
+}
+
+export class AutomationDeniedError extends Error {
+  constructor(readonly terminal: Terminal) {
+    super(`Session Deck can't control ${terminalLabel(terminal)}. Allow it in System Settings → Privacy & Security → Automation. Resume command copied.`)
+  }
+}
+
+export const isAutomationDenied = (e: unknown): boolean =>
+  /-1743|not authori[sz]ed to send apple events/i.test(String((e as { stderr?: unknown } | undefined)?.stderr ?? (e instanceof Error ? e.message : '')))
+
+async function osascript(terminal: Terminal, script: string): Promise<void> {
+  try {
+    await run('osascript', ['-e', script])
+  } catch (e) {
+    throw isAutomationDenied(e) ? new AutomationDeniedError(terminal) : e
   }
 }
 
@@ -106,20 +169,24 @@ export async function launch(terminal: Terminal, open: OpenIn, s: Session, fork:
   const claude = resumeCommand(s.id, fork, skip).split(' ')
   switch (terminal) {
     case 'warp':
+      if (open === 'tab' && (await isRunning('Warp').catch(() => false))) {
+        const typed = await run('osascript', ['-e', warpTabScript(cmd)]).then((r) => r.stdout.trim() === 'tab', () => false)
+        if (typed) return
+      }
       mkdirSync(dirname(PATHS.warpConfig), { recursive: true })
       writeFileSync(PATHS.warpConfig, warpConfig(s.title, dir, resumeCommand(s.id, fork, skip)))
       await run('open', [warpUri(open)])
       return
     case 'iterm':
       // execFile, never a shell: the script is a single argv entry.
-      await run('osascript', ['-e', itermScript(cmd, open)])
+      await osascript('iterm', itermScript(cmd, open))
       return
     case 'terminal':
-      if (open === 'window') return void (await run('osascript', ['-e', terminalAppScript(cmd)]))
+      if (open === 'window') return void (await osascript('terminal', terminalAppScript(cmd)))
       try {
-        await run('osascript', ['-e', terminalAppTabScript(cmd)])
+        await osascript('terminal', terminalAppTabScript(cmd))
       } catch {
-        await run('osascript', ['-e', terminalAppScript(cmd)])
+        await osascript('terminal', terminalAppScript(cmd))
       }
       return
     case 'ghostty':
@@ -206,5 +273,43 @@ if (import.meta.vitest) {
     mkdirSync(dirname(PATHS.warpConfig), { recursive: true })
     writeFileSync(PATHS.warpConfig, warpConfig('session-deck-check', PATHS.home, echo))
     await run('open', [warpUri('tab')])
+    await run('osascript', ['-e', warpTabScript(echo)])
   }, 120_000)
+  it('recognises the macOS Automation refusal and nothing else', () => {
+    expect(isAutomationDenied({ stderr: '0:36: execution error: Not authorized to send Apple events to iTerm. (-1743)' })).toBe(true)
+    expect(isAutomationDenied(new Error('osascript: (-1743)'))).toBe(true)
+    expect(isAutomationDenied({ stderr: 'execution error: iTerm got an error: Can’t get window 1. (-1728)' })).toBe(false)
+    expect(isAutomationDenied(undefined)).toBe(false)
+  })
+  it('names the terminal and the System Settings path in the refusal message', () => {
+    const e = new AutomationDeniedError('iterm')
+    expect(e.terminal).toBe('iterm')
+    expect(e.message).toContain("can't control iTerm2")
+    expect(e.message).toContain('Privacy & Security → Automation')
+  })
+  it('types the command into a new Warp tab only when a Warp window exists', () => {
+    const script = warpTabScript(`cd '/x' && claude --resume ${id}`)
+    expect(script).toContain('tell application "Warp" to activate')
+    expect(script).toContain('if (count of windows) is 0 then return "none"')
+    expect(script).toContain('set frontmost to true\n    if not frontmost then return "none"')
+    expect(script).toContain('keystroke "t" using command down')
+    expect(script).toContain(`keystroke "cd '/x' && claude --resume ${id}"`)
+    expect(script).toContain('key code 36')
+    expect(script.trimEnd().endsWith('return "tab"')).toBe(true)
+  })
+  it('escapes quotes in the command typed into Warp', () => {
+    expect(warpTabScript('say "hi"')).toContain('keystroke "say \\"hi\\""')
+  })
+  it('lists the installed terminals pinned in the Dock, in Dock order', () => {
+    const tile = (url: string) =>
+      `<dict><key>tile-data</key><dict><key>book</key><data>Ym9vaw==</data><key>file-data</key><dict>
+        <key>_CFURLString</key>\n\t<string>${url}</string><key>_CFURLStringType</key><integer>15</integer></dict></dict></dict>`
+    const dock = `<plist version="1.0"><array>${['Safari.app', 'Visual%20Studio%20Code.app', 'Warp.app'].map((a) => tile(`file:///Applications/${a}/`)).join('')}</array></plist>`
+    expect(dockTerminals(dock, ['terminal', 'warp', 'vscode'])).toEqual(['vscode', 'warp'])
+    expect(dockTerminals(dock, ['terminal'])).toEqual([])
+  })
+  it('returns nothing for a Dock it cannot read', () => {
+    expect(dockTerminals('not xml', ['terminal'])).toEqual([])
+    expect(dockTerminals('', ['terminal'])).toEqual([])
+  })
 }
