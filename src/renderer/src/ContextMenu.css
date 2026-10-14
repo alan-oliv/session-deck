@@ -1,0 +1,41 @@
+.cm {
+  position: fixed;
+  z-index: 30;
+}
+
+.cm .lp {
+  position: relative;
+  top: 0;
+}
+
+.cm-menu {
+  position: relative;
+  z-index: 21;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  padding: 4px;
+  border-radius: var(--app-radius-panel);
+  background: var(--app-modal);
+  box-shadow: inset 0 0 0 1px var(--app-border-strong), 0 7px 24px rgba(0, 0, 0, 0.35);
+}
+
+.cm-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: var(--app-radius);
+  font-size: 13px;
+  color: var(--app-text);
+  white-space: nowrap;
+}
+
+.cm-item svg {
+  color: var(--app-text-3);
+}
+
+.cm-item:hover {
+  background: var(--app-wash);
+}
