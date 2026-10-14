@@ -50,6 +50,18 @@ export function applyNewLabel(store: LabelStore, sessionId: string, name: string
   return labelIdsOf(made.store, sessionId).includes(made.label.id) ? made.store : toggleLabel(made.store, sessionId, made.label.id)
 }
 
+export function toggleLabelMany(store: LabelStore, sessionIds: string[], labelId: string): LabelStore {
+  const lacking = sessionIds.filter((sid) => !labelIdsOf(store, sid).includes(labelId))
+  return (lacking.length ? lacking : sessionIds).reduce((s, sid) => toggleLabel(s, sid, labelId), store)
+}
+
+export function applyNewLabelMany(store: LabelStore, sessionIds: string[], name: string, id?: string): LabelStore | null {
+  const made = createLabel(store, name, id)
+  if (!made) return null
+  const lacking = sessionIds.filter((sid) => !labelIdsOf(made.store, sid).includes(made.label.id))
+  return lacking.reduce((s, sid) => toggleLabel(s, sid, made.label.id), made.store)
+}
+
 export function deleteLabel(store: LabelStore, id: string): { store: LabelStore; sessions: number } {
   return {
     store: { ...store, list: store.list.filter((l) => l.id !== id) },
@@ -131,6 +143,19 @@ if (import.meta.vitest) {
     expect(applyNewLabel(abc, 's2', 'Delta', 'd')!.map.s2).toEqual(['d'])
     expect(applyNewLabel(abc, 's1', 'alpha')!.map.s1).toEqual(['b', 'gone', 'a'])
     expect(applyNewLabel(abc, 's2', '')).toBeNull()
+  })
+  it('adds a label to the sessions lacking it, and removes it from all only when every session has it', () => {
+    const mixed = store(abc.list, { s1: ['a'], s2: [] })
+    const added = toggleLabelMany(mixed, ['s1', 's2'], 'a')
+    expect(added.map).toEqual({ s1: ['a'], s2: ['a'] })
+    expect(toggleLabelMany(added, ['s1', 's2'], 'a').map).toEqual({ s1: [], s2: [] })
+  })
+  it('creates or reuses a label and puts it on every session, null for an empty name', () => {
+    const r = applyNewLabelMany(store(abc.list, { s1: ['a'] }), ['s1', 's2'], 'alpha')!
+    expect(r.list).toHaveLength(3)
+    expect(r.map).toEqual({ s1: ['a'], s2: ['a'] })
+    expect(applyNewLabelMany(abc, ['s1', 's2'], 'Delta', 'd')!.map.s2).toEqual(['d'])
+    expect(applyNewLabelMany(abc, ['s1'], ' ')).toBeNull()
   })
   it('deletes a label from the list, keeps the map for Undo, and counts the sessions that had it', () => {
     const r = deleteLabel(store(abc.list, { s1: ['a'], s2: ['a', 'b'], s3: ['c'] }), 'a')
