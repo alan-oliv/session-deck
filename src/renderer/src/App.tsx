@@ -13,12 +13,15 @@ import { ContextMenu } from './ContextMenu'
 import { Detail, type CopiedKey, type DetailTab } from './Detail'
 import { errorText, useLabels, useNow, useSessions, useSettings, useUpdate } from './hooks'
 import { SessionList } from './SessionList'
+import { Onboarding } from './Onboarding'
 import { SettingsModal } from './Settings'
 import { Sidebar } from './Sidebar'
 import './App.css'
 
 const COPIED_MS = 1600
 const TOAST_MS = 2400
+// Long enough to read the refusal and reach for its button.
+const AUTOMATION_TOAST_MS = 12_000
 // Static renders in tests have no window; the default window width stands in.
 const windowWidth = () => (typeof window === 'undefined' ? 1360 : window.innerWidth)
 
@@ -31,8 +34,18 @@ function savedPanes(): PaneWidths {
 }
 
 type Pending = { id: string; fork: boolean }
-type Toast = { text: string; undo(): void }
+type Toast = { text: string; undo?(): void; action?: { label: string; run(): void } }
 const LABEL_TOAST_MS = 5000
+
+function ToastView({ toast }: { toast: Toast }) {
+  return (
+    <div className={toast.action ? 'toast toast-wide' : 'toast'}>
+      <span>{toast.text}</span>
+      {toast.undo && <button type="button" className="toast-undo" onClick={toast.undo}>Undo</button>}
+      {toast.action && <button type="button" className="toast-undo" onClick={toast.action.run}>{toast.action.label}</button>}
+    </div>
+  )
+}
 
 export function App() {
   const sessions = useSessions()
@@ -51,7 +64,7 @@ export function App() {
   return sessions && settings && installed && labels ? <Deck all={sessions} settings={settings} installed={installed} now={now} labels={labels} update={update} /> : <div className="app-loading" />
 }
 
-export function Deck({ all, settings, installed, now, labels, update }: { all: Session[]; settings: Settings; installed: Terminal[]; now: Date; labels: LabelStore; update?: string | null }) {
+export function Deck({ all, settings, installed, now, labels, update, suggested: initialSuggestion = null }: { all: Session[]; settings: Settings; installed: Terminal[]; now: Date; labels: LabelStore; update?: string | null; suggested?: Terminal | null }) {
   const shown = useMemo(() => byRecent(visible(all)), [all])
   const archived = useMemo(() => byRecent(archivedOf(all)), [all])
   const tree = useMemo(() => buildTree(shown, archived.length, labels), [shown, archived, labels])
@@ -68,9 +81,11 @@ export function Deck({ all, settings, installed, now, labels, update }: { all: S
   const [detailTab, setDetailTab] = useState<DetailTab>('overview')
   const [focus, setFocus] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [setupOpen, setSetupOpen] = useState(!settings.onboarded)
   const [toast, setToast] = useState<Toast | null>(null)
   const [picks, setPicks] = useState<Picks>({ picked: [], anchor: null })
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
+  const [suggested, setSuggested] = useState<Terminal | null>(initialSuggestion)
   const barSeq = useRef(0)
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -147,6 +162,7 @@ export function Deck({ all, settings, installed, now, labels, update }: { all: S
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (setupOpen) return
       if ((e.metaKey || e.ctrlKey) && e.key === ',') {
         e.preventDefault()
         toggleSettings()
@@ -166,7 +182,16 @@ export function Deck({ all, settings, installed, now, labels, update }: { all: S
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [settingsOpen, bar, menu, picks.picked.length])
+  }, [settingsOpen, setupOpen, bar, menu, picks.picked.length])
+
+  useEffect(() => {
+    if (!setupOpen || suggested) return
+    // Shortcuts stay off while setup is pending, so a failed suggestion must still bring onboarding up.
+    window.api.suggestTerminal().then(setSuggested, (e) => {
+      console.error(e)
+      setSuggested('terminal')
+    })
+  }, [setupOpen])
 
   const flash = (key: CopiedKey) => {
     setCopied(key)
@@ -186,6 +211,9 @@ export function Deck({ all, settings, installed, now, labels, update }: { all: S
       const r = await window.api.resumeSession(id, { fork, open })
       if (r.ok) return flash({ id, what: fork ? 'forked' : 'resumed' })
       flash({ id, what: fork ? 'fork' : 'resume' })
+      if (r.automation) {
+        return showToast({ text: r.message, action: { label: 'Open System Settings', run: () => void call(() => window.api.openAutomationSettings()) } }, AUTOMATION_TOAST_MS)
+      }
       fail(new Error(r.message))
     } catch (e) {
       fail(e)
@@ -303,110 +331,120 @@ export function Deck({ all, settings, installed, now, labels, update }: { all: S
   }
 
   return (
-    <div className="app">
-      {!selected && <div className="app-drag" style={{ left: panes.side + panes.list }} />}
-      {!focus && (
-        <Sidebar
-          tree={tree}
-          scope={scope}
-          current={selected ? sessionProject(selected) : null}
-          width={panes.side}
-          maxWidth={paneMax('side', panes.list, winWidth)}
-          onWidth={setPane('side')}
-          onScope={setScope}
-          settingsOpen={settingsOpen}
-          onSettings={toggleSettings}
-          onLabelCreate={(name) => saveLabels((l) => createLabel(l, name)?.store ?? null)}
-          onLabelDelete={deleteLabelWithUndo}
-          onLabelRename={(id, name) => saveLabels((l) => renameLabel(l, id, name))}
-          onLabelColor={(id, color) => saveLabels((l) => recolorLabel(l, id, color))}
-          onLabelMove={(id, before) => saveLabels((l) => moveLabel(l, id, before))}
-        />
-      )}
-      {!focus && (
-        <SessionList
-          title={scopeTitle(scope, tree)}
-          width={panes.list}
-          maxWidth={paneMax('list', panes.side, winWidth)}
-          onWidth={setPane('list')}
-          sessions={scoped}
-          chips={buildChips(shown, scope)}
-          scope={scope}
-          onScope={setScope}
-          showModes={scope.type === 'all'}
-          mode={viewMode}
-          onMode={setMode}
-          selectedId={selected?.id ?? null}
-          picked={picks.picked}
-          onPick={(id, mods) => {
-            const next = nextPicks(picks, listed.map((s) => s.id), id, mods, selected?.id ?? null)
-            setPicks(next)
-            // A toggle-off must not leave the detail on a row outside the target set.
-            const toggledOff = mods.toggle && !mods.shift && !next.picked.includes(id)
-            if (!toggledOff) setSelectedId(id)
-            else if (next.picked.length) setSelectedId(next.picked[next.picked.length - 1])
-          }}
-          onContextMenu={(id, x, y) => {
-            if (!picks.picked.includes(id)) {
-              setPicks({ picked: [], anchor: id })
-              setSelectedId(id)
-            }
-            setMenu({ x, y })
-          }}
-          onArchive={(s) => archive(s, !s.archived)}
-          onOpenBar={() => openBar({ kind: 'sessions', query: '' })}
-          now={now}
-          month={calMonth}
-          day={calDay}
-          onMonth={setMonth}
-          onDay={setDay}
-          labels={labels}
-        />
-      )}
-      {selected ? (
-        <Detail
-          session={selected}
-          now={now}
-          copied={copied}
-          teeOn={settings.statusTee}
-          open={settings.open}
-          skip={settings.skipPermissions}
-          terminalName={terminalName}
-          tab={detailTab}
-          focus={focus}
-          onTab={setDetailTab}
-          onFocus={() => setFocus(!focus)}
-          onResume={(open) => void resume(selected.id, false, open)}
-          onCopy={() => copy(selected.id, 'resume', resumeCommand(selected.id, false, settings.skipPermissions))}
-          onFork={() => void resume(selected.id, true)}
-          onRename={(title) => void call(() => window.api.renameSession(selected.id, title))}
-          onOpenFolder={() => void call(() => window.api.openFolder(selected.id))}
-          onCopyPr={() => selected.pr && copy(selected.id, 'pr', prCommand(selected.pr.number))}
-          onEnableTee={() => void call(() => window.api.setStatusTee(true))}
-          onArchive={() => archive(selected, !selected.archived)}
-          labels={labels}
-          labelCounts={labelCounts}
-          onToggleLabel={(labelId) => saveLabels((l) => toggleLabel(l, selected.id, labelId))}
-          onCreateLabel={(name) => saveLabels((l) => applyNewLabel(l, selected.id, name))}
-        />
-      ) : (
-        <main className="detail" />
-      )}
-      {bar && (
-        <CommandBar
-          key={bar.seq}
-          open={bar.open}
-          sessions={all}
-          settings={settings}
-          labels={labels}
-          now={now}
-          note={note}
-          resultsWidth={panes.pal}
-          onResultsWidth={setPane('pal')}
-          onClose={closeBar}
-          onAction={(a) => void onAction(a)}
-        />
-      )}
+    <>
+      <div className="app" inert={setupOpen}>
+        {!selected && <div className="app-drag" style={{ left: panes.side + panes.list }} />}
+        {!focus && (
+          <Sidebar
+            tree={tree}
+            scope={scope}
+            current={selected ? sessionProject(selected) : null}
+            width={panes.side}
+            maxWidth={paneMax('side', panes.list, winWidth)}
+            onWidth={setPane('side')}
+            onScope={setScope}
+            settingsOpen={settingsOpen}
+            onSettings={toggleSettings}
+            onLabelCreate={(name) => saveLabels((l) => createLabel(l, name)?.store ?? null)}
+            onLabelDelete={deleteLabelWithUndo}
+            onLabelRename={(id, name) => saveLabels((l) => renameLabel(l, id, name))}
+            onLabelColor={(id, color) => saveLabels((l) => recolorLabel(l, id, color))}
+            onLabelMove={(id, before) => saveLabels((l) => moveLabel(l, id, before))}
+          />
+        )}
+        {!focus && (
+          <SessionList
+            title={scopeTitle(scope, tree)}
+            width={panes.list}
+            maxWidth={paneMax('list', panes.side, winWidth)}
+            onWidth={setPane('list')}
+            sessions={scoped}
+            chips={buildChips(shown, scope)}
+            scope={scope}
+            onScope={setScope}
+            showModes={scope.type === 'all'}
+            mode={viewMode}
+            onMode={setMode}
+            selectedId={selected?.id ?? null}
+            picked={picks.picked}
+            onPick={(id, mods) => {
+              const next = nextPicks(picks, listed.map((s) => s.id), id, mods, selected?.id ?? null)
+              setPicks(next)
+              // A toggle-off must not leave the detail on a row outside the target set.
+              const toggledOff = mods.toggle && !mods.shift && !next.picked.includes(id)
+              if (!toggledOff) setSelectedId(id)
+              else if (next.picked.length) setSelectedId(next.picked[next.picked.length - 1])
+            }}
+            onContextMenu={(id, x, y) => {
+              if (!picks.picked.includes(id)) {
+                setPicks({ picked: [], anchor: id })
+                setSelectedId(id)
+              }
+              setMenu({ x, y })
+            }}
+            onArchive={(s) => archive(s, !s.archived)}
+            onOpenBar={() => openBar({ kind: 'sessions', query: '' })}
+            now={now}
+            month={calMonth}
+            day={calDay}
+            onMonth={setMonth}
+            onDay={setDay}
+            labels={labels}
+          />
+        )}
+        {selected ? (
+          <Detail
+            session={selected}
+            now={now}
+            copied={copied}
+            teeOn={settings.statusTee}
+            open={settings.open}
+            skip={settings.skipPermissions}
+            terminalName={terminalName}
+            tab={detailTab}
+            focus={focus}
+            onTab={setDetailTab}
+            onFocus={() => setFocus(!focus)}
+            onResume={(open) => void resume(selected.id, false, open)}
+            onCopy={() => copy(selected.id, 'resume', resumeCommand(selected.id, false, settings.skipPermissions))}
+            onFork={() => void resume(selected.id, true)}
+            onRename={(title) => void call(() => window.api.renameSession(selected.id, title))}
+            onOpenFolder={() => void call(() => window.api.openFolder(selected.id))}
+            onCopyPr={() => selected.pr && copy(selected.id, 'pr', prCommand(selected.pr.number))}
+            onEnableTee={() => void call(() => window.api.setStatusTee(true))}
+            onArchive={() => archive(selected, !selected.archived)}
+            labels={labels}
+            labelCounts={labelCounts}
+            onToggleLabel={(labelId) => saveLabels((l) => toggleLabel(l, selected.id, labelId))}
+            onCreateLabel={(name) => saveLabels((l) => applyNewLabel(l, selected.id, name))}
+          />
+        ) : (
+          <main className="detail" />
+        )}
+        {bar && !setupOpen && (
+          <CommandBar
+            key={bar.seq}
+            open={bar.open}
+            sessions={all}
+            settings={settings}
+            labels={labels}
+            now={now}
+            note={note}
+            resultsWidth={panes.pal}
+            onResultsWidth={setPane('pal')}
+            onClose={closeBar}
+            onAction={(a) => void onAction(a)}
+          />
+        )}
+        {toast && <ToastView toast={toast} />}
+        {update && (
+          <div className="toast update-toast">
+            <span>{`Version ${update} is ready`}</span>
+            <button type="button" className="toast-undo" onClick={() => void call(() => window.api.installUpdate())}>Restart to update</button>
+          </div>
+        )}
+        {settingsOpen && <SettingsModal settings={settings} installed={installed} onChange={saveSettings} onRerunSetup={() => { setSettingsOpen(false); setSetupOpen(true) }} onClose={() => setSettingsOpen(false)} />}
+      </div>
       {menu && targets.length > 0 && (
         <ContextMenu
           x={menu.x}
@@ -422,28 +460,29 @@ export function Deck({ all, settings, installed, now, labels, update }: { all: S
           onClose={() => setMenu(null)}
         />
       )}
-      {toast && (
-        <div className="toast">
-          <span>{toast.text}</span>
-          <button type="button" className="toast-undo" onClick={toast.undo}>Undo</button>
-        </div>
+      {setupOpen && suggested && (
+        <Onboarding
+          settings={settings}
+          installed={installed}
+          suggested={suggested}
+          onChange={saveSettings}
+          onFinish={(openSettings) => {
+            saveSettings({ onboarded: true })
+            setSetupOpen(false)
+            if (openSettings) setSettingsOpen(true)
+          }}
+        />
       )}
-      {update && (
-        <div className="toast update-toast">
-          <span>{`Version ${update} is ready`}</span>
-          <button type="button" className="toast-undo" onClick={() => void call(() => window.api.installUpdate())}>Restart to update</button>
-        </div>
-      )}
-      {settingsOpen && <SettingsModal settings={settings} installed={installed} onChange={saveSettings} onClose={() => setSettingsOpen(false)} />}
-    </div>
+    </>
   )
 }
 
 if (import.meta.vitest) {
   const { it, expect } = import.meta.vitest
   const now = new Date(2026, 9, 6, 11, 0)
-  const settings: Settings = SETTINGS_DEFAULTS
+  const settings: Settings = { ...SETTINGS_DEFAULTS, onboarded: true }
   const installed: Terminal[] = ['terminal']
+  const toastView = (t: Toast) => renderToStaticMarkup(<ToastView toast={t} />)
   it('offers a restart only when an update has been downloaded', () => {
     const deck = (update?: string | null) => renderToStaticMarkup(<Deck all={[makeSession({ title: 'perf pass' })]} settings={settings} installed={installed} now={now} labels={NO_LABELS} update={update} />)
     expect(deck('0.2.0')).toContain('Version 0.2.0 is ready')
@@ -498,5 +537,16 @@ if (import.meta.vitest) {
     const html = renderToStaticMarkup(<Deck all={[a, b]} settings={settings} installed={installed} now={now} labels={labels} />)
     expect(html).toMatch(/side-label">Bug<\/span><span class="side-count">1</)
     expect(html).toContain('>2 sessions<')
+  })
+  it('shows onboarding until the install is onboarded and keeps the deck inert under it', () => {
+    const deck = (onboarded: boolean) => renderToStaticMarkup(<Deck all={[]} settings={{ ...settings, onboarded }} installed={installed} now={now} labels={NO_LABELS} suggested="terminal" />)
+    expect(deck(false)).toContain('ob-panel')
+    expect(deck(false)).toContain('class="app" inert=""')
+    expect(deck(true)).not.toContain('ob-panel')
+    expect(deck(true)).not.toContain('inert')
+  })
+  it('shows a toast with an Open System Settings button for an Automation refusal', () => {
+    expect(toastView({ text: "Session Deck can't control iTerm2.", action: { label: 'Open System Settings', run: () => {} } })).toContain('>Open System Settings<')
+    expect(toastView({ text: 'Archived', undo: () => {} })).toContain('>Undo<')
   })
 }

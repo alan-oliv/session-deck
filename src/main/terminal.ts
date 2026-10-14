@@ -17,6 +17,25 @@ export function defaultTerminal(installed: readonly Terminal[]): Terminal {
   return (['ghostty', 'iterm', 'terminal'] as const).find((t) => installed.includes(t)) ?? 'terminal'
 }
 
+// macOS keeps no usage history, so a terminal pinned in the Dock is the nearest signal for "the one they use".
+// Dock tiles hold bookmark data, which plutil refuses to print as JSON, so this reads persistent-apps as XML.
+export function dockTerminals(dockXml: string, installed: readonly Terminal[]): Terminal[] {
+  return [...dockXml.matchAll(/<key>_CFURLString<\/key>\s*<string>([^<]*)<\/string>/g)].flatMap(([, u]) => {
+    const url = decodeURIComponent(u).replace(/\/$/, '')
+    const t = TERMINALS.find((x) => installed.includes(x.id) && url.endsWith(`/${x.app}`))
+    return t ? [t.id] : []
+  })
+}
+
+export async function suggestTerminal(installed: readonly Terminal[]): Promise<Terminal> {
+  try {
+    const { stdout } = await run('plutil', ['-extract', 'persistent-apps', 'xml1', '-o', '-', join(PATHS.home, 'Library/Preferences/com.apple.dock.plist')])
+    return dockTerminals(stdout, installed)[0] ?? defaultTerminal(installed)
+  } catch {
+    return defaultTerminal(installed)
+  }
+}
+
 export const shellQuote = (s: string): string => `'${s.replace(/'/g, `'\\''`)}'`
 export const appleScriptString = (s: string): string => `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
 
@@ -99,6 +118,23 @@ export class CannotRunError extends Error {
   }
 }
 
+export class AutomationDeniedError extends Error {
+  constructor(readonly terminal: Terminal) {
+    super(`Session Deck can't control ${terminalLabel(terminal)}. Allow it in System Settings → Privacy & Security → Automation. Resume command copied.`)
+  }
+}
+
+export const isAutomationDenied = (e: unknown): boolean =>
+  /-1743|not authori[sz]ed to send apple events/i.test(String((e as { stderr?: unknown } | undefined)?.stderr ?? (e instanceof Error ? e.message : '')))
+
+async function osascript(terminal: Terminal, script: string): Promise<void> {
+  try {
+    await run('osascript', ['-e', script])
+  } catch (e) {
+    throw isAutomationDenied(e) ? new AutomationDeniedError(terminal) : e
+  }
+}
+
 // Throws CannotRunError when the terminal opened but cannot be told to run the command (VS Code).
 export async function launch(terminal: Terminal, open: OpenIn, s: Session, fork: boolean, skip = false): Promise<void> {
   const cmd = terminalCommand(s, fork, skip)
@@ -106,20 +142,22 @@ export async function launch(terminal: Terminal, open: OpenIn, s: Session, fork:
   const claude = resumeCommand(s.id, fork, skip).split(' ')
   switch (terminal) {
     case 'warp':
+      // Never type the command into Warp: keystroke goes through the keyboard layout, and on dead-key layouts
+      // (Brazilian, US International) the quotes compose with the next key and Return never runs the line.
       mkdirSync(dirname(PATHS.warpConfig), { recursive: true })
       writeFileSync(PATHS.warpConfig, warpConfig(s.title, dir, resumeCommand(s.id, fork, skip)))
       await run('open', [warpUri(open)])
       return
     case 'iterm':
       // execFile, never a shell: the script is a single argv entry.
-      await run('osascript', ['-e', itermScript(cmd, open)])
+      await osascript('iterm', itermScript(cmd, open))
       return
     case 'terminal':
-      if (open === 'window') return void (await run('osascript', ['-e', terminalAppScript(cmd)]))
+      if (open === 'window') return void (await osascript('terminal', terminalAppScript(cmd)))
       try {
-        await run('osascript', ['-e', terminalAppTabScript(cmd)])
+        await osascript('terminal', terminalAppTabScript(cmd))
       } catch {
-        await run('osascript', ['-e', terminalAppScript(cmd)])
+        await osascript('terminal', terminalAppScript(cmd))
       }
       return
     case 'ghostty':
@@ -207,4 +245,28 @@ if (import.meta.vitest) {
     writeFileSync(PATHS.warpConfig, warpConfig('session-deck-check', PATHS.home, echo))
     await run('open', [warpUri('tab')])
   }, 120_000)
+  it('recognises the macOS Automation refusal and nothing else', () => {
+    expect(isAutomationDenied({ stderr: '0:36: execution error: Not authorized to send Apple events to iTerm. (-1743)' })).toBe(true)
+    expect(isAutomationDenied(new Error('osascript: (-1743)'))).toBe(true)
+    expect(isAutomationDenied({ stderr: 'execution error: iTerm got an error: Can’t get window 1. (-1728)' })).toBe(false)
+    expect(isAutomationDenied(undefined)).toBe(false)
+  })
+  it('names the terminal and the System Settings path in the refusal message', () => {
+    const e = new AutomationDeniedError('iterm')
+    expect(e.terminal).toBe('iterm')
+    expect(e.message).toContain("can't control iTerm2")
+    expect(e.message).toContain('Privacy & Security → Automation')
+  })
+  it('lists the installed terminals pinned in the Dock, in Dock order', () => {
+    const tile = (url: string) =>
+      `<dict><key>tile-data</key><dict><key>book</key><data>Ym9vaw==</data><key>file-data</key><dict>
+        <key>_CFURLString</key>\n\t<string>${url}</string><key>_CFURLStringType</key><integer>15</integer></dict></dict></dict>`
+    const dock = `<plist version="1.0"><array>${['Safari.app', 'Visual%20Studio%20Code.app', 'Warp.app'].map((a) => tile(`file:///Applications/${a}/`)).join('')}</array></plist>`
+    expect(dockTerminals(dock, ['terminal', 'warp', 'vscode'])).toEqual(['vscode', 'warp'])
+    expect(dockTerminals(dock, ['terminal'])).toEqual([])
+  })
+  it('returns nothing for a Dock it cannot read', () => {
+    expect(dockTerminals('not xml', ['terminal'])).toEqual([])
+    expect(dockTerminals('', ['terminal'])).toEqual([])
+  })
 }

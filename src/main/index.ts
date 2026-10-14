@@ -1,5 +1,5 @@
 import { app, BrowserWindow, clipboard, shell } from 'electron'
-import { appendFileSync, closeSync, openSync, readSync, statSync } from 'node:fs'
+import { appendFileSync, closeSync, existsSync, openSync, readSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { isSessionId, terminalLabel, type ResumeResult, type Session, type Settings, type SettingsPatch } from '../shared/api'
 import { blurRadius } from '../shared/appearance'
@@ -10,7 +10,7 @@ import { createLabelsStore } from './labels'
 import { PATHS } from './paths'
 import { applyPatch, createSettingsStore, isTerminal } from './settings'
 import { installTee, removeTee } from './statusline'
-import { CannotRunError, defaultTerminal, folderToOpen, installedTerminals, launch, terminalCommand } from './terminal'
+import { AutomationDeniedError, CannotRunError, defaultTerminal, folderToOpen, installedTerminals, launch, suggestTerminal, terminalCommand } from './terminal'
 import { cleanTitle, customTitleLine } from './transcript'
 import { createTranscriptStore } from './transcripts'
 import { createUpdates } from './updates'
@@ -71,7 +71,7 @@ function appendLine(path: string, line: string): void {
 
 app.whenReady().then(() => {
   const userData = app.getPath('userData')
-  const settings = createSettingsStore(join(userData, 'settings.json'))
+  const settings = createSettingsStore(join(userData, 'settings.json'), existsSync(join(userData, 'index.json')))
   const labels = createLabelsStore(join(userData, 'labels.json'))
   initBlur((err) => console.error('blur', err))
   applyAppIcon(settings.get())
@@ -109,6 +109,10 @@ app.whenReady().then(() => {
       return next
     },
     listTerminals: async () => installedTerminals(),
+    suggestTerminal: async () => suggestTerminal(installedTerminals()),
+    openAutomationSettings: async () => {
+      await shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Automation')
+    },
     resumeSession: async (id, opts): Promise<ResumeResult> => {
       if (!opts || typeof opts !== 'object' || typeof opts.fork !== 'boolean') throw new Error('Invalid options')
       if (opts.open !== undefined && opts.open !== 'tab' && opts.open !== 'window') throw new Error('Invalid options')
@@ -123,6 +127,7 @@ app.whenReady().then(() => {
         return { ok: true }
       } catch (e) {
         clipboard.writeText(terminalCommand(s, fork, skipPermissions))
+        if (e instanceof AutomationDeniedError) return { ok: false, message: e.message, automation: e.terminal }
         if (e instanceof CannotRunError) return { ok: false, message: e.message }
         return { ok: false, message: `Couldn't open ${terminalLabel(terminal)}, so the command was copied. ${e instanceof Error ? e.message : String(e)}` }
       }

@@ -9,8 +9,6 @@
   A macOS app that reads <code>~/.claude</code> and puts every session one keystroke away.
 </p>
 
-https://github.com/user-attachments/assets/656fefc1-8bf6-4081-a277-5a589b767a9c
-
 ## Why
 
 Claude Code keeps every session on disk, but after a few weeks there are hundreds of them spread across repos, branches and worktrees, most named after their first prompt. Finding "the one where I fixed the transcript upload" means remembering which folder it ran in and scrolling a picker.
