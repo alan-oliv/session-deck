@@ -138,8 +138,13 @@ async function osascript(terminal: Terminal, script: string): Promise<void> {
 // Throws CannotRunError when the terminal opened but cannot be told to run the command (VS Code).
 export async function launch(terminal: Terminal, open: OpenIn, s: Session, fork: boolean, skip = false): Promise<void> {
   await spawn(terminal, open, s, fork, skip)
-  // Warp and WezTerm open the tab without coming forward, so raise the chosen terminal whatever it is.
-  await run('open', ['-a', TERMINALS.find((t) => t.id === terminal)!.app])
+  // Warp and WezTerm open the tab without coming forward, and `open -a` won't switch to a fullscreen Space; AppleScript `activate` does.
+  const app = TERMINALS.find((t) => t.id === terminal)!.app
+  try {
+    await run('osascript', ['-e', `tell application ${appleScriptString(app.replace(/\.app$/, ''))} to activate`])
+  } catch {
+    await run('open', ['-a', app])
+  }
 }
 
 async function spawn(terminal: Terminal, open: OpenIn, s: Session, fork: boolean, skip: boolean): Promise<void> {
