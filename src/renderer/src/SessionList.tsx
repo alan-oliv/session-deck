@@ -33,7 +33,9 @@ export interface SessionListProps {
   mode: ViewMode
   onMode(m: ViewMode): void
   selectedId: string | null
-  onSelect(id: string): void
+  picked: string[]
+  onPick(id: string, mods: { shift: boolean; toggle: boolean }): void
+  onContextMenu(id: string, x: number, y: number): void
   onArchive(s: Session): void
   onOpenBar(): void
   now: Date
@@ -43,18 +45,33 @@ export interface SessionListProps {
   onDay(key: string): void
 }
 
-interface RowProps { s: Session; mode: ViewMode; now: Date; selected: boolean; onSelect(id: string): void; onScope(scope: Scope): void; onArchive(s: Session): void; labels: Label[] }
+interface RowProps {
+  s: Session
+  mode: ViewMode
+  now: Date
+  selected: boolean
+  picked: boolean
+  onPick: SessionListProps['onPick']
+  onContextMenu: SessionListProps['onContextMenu']
+  onScope(scope: Scope): void
+  onArchive(s: Session): void
+  labels: Label[]
+}
 
-function Row({ s, mode, now, selected, onSelect, onScope, onArchive, labels }: RowProps) {
+function Row({ s, mode, now, selected, picked, onPick, onContextMenu, onScope, onArchive, labels }: RowProps) {
   const dot = attention(s.status)
   const timeline = mode === 'timeline'
   const where = `${mode !== 'repo' && s.repo ? `${s.repo.name} · ` : ''}${tildify(s.cwd)}${s.forks ? ` · ${plural(s.forks, 'fork')}` : ''}`
   const branch = s.repo && s.branch && s.branch !== 'HEAD' ? { repo: s.repo.root, branch: s.branch } : null
   return (
     <div
-      className={selected ? 'row is-selected' : 'row'}
+      className={selected ? 'row is-selected' : picked ? 'row is-picked' : 'row'}
       style={{ gridTemplateColumns: timeline ? '58px minmax(0, 1fr)' : 'minmax(0, 1fr)' }}
-      onClick={() => onSelect(s.id)}
+      onClick={(e) => onPick(s.id, { shift: e.shiftKey, toggle: e.metaKey || e.ctrlKey })}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        onContextMenu(s.id, e.clientX, e.clientY)
+      }}
     >
       <button
         type="button"
@@ -158,7 +175,7 @@ export function SessionList(p: SessionListProps) {
               </div>
             )}
             {g.sessions.map((s) => (
-              <Row key={s.id} s={s} mode={p.mode} now={p.now} selected={s.id === p.selectedId} onSelect={p.onSelect} onScope={p.onScope} onArchive={p.onArchive} labels={labelsOf(p.labels, s.id)} />
+              <Row key={s.id} s={s} mode={p.mode} now={p.now} selected={s.id === p.selectedId} picked={p.picked.includes(s.id)} onPick={p.onPick} onContextMenu={p.onContextMenu} onScope={p.onScope} onArchive={p.onArchive} labels={labelsOf(p.labels, s.id)} />
             ))}
           </div>
         ))}
@@ -173,7 +190,7 @@ if (import.meta.vitest) {
   const now = new Date(2026, 9, 6, 11, 0)
   const base = {
     title: 'All sessions', width: 380, maxWidth: 600, onWidth: () => {}, chips: [], scope: { type: 'all' } as Scope, onScope: () => {}, showModes: true, mode: 'list' as ViewMode, onMode: () => {}, selectedId: null,
-    onSelect: () => {}, onArchive: () => {}, onOpenBar: () => {}, now, month: { year: 2026, month: 9 }, day: null, onMonth: () => {}, onDay: () => {}, labels: NO_LABELS,
+    picked: [] as string[], onPick: () => {}, onContextMenu: () => {}, onArchive: () => {}, onOpenBar: () => {}, now, month: { year: 2026, month: 9 }, day: null, onMonth: () => {}, onDay: () => {}, labels: NO_LABELS,
   }
   const live = makeSession({ title: 'live-meeting', status: 'running', forks: 1, end: new Date(2026, 9, 6, 9, 12).toISOString() })
   const old = makeSession({ title: 'old pass', end: new Date(2026, 9, 3, 9, 0).toISOString(), repo: null, cwd: '/Users/me/code' })
@@ -241,6 +258,15 @@ if (import.meta.vitest) {
     expect(html).toMatch(/row-title">live-meeting<\/span><span class="row-labels"[\s\S]*row-ago">/)
     expect(html.match(/class="row-labels"/g)).toHaveLength(1)
     expect(render()).not.toContain('row-labels')
+  })
+  it('marks picked rows, leaving the selected one marked as selected', () => {
+    const html = render({ picked: [old.id] })
+    expect(html.match(/row is-picked"/g)).toHaveLength(1)
+    expect(html).toMatch(/row is-picked"[\s\S]*old pass/)
+    expect(render()).not.toContain('is-picked')
+    const both = render({ picked: [live.id, old.id], selectedId: live.id })
+    expect(both).toMatch(/row is-selected"[\s\S]*live-meeting/)
+    expect(both.match(/row is-picked"/g)).toHaveLength(1)
   })
   it('says so when there is nothing to show', () => {
     expect(render({ sessions: [] })).toContain('No sessions here.')
