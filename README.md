@@ -9,6 +9,12 @@
   A macOS app that reads <code>~/.claude</code> and puts every session one keystroke away.
 </p>
 
+<p align="center">
+  <a href="https://github.com/alan-oliv/session-deck/releases/latest/download/Session-Deck-arm64.dmg"><b>Download for macOS</b></a> (Apple Silicon, free) ·
+  <a href="https://session-deck.app/">Website</a> ·
+  <a href="https://github.com/alan-oliv/session-deck/releases/latest">Release notes</a>
+</p>
+
 ## Why
 
 Claude Code keeps every session on disk, but after a few weeks there are hundreds of them spread across repos, branches and worktrees, most named after their first prompt. Finding "the one where I fixed the transcript upload" means remembering which folder it ran in and scrolling a picker.
@@ -165,11 +171,11 @@ If a terminal can't run the command (VS Code opens the folder only) or fails to 
 
 ## Getting started
 
-You need:
+[Download the .dmg](https://github.com/alan-oliv/session-deck/releases/latest/download/Session-Deck-arm64.dmg), drag Session Deck to Applications and open it. It finds your sessions on its own. You need macOS on Apple Silicon and [Claude Code](https://claude.com/claude-code) with at least one session.
 
-- macOS on Apple Silicon
-- [Claude Code](https://claude.com/claude-code), with at least one session
-- Node.js 22 and the Xcode Command Line Tools (`xcode-select --install`) to build the blur addon
+### Build from source
+
+You also need Node.js 22 and the Xcode Command Line Tools (`xcode-select --install`) to build the blur addon.
 
 ```sh
 git clone git@github.com:alan-oliv/session-deck.git
