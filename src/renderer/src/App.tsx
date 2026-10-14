@@ -98,8 +98,10 @@ export function Deck({ all, settings, installed, now, labels, update }: { all: S
   useEffect(() => {
     if (selectedId && !listed.some((s) => s.id === selectedId)) setSelectedId(null)
     setPicks((p) => {
-      const picked = p.picked.filter((id) => listed.some((s) => s.id === id))
-      return picked.length === p.picked.length ? p : { ...p, picked }
+      const inList = (id: string) => listed.some((s) => s.id === id)
+      const picked = p.picked.filter(inList)
+      const anchor = p.anchor && inList(p.anchor) ? p.anchor : null
+      return picked.length === p.picked.length && anchor === p.anchor ? p : { picked, anchor }
     })
   }, [listKey])
 
@@ -337,8 +339,12 @@ export function Deck({ all, settings, installed, now, labels, update }: { all: S
           selectedId={selected?.id ?? null}
           picked={picks.picked}
           onPick={(id, mods) => {
-            setPicks(nextPicks(picks, listed.map((s) => s.id), id, mods))
-            setSelectedId(id)
+            const next = nextPicks(picks, listed.map((s) => s.id), id, mods, selected?.id ?? null)
+            setPicks(next)
+            // A toggle-off must not leave the detail on a row outside the target set.
+            const toggledOff = mods.toggle && !mods.shift && !next.picked.includes(id)
+            if (!toggledOff) setSelectedId(id)
+            else if (next.picked.length) setSelectedId(next.picked[next.picked.length - 1])
           }}
           onContextMenu={(id, x, y) => {
             if (!picks.picked.includes(id)) {

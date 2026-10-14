@@ -7,10 +7,15 @@ export function rangeIds(order: string[], anchor: string | null, to: string): st
   return order.slice(Math.min(a, b), Math.max(a, b) + 1)
 }
 
-export function nextPicks(state: Picks, order: string[], id: string, mods: { shift: boolean; toggle: boolean }): Picks {
-  if (mods.shift) return { picked: rangeIds(order, state.anchor, id), anchor: state.anchor ?? id }
+// `selected` is the row the detail pane shows: a first Cmd/Shift-click extends from it, not from nothing.
+export function nextPicks(state: Picks, order: string[], id: string, mods: { shift: boolean; toggle: boolean }, selected: string | null = null): Picks {
+  if (mods.shift) {
+    const anchor = state.anchor ?? selected ?? id
+    return { picked: rangeIds(order, anchor, id), anchor }
+  }
   if (mods.toggle) {
-    const picked = state.picked.includes(id) ? state.picked.filter((p) => p !== id) : [...state.picked, id]
+    const base = state.picked.length || !selected ? state.picked : [selected]
+    const picked = base.includes(id) ? base.filter((p) => p !== id) : [...base, id]
     return { picked, anchor: id }
   }
   return { picked: [], anchor: id }
@@ -39,6 +44,12 @@ if (import.meta.vitest) {
     const on = nextPicks({ picked: ['a'], anchor: 'a' }, order, 'c', { ...none, toggle: true })
     expect(on).toEqual({ picked: ['a', 'c'], anchor: 'c' })
     expect(nextPicks(on, order, 'a', { ...none, toggle: true })).toEqual({ picked: ['c'], anchor: 'a' })
+  })
+  it('extends from the selected row on the first shift-click or toggle-click', () => {
+    const fresh = { picked: [], anchor: null }
+    expect(nextPicks(fresh, order, 'd', { ...none, shift: true }, 'b')).toEqual({ picked: ['b', 'c', 'd'], anchor: 'b' })
+    expect(nextPicks(fresh, order, 'c', { ...none, toggle: true }, 'a')).toEqual({ picked: ['a', 'c'], anchor: 'c' })
+    expect(nextPicks(fresh, order, 'a', { ...none, toggle: true }, 'a')).toEqual({ picked: [], anchor: 'a' })
   })
   it('clears the picks on a plain click and anchors on the clicked id', () => {
     expect(nextPicks({ picked: ['a', 'b'], anchor: 'a' }, order, 'e', none)).toEqual({ picked: [], anchor: 'e' })
