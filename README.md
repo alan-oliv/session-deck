@@ -42,6 +42,7 @@ Plain words search everything. A prefix like `file:` or `pr:` switches to a narr
 | `art:` | Documents the session wrote and Claude artifacts it published, by name, link or content | `art:report` |
 | `pr:` | Pull requests and commits | `pr:27` |
 | `in:` | One repository or folder | `in:meetnotes live` |
+| `label:` | Sessions you gave a label | `label:bug` |
 | `is:` | Status, plus hidden and archived sessions | `is:waiting` |
 | `when:` | When the session was last active | `when:yesterday` |
 
@@ -92,6 +93,10 @@ With nothing typed, it lists every PR your sessions opened. PRs come from the li
 
 Start typing a place and the bar suggests repositories and folders with their session counts. Repositories go by name (`in:meetnotes`), and sessions outside a git repository go by folder (`in:~/code`). Once the first word names a place exactly, everything after it is a plain-text search inside that place: `in:meetnotes live speaker`.
 
+### `label:` Label
+
+Start typing a label and the bar lists your labels with their session counts. Once the first word names one, everything after it is a plain-text search inside that label: `label:feature refactor`. See [Organize](#organize) for how labels are made.
+
 ### `is:` Status
 
 | Search | Finds |
@@ -125,6 +130,7 @@ Highlight a session in the results and press <kbd>></kbd> to run an action on it
 | Show repo in the tree | Jumps to the session's repository in the sidebar |
 | Rename session | Type a new title and press <kbd>↵</kbd> |
 | Archive session, Restore from archive | Moves it into or out of Archived |
+| Add label, Remove label | One row per label, to put it on the session or take it off |
 | Change terminal | Picks the terminal that resumes and forks sessions |
 | Show plan usage, Hide plan usage | Wraps your status line so Session Deck can read plan usage, or puts the original back |
 
@@ -147,10 +153,22 @@ The right side of the bar previews the highlighted row: the session's facts and 
 
 ### Browse
 
-- The sidebar has All sessions, Archived and Needs you, then every repository and folder you've run Claude in, ordered by latest activity.
+- The sidebar has All sessions and Archived, then every repository and folder you've run Claude in, ordered by latest activity, then your labels.
 - Branch and worktree chips above the list narrow a repository down. Each row shows its last branch, and clicking it filters to that branch.
 - Each row has a status dot: running, waiting, interrupted, failed or completed.
-- Needs you only counts live sessions waiting on you and sessions that ended on an API error, so it stays short.
+- Needs you, the first row under Labels, only counts live sessions waiting on you and sessions that ended on an API error, so it stays short.
+
+### Organize
+
+Labels are tags you put on sessions, like `Bug`, `Feature` or `Refactor`, so a piece of work stays together even when it spans repos and folders. A session can have several. New installs start with Bug, Feature, Investigation, Refactor, Performance and Docs, and you can change all of them.
+
+- Put a label on a session from the Labels row in its Overview, or right-click it in the list and choose Labels…. Both open the same picker: type to filter, <kbd>↑</kbd> <kbd>↓</kbd> and <kbd>↵</kbd> to toggle, and type a new name to create one.
+- Click a label in the sidebar to see only its sessions. The count next to it is how many sessions have it.
+- The <kbd>+</kbd> next to the Labels header makes a new label. Double-click a label to rename it, click its dot to change its colour, drag it to reorder, or use the trash to delete it. Delete shows an Undo toast, and the sessions get the label back if you undo.
+- <kbd>⌘</kbd>-click picks several sessions, <kbd>⇧</kbd>-click picks a range and <kbd>esc</kbd> clears the picks. Right-click on a pick to archive or label all of them at once. If some of them already have the label it is added to the rest, and if all of them have it, it's removed.
+- Search by label with [`label:`](#label-label), or run Add label from the [`>` actions](#-actions).
+
+Labels are kept in Session Deck's own data, not in Claude Code's transcripts, so they never touch `~/.claude` and `claude --resume` is unaffected.
 
 ### Inspect
 
