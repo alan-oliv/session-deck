@@ -179,7 +179,8 @@
   background: var(--app-wash);
 }
 
-.row.is-selected {
+.row.is-selected,
+.row.is-picked {
   background: var(--app-selected);
 }
 

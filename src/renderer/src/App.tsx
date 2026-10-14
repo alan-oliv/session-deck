@@ -3,11 +3,13 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { prCommand, resumeCommand, SETTINGS_DEFAULTS, terminalLabel, type OpenIn, type Session, type LabelStore, type Settings, type SettingsPatch, type Terminal } from '../../shared/api'
 import { appearanceVars } from '../../shared/appearance'
 import { makeSession } from '../../shared/fixtures'
-import { applyNewLabel, countByLabel, createLabel, deleteLabel, deleteToastText, moveLabel, NO_LABELS, recolorLabel, renameLabel, toggleLabel } from '../../shared/labels'
+import { applyNewLabel, applyNewLabelMany, countByLabel, createLabel, deleteLabel, deleteToastText, labelIdsOf, moveLabel, NO_LABELS, recolorLabel, renameLabel, toggleLabel, toggleLabelMany } from '../../shared/labels'
+import { nextPicks, type Picks } from '../../shared/selection'
 import { clampPane, PANES_KEY, paneMax, readPaneWidths, type PaneKey, type PaneWidths } from '../../shared/panes'
 import { archivedOf, buildChips, buildTree, inScope, scopeTitle, sessionProject, visible, type Scope } from '../../shared/tree'
 import { byRecent, dayKey, latestDay, listForView, type ViewMode, type YearMonth } from '../../shared/views'
 import { CommandBar, type BarAction, type BarOpen } from './CommandBar'
+import { ContextMenu } from './ContextMenu'
 import { Detail, type CopiedKey, type DetailTab } from './Detail'
 import { errorText, useLabels, useNow, useSessions, useSettings, useUpdate } from './hooks'
 import { SessionList } from './SessionList'
@@ -81,6 +83,8 @@ export function Deck({ all, settings, installed, now, labels, update, suggested:
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [setupOpen, setSetupOpen] = useState(!settings.onboarded)
   const [toast, setToast] = useState<Toast | null>(null)
+  const [picks, setPicks] = useState<Picks>({ picked: [], anchor: null })
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
   const [suggested, setSuggested] = useState<Terminal | null>(initialSuggestion)
   const barSeq = useRef(0)
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -108,6 +112,12 @@ export function Deck({ all, settings, installed, now, labels, update, suggested:
 
   useEffect(() => {
     if (selectedId && !listed.some((s) => s.id === selectedId)) setSelectedId(null)
+    setPicks((p) => {
+      const inList = (id: string) => listed.some((s) => s.id === id)
+      const picked = p.picked.filter(inList)
+      const anchor = p.anchor && inList(p.anchor) ? p.anchor : null
+      return picked.length === p.picked.length && anchor === p.anchor ? p : { picked, anchor }
+    })
   }, [listKey])
 
   useEffect(() => {
@@ -161,6 +171,8 @@ export function Deck({ all, settings, installed, now, labels, update, suggested:
         e.preventDefault()
         e.stopPropagation()
         setSettingsOpen(false)
+      } else if (e.key === 'Escape' && picks.picked.length && !bar && !menu) {
+        setPicks((p) => ({ ...p, picked: [] }))
       } else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'p' && !settingsOpen) {
         e.preventDefault()
         const seq = ++barSeq.current
@@ -170,7 +182,7 @@ export function Deck({ all, settings, installed, now, labels, update, suggested:
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [settingsOpen, setupOpen])
+  }, [settingsOpen, setupOpen, bar, menu, picks.picked.length])
 
   useEffect(() => {
     if (!setupOpen || suggested) return
@@ -207,26 +219,29 @@ export function Deck({ all, settings, installed, now, labels, update, suggested:
       fail(e)
     }
   }
-  const archive = (s: Session, archived: boolean) =>
-    void call(
-      () => window.api.setArchived(s.id, archived),
-      () =>
-        showToast(
-          {
-            text: `${archived ? 'Archived' : 'Restored'} “${s.title}”`,
-            undo: () =>
-              void call(
-                () => window.api.setArchived(s.id, !archived),
-                () => {
-                  clearTimeout(toastTimer.current)
-                  setToast(null)
-                  setSelectedId(s.id)
-                },
-              ),
-          },
-          TOAST_MS,
-        ),
-    )
+  const archiveMany = (targets: Session[], archived: boolean) => {
+    const setAll = (value: boolean) => async () => {
+      for (const s of targets) await window.api.setArchived(s.id, value)
+    }
+    const n = targets.length
+    const text = n === 1 ? `“${targets[0].title}”` : `${n} sessions`
+    void call(setAll(archived), () => {
+      setPicks({ picked: [], anchor: null })
+      showToast(
+        {
+          text: `${archived ? 'Archived' : 'Restored'} ${text}`,
+          undo: () =>
+            void call(setAll(!archived), () => {
+              clearTimeout(toastTimer.current)
+              setToast(null)
+              setSelectedId(targets[0].id)
+            }),
+        },
+        TOAST_MS,
+      )
+    })
+  }
+  const archive = (s: Session, archived: boolean) => archiveMany([s], archived)
   const saveSettings = (patch: SettingsPatch) => void call(() => window.api.saveSettings(patch))
   const terminal = settings.terminal && installed.includes(settings.terminal) ? settings.terminal : null
   const terminalName = terminal ? terminalLabel(terminal) : 'your terminal'
@@ -266,6 +281,9 @@ export function Deck({ all, settings, installed, now, labels, update, suggested:
       showToast({ text: deleteToastText(gone.name, r.sessions), undo: () => saveLabels(() => prev, () => setToast(null)) }, LABEL_TOAST_MS)
     })
   }
+
+  const targets = picks.picked.length ? all.filter((s) => picks.picked.includes(s.id)) : selected ? [selected] : []
+  const targetIds = targets.map((s) => s.id)
 
   const onAction = async (a: BarAction) => {
     setNote(null)
@@ -348,7 +366,22 @@ export function Deck({ all, settings, installed, now, labels, update, suggested:
             mode={viewMode}
             onMode={setMode}
             selectedId={selected?.id ?? null}
-            onSelect={setSelectedId}
+            picked={picks.picked}
+            onPick={(id, mods) => {
+              const next = nextPicks(picks, listed.map((s) => s.id), id, mods, selected?.id ?? null)
+              setPicks(next)
+              // A toggle-off must not leave the detail on a row outside the target set.
+              const toggledOff = mods.toggle && !mods.shift && !next.picked.includes(id)
+              if (!toggledOff) setSelectedId(id)
+              else if (next.picked.length) setSelectedId(next.picked[next.picked.length - 1])
+            }}
+            onContextMenu={(id, x, y) => {
+              if (!picks.picked.includes(id)) {
+                setPicks({ picked: [], anchor: id })
+                setSelectedId(id)
+              }
+              setMenu({ x, y })
+            }}
             onArchive={(s) => archive(s, !s.archived)}
             onOpenBar={() => openBar({ kind: 'sessions', query: '' })}
             now={now}
@@ -412,6 +445,21 @@ export function Deck({ all, settings, installed, now, labels, update, suggested:
         )}
         {settingsOpen && <SettingsModal settings={settings} installed={installed} onChange={saveSettings} onRerunSetup={() => { setSettingsOpen(false); setSetupOpen(true) }} onClose={() => setSettingsOpen(false)} />}
       </div>
+      {menu && targets.length > 0 && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          count={targets.length}
+          archived={targets.every((s) => s.archived)}
+          labels={labels.list}
+          applied={labels.list.filter((l) => targets.every((s) => labelIdsOf(labels, s.id).includes(l.id))).map((l) => l.id)}
+          counts={labelCounts}
+          onArchive={() => archiveMany(targets, !targets.every((s) => s.archived))}
+          onToggleLabel={(labelId) => saveLabels((l) => toggleLabelMany(l, targetIds, labelId))}
+          onCreateLabel={(name) => saveLabels((l) => applyNewLabelMany(l, targetIds, name))}
+          onClose={() => setMenu(null)}
+        />
+      )}
       {setupOpen && suggested && (
         <Onboarding
           settings={settings}
