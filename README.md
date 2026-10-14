@@ -5,8 +5,7 @@
 <h1 align="center">Session Deck</h1>
 
 <p align="center">
-  Find, inspect and resume your local Claude Code sessions.<br>
-  A macOS app that reads <code>~/.claude</code> and puts every session one keystroke away.
+  Managing sessions and context windows is now a core part of the engineering workflow. Session Deck keeps every session one keystroke away. Search by the files they changed, the PRs they opened and the plans they left behind, then pick up right where you stopped.
 </p>
 
 <p align="center">
