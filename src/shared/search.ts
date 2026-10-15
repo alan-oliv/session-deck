@@ -208,7 +208,8 @@ function places(shown: Session[]): { id: string; count: number; remote: string |
 export function search(all: Session[], kind: KindId, query: string, ctx: SearchContext): ResultGroup[] {
   const q = query.trim()
   const ql = q.toLowerCase()
-  const shown = byRecent(visible(all))
+  const active = byRecent(visible(all))
+  const shown = byRecent(all.filter((s) => !s.hidden))
   const groups: ResultGroup[] = []
   const add = (label: string, results: Result[]) => {
     if (results.length) groups.push({ label, results })
@@ -219,7 +220,7 @@ export function search(all: Session[], kind: KindId, query: string, ctx: SearchC
     case 'sessions':
       if (q === '' || q === '/') {
         add('Search kinds', KINDS.filter((k) => k.id !== 'sessions').map(kindRow))
-        if (q === '') add('Recent', shown.slice(0, 3).map((s) => row(s)))
+        if (q === '') add('Recent', active.slice(0, 3).map((s) => row(s)))
       } else {
         add('Sessions', shown.filter((s) => matches(s, q)).map((s) => row(s)))
         add('Search kinds', KINDS.filter((k) => k.id !== 'sessions' && (k.label.toLowerCase().includes(ql) || k.prefix.startsWith(ql))).map(kindRow))
@@ -301,14 +302,14 @@ export function search(all: Session[], kind: KindId, query: string, ctx: SearchC
       const opts: [string, Session[]][] =
         kind === 'is'
           ? [
-              ...(['running', 'waiting', 'interrupted', 'failed', 'completed'] as const).map((st): [string, Session[]] => [st, shown.filter((s) => s.status === st)]),
+              ...(['running', 'waiting', 'interrupted', 'failed', 'completed'] as const).map((st): [string, Session[]] => [st, active.filter((s) => s.status === st)]),
               ['hidden', byRecent(all.filter((s) => s.hidden && !s.archived))],
               ['archived', byRecent(all.filter((s) => s.archived))],
             ]
           : [
-              ['today', shown.filter((s) => daysAgo(s.end, ctx.now) === 0)],
-              ['yesterday', shown.filter((s) => daysAgo(s.end, ctx.now) === 1)],
-              ['week', shown.filter((s) => daysAgo(s.end, ctx.now) <= 7)],
+              ['today', active.filter((s) => daysAgo(s.end, ctx.now) === 0)],
+              ['yesterday', active.filter((s) => daysAgo(s.end, ctx.now) === 1)],
+              ['week', active.filter((s) => daysAgo(s.end, ctx.now) <= 7)],
             ]
       const label = kindById(kind).label
       const exact = opts.find(([name]) => name === ql)
@@ -389,11 +390,11 @@ if (import.meta.vitest) {
     expect(empty[1].results.map((r) => r.title)).toEqual(['live-meeting', 'perf pass', 'disk cleanup'])
     expect(search(all, 'sessions', '/', ctx).map((g) => g.label)).toEqual(['Search kinds'])
   })
-  it('matches every word across title, prompts, summary, paths, PR and commits, never hidden or archived', () => {
+  it('matches every word across title, prompts, summary, paths, PR and commits, archived included, never hidden', () => {
     expect(titles(search(all, 'sessions', 'speaker diarize', ctx))).toEqual(['live-meeting'])
     expect(titles(search(all, 'sessions', 'meetnotes#27 4e9c1b7', ctx))).toEqual(['live-meeting'])
     expect(titles(search(all, 'sessions', 'run', ctx))).not.toContain('sdk run')
-    expect(titles(search(all, 'sessions', 'old thing', ctx))).toEqual([])
+    expect(titles(search(all, 'sessions', 'old thing', ctx))).toEqual(['old thing'])
   })
   it('scores Ask queries by the share of meaningful words found and says why', () => {
     const r = ask(live, 'where did I fix the diarize transcript')
