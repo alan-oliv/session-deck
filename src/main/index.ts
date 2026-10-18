@@ -1,7 +1,7 @@
 import { app, BrowserWindow, clipboard, shell } from 'electron'
 import { appendFileSync, closeSync, existsSync, openSync, readSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { isSessionId, terminalLabel, type ResumeResult, type Session, type Settings, type SettingsPatch } from '../shared/api'
+import { canRename, isSessionId, RENAME_BLOCKED, terminalLabel, type ResumeResult, type Session, type Settings, type SettingsPatch } from '../shared/api'
 import { blurRadius } from '../shared/appearance'
 import { initBlur, setWindowBlur } from './blur'
 import { createIndexer } from './indexer'
@@ -146,7 +146,7 @@ app.whenReady().then(() => {
     },
     renameSession: async (id, title) => {
       const s = sessionFor(id)
-      if (s.live) throw new Error("Can't rename a running session")
+      if (!canRename(s)) throw new Error(RENAME_BLOCKED)
       const clean = cleanTitle(title)
       if (!clean) throw new Error('Titles are 1–120 characters on one line')
       const path = indexer.transcriptPath(s.id)

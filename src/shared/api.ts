@@ -191,6 +191,10 @@ export const resumeCommand = (id: string, fork: boolean, skip = false): string =
   `claude --resume ${id}${fork ? ' --fork-session' : ''}${skip ? ' --dangerously-skip-permissions' : ''}`
 export const prCommand = (n: number): string => `claude --from-pr ${n}`
 
+// A running Claude Code writes the name it holds back into the transcript, undoing an outside rename. Unnamed, it has nothing to write back.
+export const canRename = (s: Pick<Session, 'live' | 'named'>): boolean => !(s.live && s.named)
+export const RENAME_BLOCKED = "Can't rename a named session while it's running. Use /rename in its terminal."
+
 // Linear Design System icons the app draws; src/renderer/src/icons.tsx holds their SVG bodies.
 export const ICON_NAMES = [
   'AllItems', 'Box', 'Branch', 'Layers', 'Storage', 'ChevronDown2', 'Search1', 'Bolt', 'Document', 'Attachment2',

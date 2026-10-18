@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import type { LabelStore, OpenIn, Session, Status, Transcript as TranscriptData } from '../../shared/api'
+import { canRename, RENAME_BLOCKED, type LabelStore, type OpenIn, type Session, type Status, type Transcript as TranscriptData } from '../../shared/api'
 import { makeSession } from '../../shared/fixtures'
 import { agoLong, fileSize, modelLabel, monthDay, plural, tildify } from '../../shared/format'
 import { NO_LABELS } from '../../shared/labels'
@@ -154,6 +154,7 @@ export function Detail(p: DetailProps) {
   const count = transcript ? transcript.turns.reduce((n, t) => n + t.items.length, 0) : null
   const tabClass = (t: DetailTab) => (p.tab === t ? 'tab is-active' : 'tab')
   const [renaming, setRenaming] = useState(false)
+  const startRename = () => setRenaming(canRename(s))
   const label = copied('resumed') || copied('forked') ? 'Opened' : copied('fork') ? 'Copied' : 'Resume'
   return (
     <main className="detail">
@@ -182,7 +183,7 @@ export function Detail(p: DetailProps) {
                   }}
                 />
               ) : (
-                <h2 className="detail-title" title="Double-click to rename" onDoubleClick={() => setRenaming(true)}>{s.title}</h2>
+                <h2 className="detail-title" title={canRename(s) ? 'Double-click to rename' : RENAME_BLOCKED} onDoubleClick={startRename}>{s.title}</h2>
               )}
               <span className="detail-when">{`${agoLong(s.end, p.now)} · ${modelLabel(s.model)} · ${fileSize(s.sizeBytes)}`}</span>
             </div>
@@ -195,7 +196,7 @@ export function Detail(p: DetailProps) {
                 terminalName={p.terminalName}
                 onResume={p.onResume}
                 onFork={p.onFork}
-                onRename={() => setRenaming(true)}
+                onRename={startRename}
                 onCopy={p.onCopy}
                 onOpenFolder={p.onOpenFolder}
                 onArchive={p.onArchive}
@@ -328,6 +329,15 @@ if (import.meta.vitest) {
     expect(html).toContain('>Resume</button>')
     expect(html).toContain('>All sessions for #27<')
     expect(html).not.toContain('Copy command')
+  })
+  it('does not offer to rename a named session that is open in a terminal, and says why', () => {
+    const html = renderToStaticMarkup(<Detail session={makeSession({ title: 'live-meeting', live: true, named: true })} now={now} copied={null} teeOn={false} {...handlers} />)
+    expect(html).not.toContain('Double-click to rename')
+    expect(html).toContain('title="Can&#x27;t rename a named session while it&#x27;s running. Use /rename in its terminal.">live-meeting</h2>')
+  })
+  it('still offers to rename an unnamed session that is open in a terminal', () => {
+    const html = renderToStaticMarkup(<Detail session={makeSession({ title: 'live-meeting', live: true })} now={now} copied={null} teeOn={false} {...handlers} />)
+    expect(html).toContain('title="Double-click to rename">live-meeting</h2>')
   })
   it('swaps labels after a copy or a launch', () => {
     const s = makeSession({ pr })
