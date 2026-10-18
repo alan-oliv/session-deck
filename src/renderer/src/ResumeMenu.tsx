@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { resumeCommand, type IconName, type OpenIn, type Session } from '../../shared/api'
+import { canRename, RENAME_BLOCKED, resumeCommand, type IconName, type OpenIn, type Session } from '../../shared/api'
 import { makeSession } from '../../shared/fixtures'
 import { tildify } from '../../shared/format'
 import { Icon } from './icons'
@@ -39,7 +39,7 @@ export function ResumeMenu(p: ResumeMenuProps) {
     ],
     [
       { icon: 'Branch', label: 'Branch conversation', sub: 'Starts a new session from this point. The original stays as it is.', key: 'B', cmd: resumeCommand(s.id, true, p.skip), run: p.onFork },
-      { icon: 'Edit', label: 'Rename…', sub: s.named ? undefined : 'Give it a name so you can resume by name.', key: 'R', run: p.onRename },
+      { icon: 'Edit', label: 'Rename…', sub: !canRename(s) ? RENAME_BLOCKED : s.named ? undefined : 'Give it a name so you can resume by name.', key: 'R', disabled: !canRename(s), run: p.onRename },
     ],
     [
       { icon: 'Clipboard', label: 'Copy resume command', cmd, run: p.onCopy },

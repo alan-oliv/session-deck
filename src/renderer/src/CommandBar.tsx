@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { PUBLISHED_KIND, SETTINGS_DEFAULTS, type IconName, type LabelStore, type Session, type Settings, type Terminal } from '../../shared/api'
+import { canRename, PUBLISHED_KIND, RENAME_BLOCKED, SETTINGS_DEFAULTS, type IconName, type LabelStore, type Session, type Settings, type Terminal } from '../../shared/api'
 import { makeSession } from '../../shared/fixtures'
 import { agoLong, fileSize, tildify } from '../../shared/format'
 import { NO_LABELS } from '../../shared/labels'
@@ -189,7 +189,7 @@ export function CommandBar(p: CommandBarProps) {
   const groups = search(p.sessions, kindId, query, { now: p.now, selected: target, settings: p.settings, labels: p.labels })
   const flat = groups.flatMap((g) => g.results)
   const cur = flat[Math.min(idx, Math.max(0, flat.length - 1))]
-  const renameBlocked = kindId === 'rename' && !!target?.live
+  const renameBlocked = kindId === 'rename' && !!target && !canRename(target)
 
   useEffect(() => {
     listRef.current?.querySelector('.bar-row.is-active')?.scrollIntoView({ block: 'nearest' })
@@ -222,7 +222,7 @@ export function CommandBar(p: CommandBarProps) {
   }
 
   const footIcon: IconName = copied ? 'Check' : kind.icon
-  const footLabel = p.note ?? (renameBlocked ? "Can't rename a running session" : copied ? 'Copied resume command' : kind.label)
+  const footLabel = p.note ?? (renameBlocked ? RENAME_BLOCKED : copied ? 'Copied resume command' : kind.label)
   const emptyText =
     kindId === 'ask' ? 'Nothing close. Try different words or a file name.'
     : kindId === 'rename' ? (target ? `Press ↵ to rename “${target.title}”.` : 'Select a session first.')
@@ -388,8 +388,9 @@ if (import.meta.vitest) {
   it('says nothing is close when Ask finds no match', () => {
     expect(render({ kind: 'ask', query: 'kubernetes billing' })).toContain('Nothing close. Try different words or a file name.')
   })
-  it('refuses to rename a running session and shows errors from the app in the footer', () => {
-    expect(render({ kind: 'rename', query: 'x', target: s.id }, { sessions: [{ ...s, live: true }] })).toContain("Can&#x27;t rename a running session")
+  it('refuses to rename a named running session and shows errors from the app in the footer', () => {
+    expect(render({ kind: 'rename', query: 'x', target: s.id }, { sessions: [{ ...s, live: true, named: true }] })).toContain("Can&#x27;t rename a named session while it&#x27;s running")
+    expect(render({ kind: 'rename', query: 'x', target: s.id }, { sessions: [{ ...s, live: true, named: false }] })).not.toContain('Can&#x27;t rename')
     expect(render({ kind: 'sessions', query: '' }, { note: 'Unknown session' })).toContain('Unknown session')
   })
   it('switches to the Repository chip and resolves the place when a GitHub repo link is pasted', () => {
