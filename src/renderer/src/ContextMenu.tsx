@@ -17,8 +17,10 @@ export interface ContextMenuProps {
   counts: Record<string, number>
   projects: Project[]
   moveBlocked: string | null
+  trashBlocked: string | null
   onMove(cwd: string): void
   onArchive(): void
+  onTrash?(): void
   onToggleLabel(id: string): void
   onCreateLabel(name: string): void
   onClose(): void
@@ -30,6 +32,8 @@ const clamp = (v: number, size: number, room: number) => Math.max(MARGIN, Math.m
 
 const archiveLabel = (count: number, archived: boolean) =>
   `${archived ? 'Restore' : 'Archive'}${count > 1 ? ` ${count} sessions` : ''}`
+
+const trashLabel = (count: number) => (count > 1 ? `Move ${count} sessions to Trash…` : 'Move to Trash…')
 
 export function ContextMenu(p: ContextMenuProps) {
   const ref = useRef<HTMLDivElement>(null)
@@ -123,6 +127,22 @@ export function ContextMenu(p: ContextMenuProps) {
               <Icon name="Label" size={14} />
               Labels…
             </div>
+            {p.onTrash && (
+              <div
+                role="menuitem"
+                aria-disabled={p.trashBlocked ? true : undefined}
+                className={p.trashBlocked ? 'cm-item is-danger is-disabled' : 'cm-item is-danger'}
+                title={p.trashBlocked ?? undefined}
+                onClick={() => {
+                  if (p.trashBlocked) return
+                  p.onTrash?.()
+                  p.onClose()
+                }}
+              >
+                <Icon name="Trash" size={14} />
+                {trashLabel(p.count)}
+              </div>
+            )}
           </div>
         </>
       )}
@@ -136,7 +156,7 @@ if (import.meta.vitest) {
   const render = (count: number, archived: boolean, over: Partial<ContextMenuProps> = {}) =>
     renderToStaticMarkup(
       <ContextMenu
-        x={10} y={20} count={count} archived={archived} labels={[]} applied={[]} counts={{}} projects={[]} moveBlocked={null}
+        x={10} y={20} count={count} archived={archived} labels={[]} applied={[]} counts={{}} projects={[]} moveBlocked={null} trashBlocked={null}
         onArchive={noop} onMove={noop} onToggleLabel={noop} onCreateLabel={noop} onClose={noop} {...over}
       />,
     )
@@ -158,6 +178,14 @@ if (import.meta.vitest) {
   })
   it('greys out Move to… with the reason as its tooltip when the move is blocked', () => {
     expect(render(2, false, { moveBlocked: 'Exit it first.' })).toContain('aria-disabled="true" class="cm-item is-disabled" title="Exit it first."')
+  })
+  it('offers Move to Trash… as the last item only when trashing is offered', () => {
+    expect(render(1, true)).not.toContain('Trash')
+    expect(render(1, true, { onTrash: noop })).toMatch(/Labels…<\/div><div role="menuitem" class="cm-item is-danger">.*Move to Trash…<\/div><\/div>/)
+    expect(render(3, true, { onTrash: noop })).toContain('Move 3 sessions to Trash…')
+  })
+  it('greys out Move to Trash… with the reason as its tooltip when trashing is blocked', () => {
+    expect(render(2, true, { onTrash: noop, trashBlocked: 'Exit it first.' })).toContain('aria-disabled="true" class="cm-item is-danger is-disabled" title="Exit it first."')
   })
   it('keeps the menu inside the window', () => {
     expect(clamp(990, 200, 1000)).toBe(792)
