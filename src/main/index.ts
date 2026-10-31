@@ -192,9 +192,12 @@ app.whenReady().then(() => {
       const win = BrowserWindow.getFocusedWindow()
       const { response } = await (win ? dialog.showMessageBox(win, box) : dialog.showMessageBox(box))
       if (response !== 0) return false
+      // The dialog can stay open while the user resumes one of these sessions.
+      const fresh = sessions.map((s) => sessionFor(s.id))
+      checkTrashable(fresh)
       const gone: string[] = []
       try {
-        await trashSessionsTo(sessions, (id) => indexer.transcriptPath(id), (p) => shell.trashItem(p), (id) => gone.push(id))
+        await trashSessionsTo(fresh, (id) => indexer.transcriptPath(id), (p) => shell.trashItem(p), (id) => gone.push(id))
       } finally {
         if (gone.length) {
           settings.save({ archived: settings.get().archived.filter((id) => !gone.includes(id)) })
