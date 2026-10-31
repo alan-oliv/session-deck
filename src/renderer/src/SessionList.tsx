@@ -4,6 +4,7 @@ import { makeSession } from '../../shared/fixtures'
 import { agoShort, attention, clock, plural, tildify } from '../../shared/format'
 import { labelsOf, NO_LABELS } from '../../shared/labels'
 import { PANES } from '../../shared/panes'
+import { dragIds, SESSION_DRAG } from '../../shared/selection'
 import { buildChips, sameScope, type Chip, type Scope } from '../../shared/tree'
 import { dayKey, groupSessions, listForView, type ViewMode, type YearMonth } from '../../shared/views'
 import { Calendar } from './Calendar'
@@ -51,6 +52,7 @@ interface RowProps {
   now: Date
   selected: boolean
   picked: boolean
+  drag: string[]
   onPick: SessionListProps['onPick']
   onContextMenu: SessionListProps['onContextMenu']
   onScope(scope: Scope): void
@@ -58,7 +60,17 @@ interface RowProps {
   labels: Label[]
 }
 
-function Row({ s, mode, now, selected, picked, onPick, onContextMenu, onScope, onArchive, labels }: RowProps) {
+// The browser snapshots the drag image as the drag starts, so the pill can go on the next tick.
+function setDragPill(dt: DataTransfer, n: number): void {
+  const pill = document.createElement('div')
+  pill.className = 'drag-pill'
+  pill.textContent = `${n} sessions`
+  document.body.append(pill)
+  dt.setDragImage(pill, 12, 12)
+  setTimeout(() => pill.remove())
+}
+
+function Row({ s, mode, now, selected, picked, drag, onPick, onContextMenu, onScope, onArchive, labels }: RowProps) {
   const dot = attention(s.status)
   const timeline = mode === 'timeline'
   const where = `${mode !== 'repo' && s.repo ? `${s.repo.name} · ` : ''}${tildify(s.cwd)}${s.forks ? ` · ${plural(s.forks, 'fork')}` : ''}`
@@ -67,6 +79,12 @@ function Row({ s, mode, now, selected, picked, onPick, onContextMenu, onScope, o
     <div
       className={selected ? 'row is-selected' : picked ? 'row is-picked' : 'row'}
       style={{ gridTemplateColumns: timeline ? '58px minmax(0, 1fr)' : 'minmax(0, 1fr)' }}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = 'move'
+        e.dataTransfer.setData(SESSION_DRAG, JSON.stringify(drag))
+        if (drag.length > 1) setDragPill(e.dataTransfer, drag.length)
+      }}
       onClick={(e) => onPick(s.id, { shift: e.shiftKey, toggle: e.metaKey || e.ctrlKey })}
       onContextMenu={(e) => {
         e.preventDefault()
@@ -175,7 +193,7 @@ export function SessionList(p: SessionListProps) {
               </div>
             )}
             {g.sessions.map((s) => (
-              <Row key={s.id} s={s} mode={p.mode} now={p.now} selected={s.id === p.selectedId} picked={p.picked.includes(s.id)} onPick={p.onPick} onContextMenu={p.onContextMenu} onScope={p.onScope} onArchive={p.onArchive} labels={labelsOf(p.labels, s.id)} />
+              <Row key={s.id} s={s} mode={p.mode} now={p.now} selected={s.id === p.selectedId} picked={p.picked.includes(s.id)} drag={dragIds(p.picked, s.id)} onPick={p.onPick} onContextMenu={p.onContextMenu} onScope={p.onScope} onArchive={p.onArchive} labels={labelsOf(p.labels, s.id)} />
             ))}
           </div>
         ))}
@@ -258,6 +276,9 @@ if (import.meta.vitest) {
     expect(html).toMatch(/row-title">live-meeting<\/span><span class="row-labels"[\s\S]*row-ago">/)
     expect(html.match(/class="row-labels"/g)).toHaveLength(1)
     expect(render()).not.toContain('row-labels')
+  })
+  it('makes every row draggable', () => {
+    expect(render().match(/draggable="true"/g)).toHaveLength(2)
   })
   it('marks picked rows, leaving the selected one marked as selected', () => {
     const html = render({ picked: [old.id] })

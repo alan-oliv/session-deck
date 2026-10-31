@@ -107,6 +107,11 @@ export function pickerRows(list: Label[], query: string): { options: Label[]; cr
 export const deleteToastText = (name: string, sessions: number): string =>
   `Deleted label “${name}”${sessions ? ` from ${sessions} ${sessions === 1 ? 'session' : 'sessions'}` : ''}`
 
+export const forgetSessions = (store: LabelStore, ids: string[]): LabelStore => ({
+  ...store,
+  map: Object.fromEntries(Object.entries(store.map).filter(([sid]) => !ids.includes(sid))),
+})
+
 if (import.meta.vitest) {
   const { it, expect } = import.meta.vitest
   const store = (list: Label[], map: LabelStore['map'] = {}): LabelStore => ({ list, map })
@@ -202,5 +207,9 @@ if (import.meta.vitest) {
     expect(deleteToastText('Bug', 3)).toBe('Deleted label “Bug” from 3 sessions')
     expect(deleteToastText('Bug', 1)).toBe('Deleted label “Bug” from 1 session')
     expect(deleteToastText('Bug', 0)).toBe('Deleted label “Bug”')
+  })
+  it('forgets the given sessions and keeps every label', () => {
+    const s = store(abc.list, { s1: ['a'], s2: ['b'], s3: ['a', 'c'] })
+    expect(forgetSessions(s, ['s1', 's3', 'nope'])).toEqual(store(abc.list, { s2: ['b'] }))
   })
 }

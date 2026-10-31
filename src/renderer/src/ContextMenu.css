@@ -39,3 +39,16 @@
 .cm-item:hover {
   background: var(--app-wash);
 }
+
+.cm-item.is-disabled {
+  color: var(--app-text-3);
+}
+
+.cm-item.is-disabled:hover {
+  background: none;
+}
+
+.cm-item.is-danger:not(.is-disabled),
+.cm-item.is-danger:not(.is-disabled) svg {
+  color: var(--app-red);
+}

@@ -4,6 +4,7 @@ import type { LabelStore } from '../../shared/api'
 import { makeSession } from '../../shared/fixtures'
 import { dropTarget, LABEL_COLORS, nextColor } from '../../shared/labels'
 import { PANES } from '../../shared/panes'
+import { readDragIds, SESSION_DRAG } from '../../shared/selection'
 import { buildTree, sameScope, scopeRepo, sessionProject, type Scope, type Tree, type TreeLabel } from '../../shared/tree'
 import { Icon } from './icons'
 import { ResizeHandle } from './Resize'
@@ -24,6 +25,7 @@ export interface SidebarProps {
   onLabelRename(id: string, name: string): void
   onLabelColor(id: string, color: string): void
   onLabelMove(id: string, beforeId: string | null): void
+  onMoveSessions(ids: string[], cwd: string): void
 }
 
 const SECTIONS = [['repo', 'Repositories'], ['folder', 'Folders']] as const
@@ -150,10 +152,11 @@ function LabelRow({ label, selected, drag, onSelect, onDelete, onRename, onColor
 }
 
 export function Sidebar({
-  tree, scope, current, width, maxWidth, onWidth, onScope, settingsOpen, onSettings, onLabelCreate, onLabelDelete, onLabelRename, onLabelColor, onLabelMove,
+  tree, scope, current, width, maxWidth, onWidth, onScope, settingsOpen, onSettings, onLabelCreate, onLabelDelete, onLabelRename, onLabelColor, onLabelMove, onMoveSessions,
 }: SidebarProps) {
   const [creating, setCreating] = useState(false)
   const [drag, setDrag] = useState<Drag | null>(null)
+  const [dropOn, setDropOn] = useState<string | null>(null)
   const cls = (on: boolean, base: string) => (on ? `${base} is-selected` : base)
   const repo = scopeRepo(scope)
   return (
@@ -181,9 +184,26 @@ export function Sidebar({
               {items.map((p) => (
                 <div
                   key={p.id}
-                  className={cls(kind === 'repo' ? repo === p.id : sameScope(p.scope, scope), p.id === current ? `side-item side-${kind} is-current` : `side-item side-${kind}`)}
+                  className={`${cls(kind === 'repo' ? repo === p.id : sameScope(p.scope, scope), p.id === current ? `side-item side-${kind} is-current` : `side-item side-${kind}`)}${dropOn === p.id ? ' is-drop' : ''}`}
                   onClick={() => onScope(p.scope)}
                   title={p.title}
+                  onDragOver={(e) => {
+                    if (!e.dataTransfer.types.includes(SESSION_DRAG)) return
+                    e.preventDefault()
+                    e.dataTransfer.dropEffect = 'move'
+                    if (dropOn !== p.id) setDropOn(p.id)
+                  }}
+                  onDragLeave={(e) => {
+                    // Passing over the row's own icon or label fires dragleave too; only leaving the row counts.
+                    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropOn(null)
+                  }}
+                  onDrop={(e) => {
+                    setDropOn(null)
+                    const ids = readDragIds(e.dataTransfer.getData(SESSION_DRAG))
+                    if (!ids.length) return
+                    e.preventDefault()
+                    onMoveSessions(ids, p.id)
+                  }}
                 >
                   <Icon name={kind === 'repo' ? 'Box' : 'Storage'} size={14} className="side-icon" />
                   <span className="side-label">{p.label}</span>
@@ -266,7 +286,7 @@ if (import.meta.vitest) {
       <Sidebar
         tree={buildTree(all, 2, store)} scope={scope} current={current} width={width} maxWidth={360} onWidth={() => {}} onScope={() => {}}
         settingsOpen={false} onSettings={() => {}} onLabelCreate={() => {}} onLabelDelete={() => {}}
-        onLabelRename={() => {}} onLabelColor={() => {}} onLabelMove={() => {}}
+        onLabelRename={() => {}} onLabelColor={() => {}} onLabelMove={() => {}} onMoveSessions={() => {}}
       />,
     )
 

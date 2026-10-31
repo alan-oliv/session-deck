@@ -1,3 +1,5 @@
+import { isSessionId } from './api'
+
 export type Picks = { picked: string[]; anchor: string | null }
 
 export function rangeIds(order: string[], anchor: string | null, to: string): string[] {
@@ -21,6 +23,21 @@ export function nextPicks(state: Picks, order: string[], id: string, mods: { shi
   return { picked: [], anchor: id }
 }
 
+// Session Deck's own drag type, so a sidebar row can tell a session drag from a label reorder.
+export const SESSION_DRAG = 'application/x-session-deck-ids'
+
+// Dragging a picked row carries every pick; any other row goes alone and leaves the picks as they are.
+export const dragIds = (picked: string[], id: string): string[] => (picked.includes(id) ? picked : [id])
+
+export function readDragIds(raw: string): string[] {
+  try {
+    const v: unknown = JSON.parse(raw)
+    return Array.isArray(v) ? v.filter(isSessionId) : []
+  } catch {
+    return []
+  }
+}
+
 if (import.meta.vitest) {
   const { it, expect } = import.meta.vitest
   const order = ['a', 'b', 'c', 'd', 'e']
@@ -35,6 +52,18 @@ if (import.meta.vitest) {
     expect(rangeIds(order, null, 'c')).toEqual(['c'])
     expect(rangeIds(order, 'gone', 'c')).toEqual(['c'])
     expect(rangeIds(order, 'a', 'gone')).toEqual(['gone'])
+  })
+  it('drags every pick from a picked row, and only the row itself otherwise', () => {
+    expect(dragIds(['a', 'b'], 'b')).toEqual(['a', 'b'])
+    expect(dragIds(['a', 'b'], 'c')).toEqual(['c'])
+    expect(dragIds([], 'c')).toEqual(['c'])
+  })
+  it('reads only session ids back from drag data', () => {
+    const id = 'c3f1a9d2-6b84-4e07-9a15-7d20e8b4f6a1'
+    expect(readDragIds(JSON.stringify([id, '../etc', 42]))).toEqual([id])
+    expect(readDragIds(JSON.stringify({ id }))).toEqual([])
+    expect(readDragIds('not json')).toEqual([])
+    expect(readDragIds('')).toEqual([])
   })
   it('selects a range on shift-click and keeps the anchor', () => {
     expect(nextPicks({ picked: [], anchor: 'b' }, order, 'd', { ...none, shift: true })).toEqual({ picked: ['b', 'c', 'd'], anchor: 'b' })
