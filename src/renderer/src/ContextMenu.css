@@ -39,3 +39,11 @@
 .cm-item:hover {
   background: var(--app-wash);
 }
+
+.cm-item.is-disabled {
+  color: var(--app-text-3);
+}
+
+.cm-item.is-disabled:hover {
+  background: none;
+}
