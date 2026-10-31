@@ -142,6 +142,7 @@ export interface Api {
   renameSession(id: string, title: string): Promise<void>
   setArchived(id: string, archived: boolean): Promise<void>
   moveSessions(ids: string[], cwd: string): Promise<void>
+  trashSessions(ids: string[]): Promise<boolean>
   setStatusTee(enabled: boolean): Promise<void>
   getTranscript(id: string): Promise<Transcript>
   getToolOutput(id: string, turn: number, item: number): Promise<string[]>
@@ -172,6 +173,7 @@ export const API_METHODS = [
   'renameSession',
   'setArchived',
   'moveSessions',
+  'trashSessions',
   'setStatusTee',
   'getTranscript',
   'getToolOutput',
