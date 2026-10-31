@@ -199,6 +199,7 @@ export const RENAME_BLOCKED = "Can't rename a named session while it's running. 
 // A running Claude Code keeps appending to the transcript's old path, so moving it would split the session in two.
 export const canMove = (s: Pick<Session, 'live'>): boolean => !s.live
 export const MOVE_BLOCKED = "Can't move a running session. Exit it first."
+export const TRASH_BLOCKED = "Can't delete a running session. Exit it first."
 
 // Linear Design System icons the app draws; src/renderer/src/icons.tsx holds their SVG bodies.
 export const ICON_NAMES = [
