@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { prCommand, resumeCommand, SETTINGS_DEFAULTS, terminalLabel, type OpenIn, type Session, type LabelStore, type Settings, type SettingsPatch, type Terminal } from '../../shared/api'
+import { canMove, MOVE_BLOCKED, prCommand, resumeCommand, SETTINGS_DEFAULTS, terminalLabel, type OpenIn, type Session, type LabelStore, type Settings, type SettingsPatch, type Terminal } from '../../shared/api'
 import { appearanceVars } from '../../shared/appearance'
 import { makeSession } from '../../shared/fixtures'
+import { tildify } from '../../shared/format'
 import { applyNewLabel, applyNewLabelMany, countByLabel, createLabel, deleteLabel, deleteToastText, labelIdsOf, moveLabel, NO_LABELS, recolorLabel, renameLabel, toggleLabel, toggleLabelMany } from '../../shared/labels'
 import { nextPicks, type Picks } from '../../shared/selection'
 import { clampPane, PANES_KEY, paneMax, readPaneWidths, type PaneKey, type PaneWidths } from '../../shared/panes'
@@ -36,6 +37,13 @@ function savedPanes(): PaneWidths {
 type Pending = { id: string; fork: boolean }
 type Toast = { text: string; undo?(): void; action?: { label: string; run(): void } }
 const LABEL_TOAST_MS = 5000
+
+// Undo sends each session back to the folder it was in, one call per folder.
+function undoGroups(moved: Pick<Session, 'id' | 'cwd'>[]): [cwd: string, ids: string[]][] {
+  const back = new Map<string, string[]>()
+  for (const s of moved) back.set(s.cwd, [...(back.get(s.cwd) ?? []), s.id])
+  return [...back]
+}
 
 function ToastView({ toast }: { toast: Toast }) {
   return (
@@ -242,6 +250,33 @@ export function Deck({ all, settings, installed, now, labels, update, suggested:
     })
   }
   const archive = (s: Session, archived: boolean) => archiveMany([s], archived)
+  const moveMany = (targets: Session[], cwd: string) => {
+    if (!targets.every(canMove)) return showToast({ text: MOVE_BLOCKED }, TOAST_MS)
+    // A repo's subfolders and worktrees sit under its row already, so dropping them on it does nothing.
+    const moving = targets.filter((s) => sessionProject(s) !== cwd)
+    if (!moving.length) return
+    const to = tree.projects.find((p) => p.id === cwd)?.label ?? tildify(cwd)
+    const what = moving.length === 1 ? `“${moving[0].title}”` : `${moving.length} sessions`
+    void call(() => window.api.moveSessions(moving.map((s) => s.id), cwd), () => {
+      setPicks({ picked: [], anchor: null })
+      showToast(
+        {
+          text: `Moved ${what} to ${to}`,
+          undo: () =>
+            void call(
+              async () => {
+                for (const [from, ids] of undoGroups(moving)) await window.api.moveSessions(ids, from)
+              },
+              () => {
+                clearTimeout(toastTimer.current)
+                setToast(null)
+              },
+            ),
+        },
+        LABEL_TOAST_MS,
+      )
+    })
+  }
   const saveSettings = (patch: SettingsPatch) => void call(() => window.api.saveSettings(patch))
   const terminal = settings.terminal && installed.includes(settings.terminal) ? settings.terminal : null
   const terminalName = terminal ? terminalLabel(terminal) : 'your terminal'
@@ -350,6 +385,7 @@ export function Deck({ all, settings, installed, now, labels, update, suggested:
             onLabelRename={(id, name) => saveLabels((l) => renameLabel(l, id, name))}
             onLabelColor={(id, color) => saveLabels((l) => recolorLabel(l, id, color))}
             onLabelMove={(id, before) => saveLabels((l) => moveLabel(l, id, before))}
+            onMoveSessions={(ids, cwd) => moveMany(all.filter((s) => ids.includes(s.id)), cwd)}
           />
         )}
         {!focus && (
@@ -454,6 +490,9 @@ export function Deck({ all, settings, installed, now, labels, update, suggested:
           labels={labels.list}
           applied={labels.list.filter((l) => targets.every((s) => labelIdsOf(labels, s.id).includes(l.id))).map((l) => l.id)}
           counts={labelCounts}
+          projects={tree.projects.filter((p) => !targets.every((s) => sessionProject(s) === p.id))}
+          moveBlocked={targets.every(canMove) ? null : MOVE_BLOCKED}
+          onMove={(cwd) => moveMany(targets, cwd)}
           onArchive={() => archiveMany(targets, !targets.every((s) => s.archived))}
           onToggleLabel={(labelId) => saveLabels((l) => toggleLabelMany(l, targetIds, labelId))}
           onCreateLabel={(name) => saveLabels((l) => applyNewLabelMany(l, targetIds, name))}
@@ -544,6 +583,12 @@ if (import.meta.vitest) {
     expect(deck(false)).toContain('class="app" inert=""')
     expect(deck(true)).not.toContain('ob-panel')
     expect(deck(true)).not.toContain('inert')
+  })
+  it('groups moved sessions by the folder each came from, for Undo', () => {
+    const a = makeSession({ cwd: '/r/app' })
+    const b = makeSession({ cwd: '/r/app/.worktrees/x' })
+    const c = makeSession({ cwd: '/r/app' })
+    expect(undoGroups([a, b, c])).toEqual([['/r/app', [a.id, c.id]], ['/r/app/.worktrees/x', [b.id]]])
   })
   it('shows a toast with an Open System Settings button for an Automation refusal', () => {
     expect(toastView({ text: "Session Deck can't control iTerm2.", action: { label: 'Open System Settings', run: () => {} } })).toContain('>Open System Settings<')
