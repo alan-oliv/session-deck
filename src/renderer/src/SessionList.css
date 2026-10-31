@@ -318,3 +318,16 @@
   height: 7px;
   border-radius: 50%;
 }
+
+/* Off screen: it exists only for the drag image snapshot. */
+.drag-pill {
+  position: fixed;
+  top: -100px;
+  left: 0;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: var(--app-brand);
+  color: #fff;
+  font: 500 12px var(--app-font);
+  white-space: nowrap;
+}

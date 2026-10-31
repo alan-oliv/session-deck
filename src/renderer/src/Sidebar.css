@@ -209,3 +209,9 @@
 .side-label-row.is-drop-after {
   box-shadow: inset 0 -2px 0 var(--app-focus);
 }
+
+.side-item.is-drop {
+  background: var(--app-wash);
+  box-shadow: inset 0 0 0 1px var(--app-focus);
+  color: var(--app-text);
+}
