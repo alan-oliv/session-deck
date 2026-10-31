@@ -7,6 +7,7 @@ import { initBlur, setWindowBlur } from './blur'
 import { createIndexer } from './indexer'
 import { broadcast, registerIpc } from './ipc'
 import { createLabelsStore } from './labels'
+import { checkMoveTarget, moveSessionsTo } from './move'
 import { PATHS } from './paths'
 import { applyPatch, createSettingsStore, isTerminal } from './settings'
 import { installTee, removeTee } from './statusline'
@@ -163,6 +164,16 @@ app.whenReady().then(() => {
       settings.save({ archived: [...ids] })
       broadcast('settingsChanged')
       broadcast('sessionsChanged')
+    },
+    moveSessions: async (ids, cwd) => {
+      if (!Array.isArray(ids) || !ids.length) throw new Error('Invalid sessions')
+      const sessions = [...new Set(ids)].map(sessionFor)
+      const target = checkMoveTarget(cwd)
+      try {
+        moveSessionsTo(PATHS.projects, sessions, target, (id) => indexer.transcriptPath(id))
+      } finally {
+        await indexer.refresh()
+      }
     },
     setStatusTee: async (enabled) => {
       if (typeof enabled !== 'boolean') throw new Error('Invalid status tee flag')

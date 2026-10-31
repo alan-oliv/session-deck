@@ -1,10 +1,12 @@
+import { spawnSync } from 'node:child_process'
 import {
-  chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync,
+  chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
-import { SETTINGS_DEFAULTS } from '../shared/api'
+import { dirname, isAbsolute, join, resolve } from 'node:path'
+import { canMove, MOVE_BLOCKED, SETTINGS_DEFAULTS, type Session } from '../shared/api'
 import { createIndexer } from './indexer'
+import { PATHS } from './paths'
 
 // Claude Code 2.1 appends a hash we can't reproduce to slugs past this length, so those folders are refused.
 const MAX_SLUG = 200
@@ -48,6 +50,30 @@ export function moveTranscript(projectsDir: string, from: string, id: string, cw
     throw e
   }
   unlinkSync(from)
+}
+
+// Any existing folder, not only sidebar projects: Undo sends sessions back to a worktree or a subfolder.
+export function checkMoveTarget(raw: unknown): string {
+  if (typeof raw !== 'string' || !isAbsolute(raw) || /[\x00-\x1f\x7f]/.test(raw)) throw new Error('Invalid folder')
+  const cwd = resolve(raw)
+  if (!statSync(cwd, { throwIfNoEntry: false })?.isDirectory()) throw new Error('This folder no longer exists')
+  if (!projectSlug(cwd)) throw new Error(TOO_LONG)
+  return cwd
+}
+
+export function moveSessionsTo(projectsDir: string, sessions: Pick<Session, 'id' | 'cwd' | 'live'>[], cwd: string, pathOf: (id: string) => string | undefined): void {
+  if (!sessions.every(canMove)) throw new Error(MOVE_BLOCKED)
+  const todo = sessions.filter((s) => s.cwd !== cwd)
+  todo.forEach((s, i) => {
+    try {
+      const from = pathOf(s.id)
+      if (!from) throw new Error('Unknown session')
+      moveTranscript(projectsDir, from, s.id, cwd)
+    } catch (e) {
+      const why = e instanceof Error ? e.message : String(e)
+      throw new Error(i ? `Moved ${i} of ${todo.length} sessions. ${why}` : why)
+    }
+  })
 }
 
 if (import.meta.vitest) {
@@ -136,4 +162,67 @@ if (import.meta.vitest) {
     expect(idx.list()).toHaveLength(1)
     idx.stop()
   })
+
+  const other = '711a48a0-fc93-44b8-b71c-1c6e5b645970'
+
+  it('accepts an existing absolute folder and resolves it', () => {
+    const { root } = fixture()
+    expect(checkMoveTarget(`${root}/`)).toBe(root)
+    expect(checkMoveTarget(`${root}/projects/..`)).toBe(root)
+  })
+  it('refuses relative paths, control characters, missing folders, files and paths Claude Code would hash', () => {
+    const { root, from } = fixture()
+    expect(() => checkMoveTarget('code/app')).toThrow('Invalid folder')
+    expect(() => checkMoveTarget(42)).toThrow('Invalid folder')
+    expect(() => checkMoveTarget(`${root}/x\x15y`)).toThrow('Invalid folder')
+    expect(() => checkMoveTarget(join(root, 'gone'))).toThrow('This folder no longer exists')
+    expect(() => checkMoveTarget(from)).toThrow('This folder no longer exists')
+    const long = join(root, 'a'.repeat(200))
+    mkdirSync(long)
+    expect(() => checkMoveTarget(long)).toThrow(TOO_LONG)
+  })
+  it('moves nothing when any session in the batch is running', () => {
+    const { projects, from } = fixture()
+    const sessions = [{ id, cwd: '/r/old', live: false }, { id: other, cwd: '/r/old', live: true }]
+    expect(() => moveSessionsTo(projects, sessions, '/r/new', () => from)).toThrow(MOVE_BLOCKED)
+    expect(cwds(from)).toEqual(['/r/old', '/r/old'])
+  })
+  it('skips sessions already in the folder and moves the rest', () => {
+    const { projects, from } = fixture()
+    const seen: string[] = []
+    moveSessionsTo(projects, [{ id: other, cwd: '/r/new', live: false }, { id, cwd: '/r/old', live: false }], '/r/new', (x) => {
+      seen.push(x)
+      return from
+    })
+    expect(seen).toEqual([id])
+    expect(cwds(join(projects, '-r-new', `${id}.jsonl`))).toEqual(['/r/new', '/r/new'])
+  })
+  it('says how many sessions moved before one failed', () => {
+    const { projects, from } = fixture()
+    const sessions = [{ id, cwd: '/r/old', live: false }, { id: other, cwd: '/r/old', live: false }]
+    expect(() => moveSessionsTo(projects, sessions, '/r/new', (x) => (x === id ? from : undefined))).toThrow('Moved 1 of 2 sessions. Unknown session')
+    expect(existsSync(join(projects, '-r-new', `${id}.jsonl`))).toBe(true)
+    expect(() => moveSessionsTo(projects, [{ id: other, cwd: '/r/old', live: false }], '/r/new', () => undefined)).toThrow(/^Unknown session$/)
+  })
+  it.skipIf(!process.env.SESSION_DECK_MOVE_SMOKE)('lets claude --resume find a moved session from its new folder', () => {
+    const a = realpathSync(mkdtempSync(join(tmpdir(), 'deck-move-a-')))
+    const b = realpathSync(mkdtempSync(join(tmpdir(), 'deck-move-b-')))
+    // Claude Code refuses to start inside another Claude Code session while CLAUDECODE is set.
+    const env = { ...process.env }
+    delete env.CLAUDECODE
+    const run = (cwd: string, args: string[]) =>
+      spawnSync('claude', ['-p', '--model', 'haiku', ...args, 'Reply with the word ok.'], { cwd, env, encoding: 'utf8', timeout: 120_000 })
+    const first = run(a, ['--output-format', 'json'])
+    expect(first.status, first.stderr).toBe(0)
+    const sid: string = JSON.parse(first.stdout).session_id
+    const from = join(PATHS.projects, projectSlug(a)!, `${sid}.jsonl`)
+    try {
+      moveSessionsTo(PATHS.projects, [{ id: sid, cwd: a, live: false }], b, () => from)
+      const resumed = run(b, ['--resume', sid])
+      expect(resumed.status, resumed.stderr).toBe(0)
+    } finally {
+      rmSync(join(PATHS.projects, projectSlug(a)!), { recursive: true, force: true })
+      rmSync(join(PATHS.projects, projectSlug(b)!), { recursive: true, force: true })
+    }
+  }, 300_000)
 }

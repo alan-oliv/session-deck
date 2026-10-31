@@ -141,6 +141,7 @@ export interface Api {
   openPr(id: string): Promise<void>
   renameSession(id: string, title: string): Promise<void>
   setArchived(id: string, archived: boolean): Promise<void>
+  moveSessions(ids: string[], cwd: string): Promise<void>
   setStatusTee(enabled: boolean): Promise<void>
   getTranscript(id: string): Promise<Transcript>
   getToolOutput(id: string, turn: number, item: number): Promise<string[]>
@@ -170,6 +171,7 @@ export const API_METHODS = [
   'openPr',
   'renameSession',
   'setArchived',
+  'moveSessions',
   'setStatusTee',
   'getTranscript',
   'getToolOutput',
@@ -194,6 +196,9 @@ export const prCommand = (n: number): string => `claude --from-pr ${n}`
 // A running Claude Code writes the name it holds back into the transcript, undoing an outside rename. Unnamed, it has nothing to write back.
 export const canRename = (s: Pick<Session, 'live' | 'named'>): boolean => !(s.live && s.named)
 export const RENAME_BLOCKED = "Can't rename a named session while it's running. Use /rename in its terminal."
+// A running Claude Code keeps appending to the transcript's old path, so moving it would split the session in two.
+export const canMove = (s: Pick<Session, 'live'>): boolean => !s.live
+export const MOVE_BLOCKED = "Can't move a running session. Exit it first."
 
 // Linear Design System icons the app draws; src/renderer/src/icons.tsx holds their SVG bodies.
 export const ICON_NAMES = [
