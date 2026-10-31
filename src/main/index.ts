@@ -1,8 +1,9 @@
-import { app, BrowserWindow, clipboard, shell } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, shell, type MessageBoxOptions } from 'electron'
 import { appendFileSync, closeSync, existsSync, openSync, readSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { canRename, isSessionId, RENAME_BLOCKED, terminalLabel, type ResumeResult, type Session, type Settings, type SettingsPatch } from '../shared/api'
 import { blurRadius } from '../shared/appearance'
+import { forgetSessions } from '../shared/labels'
 import { initBlur, setWindowBlur } from './blur'
 import { createIndexer } from './indexer'
 import { broadcast, registerIpc } from './ipc'
@@ -14,6 +15,7 @@ import { installTee, removeTee } from './statusline'
 import { AutomationDeniedError, CannotRunError, defaultTerminal, folderToOpen, installedTerminals, launch, suggestTerminal, terminalCommand } from './terminal'
 import { cleanTitle, customTitleLine } from './transcript'
 import { createTranscriptStore } from './transcripts'
+import { checkTrashable, trashSessionsTo } from './trash'
 import { createUpdates } from './updates'
 
 // The renderer tints its own background by the opacity setting; the window server blurs the desktop under it.
@@ -174,6 +176,38 @@ app.whenReady().then(() => {
       } finally {
         await indexer.refresh()
       }
+    },
+    trashSessions: async (ids) => {
+      if (!Array.isArray(ids) || !ids.length) throw new Error('Invalid sessions')
+      const sessions = [...new Set(ids)].map(sessionFor)
+      checkTrashable(sessions)
+      const box: MessageBoxOptions = {
+        type: 'warning',
+        message: sessions.length === 1 ? `Move “${sessions[0].title}” to the Trash?` : `Move ${sessions.length} sessions to the Trash?`,
+        detail: "Claude Code won't list them in /resume anymore. You can restore the files from the Trash in Finder until you empty it.",
+        buttons: ['Move to Trash', 'Cancel'],
+        defaultId: 0,
+        cancelId: 1,
+      }
+      const win = BrowserWindow.getFocusedWindow()
+      const { response } = await (win ? dialog.showMessageBox(win, box) : dialog.showMessageBox(box))
+      if (response !== 0) return false
+      // The dialog can stay open while the user resumes one of these sessions.
+      const fresh = sessions.map((s) => sessionFor(s.id))
+      checkTrashable(fresh)
+      const gone: string[] = []
+      try {
+        await trashSessionsTo(fresh, (id) => indexer.transcriptPath(id), (p) => shell.trashItem(p), (id) => gone.push(id))
+      } finally {
+        if (gone.length) {
+          settings.save({ archived: settings.get().archived.filter((id) => !gone.includes(id)) })
+          labels.save(forgetSessions(labels.get(), gone))
+          broadcast('settingsChanged')
+          broadcast('labelsChanged')
+        }
+        await indexer.refresh()
+      }
+      return true
     },
     setStatusTee: async (enabled) => {
       if (typeof enabled !== 'boolean') throw new Error('Invalid status tee flag')

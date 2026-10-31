@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { canMove, MOVE_BLOCKED, prCommand, resumeCommand, SETTINGS_DEFAULTS, terminalLabel, type OpenIn, type Session, type LabelStore, type Settings, type SettingsPatch, type Terminal } from '../../shared/api'
+import { canMove, MOVE_BLOCKED, prCommand, resumeCommand, SETTINGS_DEFAULTS, terminalLabel, TRASH_BLOCKED, type OpenIn, type Session, type LabelStore, type Settings, type SettingsPatch, type Terminal } from '../../shared/api'
 import { appearanceVars } from '../../shared/appearance'
 import { makeSession } from '../../shared/fixtures'
 import { tildify } from '../../shared/format'
@@ -277,6 +277,16 @@ export function Deck({ all, settings, installed, now, labels, update, suggested:
       )
     })
   }
+  const trashMany = (targets: Session[]) => {
+    if (targets.some((s) => s.live)) return showToast({ text: TRASH_BLOCKED }, TOAST_MS)
+    const what = targets.length === 1 ? `“${targets[0].title}”` : `${targets.length} sessions`
+    void call(async () => {
+      // False means the user cancelled the confirm dialog.
+      if (!(await window.api.trashSessions(targets.map((s) => s.id)))) return
+      setPicks({ picked: [], anchor: null })
+      showToast({ text: `Moved ${what} to the Trash` }, TOAST_MS)
+    })
+  }
   const saveSettings = (patch: SettingsPatch) => void call(() => window.api.saveSettings(patch))
   const terminal = settings.terminal && installed.includes(settings.terminal) ? settings.terminal : null
   const terminalName = terminal ? terminalLabel(terminal) : 'your terminal'
@@ -492,8 +502,10 @@ export function Deck({ all, settings, installed, now, labels, update, suggested:
           counts={labelCounts}
           projects={tree.projects.filter((p) => !targets.every((s) => sessionProject(s) === p.id))}
           moveBlocked={targets.every(canMove) ? null : MOVE_BLOCKED}
+          trashBlocked={targets.some((s) => s.live) ? TRASH_BLOCKED : null}
           onMove={(cwd) => moveMany(targets, cwd)}
           onArchive={() => archiveMany(targets, !targets.every((s) => s.archived))}
+          onTrash={targets.every((s) => s.archived) ? () => trashMany(targets) : undefined}
           onToggleLabel={(labelId) => saveLabels((l) => toggleLabelMany(l, targetIds, labelId))}
           onCreateLabel={(name) => saveLabels((l) => applyNewLabelMany(l, targetIds, name))}
           onClose={() => setMenu(null)}

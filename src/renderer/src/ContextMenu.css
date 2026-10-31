@@ -47,3 +47,8 @@
 .cm-item.is-disabled:hover {
   background: none;
 }
+
+.cm-item.is-danger:not(.is-disabled),
+.cm-item.is-danger:not(.is-disabled) svg {
+  color: var(--app-red);
+}
